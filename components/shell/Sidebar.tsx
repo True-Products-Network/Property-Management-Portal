@@ -26,7 +26,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -52,6 +52,11 @@ interface SidebarProps {
   role: PortalRole;
   userName: string;
   userEmail: string;
+}
+
+interface GhlStatus {
+  connected: boolean;
+  locationName?: string;
 }
 
 function MenuItemComponent({
@@ -114,6 +119,15 @@ function MenuItemComponent({
 
 export function Sidebar({ role, userName, userEmail }: SidebarProps) {
   const menuItems = getMenuForRole(role);
+  const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
+
+  useEffect(() => {
+    // Fetch GHL status
+    fetch("/api/admin/ghl/status")
+      .then(res => res.json())
+      .then(data => setGhlStatus(data))
+      .catch(() => setGhlStatus({ connected: false }));
+  }, []);
 
   return (
     <aside className="sidebar flex flex-col">
@@ -153,8 +167,12 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
       {/* Connection Status */}
       <div className="px-4 py-2 border-t border-white/10">
         <div className="flex items-center gap-2 text-xs text-white/60">
-          <div className="w-2 h-2 rounded-full bg-green-400" />
-          <span>GHL Connected</span>
+          <div className={`w-2 h-2 rounded-full ${ghlStatus.connected ? 'bg-green-400' : 'bg-gray-400'}`} />
+          <span className="truncate">
+            {ghlStatus.connected 
+              ? (ghlStatus.locationName || 'GHL Connected')
+              : 'GHL Not Connected'}
+          </span>
         </div>
       </div>
     </aside>

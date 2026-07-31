@@ -128,7 +128,14 @@ export default function AdminIntegrationsPage() {
       const data = await response.json();
 
       if (response.ok) {
+        // Force refresh the status
         await fetchGhlStatus();
+        
+        // Small delay to ensure state updates
+        setTimeout(async () => {
+          await fetchGhlStatus();
+        }, 500);
+        
         setShowInput(false);
         setApiKey("");
         setAccessToken("");
@@ -137,7 +144,7 @@ export default function AdminIntegrationsPage() {
         
         // Show appropriate message based on test success
         if (data.testSuccess) {
-          alert(`Connected successfully!\n\nLocation: ${data.locationName || "Unknown"}`);
+          alert(`Connected successfully!\n\nLocation: ${data.locationName || data.locationId || "Unknown"}`);
         } else {
           let msg = "Credentials saved but connection test failed.";
           if (data.testError) {
