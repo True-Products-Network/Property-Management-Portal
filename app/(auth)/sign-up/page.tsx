@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Eye, EyeOff, Loader2, CheckCircle } from "lucide-react";
-import { signUpSchema, type SignUpInput, portalRoleSchema } from "@/schemas/portal/auth";
+import { signUpSchema, type SignUpInput } from "@/schemas/portal/auth";
 import { createClient } from "@/lib/supabase/client";
 
 const roles = [
@@ -23,6 +23,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [createdUser, setCreatedUser] = useState<{email: string; password: string} | null>(null);
   const [formData, setFormData] = useState<SignUpInput & { role: string; ghlContactId: string }>({
     email: "",
     password: "",
@@ -37,6 +38,7 @@ export default function SignUpPage() {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setCreatedUser(null);
 
     const result = signUpSchema.safeParse(formData);
     if (!result.success) {
@@ -51,6 +53,7 @@ export default function SignUpPage() {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/sign-in`,
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -68,6 +71,7 @@ export default function SignUpPage() {
 
       if (data.user) {
         setSuccess(true);
+        setCreatedUser({ email: formData.email, password: formData.password });
         // Clear form
         setFormData({
           email: "",
@@ -114,9 +118,22 @@ export default function SignUpPage() {
             <h2 className="text-2xl font-semibold text-[var(--main-text)] mb-2">
               User Created!
             </h2>
-            <p className="text-[var(--secondary-text)] mb-6">
+            <p className="text-[var(--secondary-text)] mb-4">
               The user account has been successfully created in Supabase Auth.
             </p>
+            
+            {createdUser && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm font-medium text-amber-800 mb-2">Important:</p>
+                <p className="text-sm text-amber-700 mb-2">
+                  Check your Supabase Dashboard to confirm this user, or disable email confirmation in Auth settings.
+                </p>
+                <div className="text-xs text-amber-600 font-mono bg-amber-100 p-2 rounded">
+                  Email: {createdUser.email}
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               <button
                 onClick={() => setSuccess(false)}
