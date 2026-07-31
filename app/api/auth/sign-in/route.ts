@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const result = signInSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { message: result.error.errors[0].message },
+        { message: result.error.issues[0].message },
         { status: 400 }
       );
     }
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         actorId: "anonymous",
         role: "unknown",
         action: "sign_in_failed",
-        ipAddress: request.ip || undefined,
+        ipAddress: request.headers.get("x-forwarded-for") || undefined,
         userAgent: request.headers.get("user-agent") || undefined,
         reason: "Invalid email or password",
       });
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       actorId: sessionUser.id,
       role: portalRoles[0],
       action: "sign_in_success",
-      ipAddress: request.ip || undefined,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
       userAgent: request.headers.get("user-agent") || undefined,
     });
 

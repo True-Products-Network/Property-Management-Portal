@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // Portal user authentication & sessions
@@ -146,7 +145,7 @@ model FileReference {
   uploadedBy    String
   uploadedAt    DateTime @default(now())
   expiresAt     DateTime?
-  scanStatus    String   @default('pending') // 'pending', 'clean', 'infected', 'error'
+  scanStatus    String   @default("pending")
   ghlDocumentId String?
 
   @@index([associationId])

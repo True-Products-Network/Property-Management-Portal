@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
         actorId: user.id,
         role: user.roles[0],
         action: "sign_out",
-        ipAddress: request.ip || undefined,
+        ipAddress: request.headers.get("x-forwarded-for") || undefined,
         userAgent: request.headers.get("user-agent") || undefined,
       });
     }
