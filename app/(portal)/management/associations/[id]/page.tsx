@@ -21,84 +21,106 @@ import {
   Edit,
   Plus,
   Loader2,
-  DollarSign,
   Upload,
   Shield,
   CircleDollarSign,
   Megaphone,
-  DoorOpen,
 } from "lucide-react";
 
-// Mock data - replace with actual API calls
-const mockAssociation = {
-  id: "ASSOC-001",
-  name: "Ridgeland Condominium Association",
-  legalName: "Ridgeland Condominium Association",
-  type: "Condominium",
-  status: "active",
-  address: "6722 S Ridgeland Ave, Chicago, IL 60649",
-  phone: "(773) 555-0123",
-  email: "board@ridgelandcondo.org",
-  fiscalYear: "January - December",
-  annualMeetingMonth: "May",
-  managementStartDate: "2024-01-01",
-  assignedManager: "Sarah Johnson",
-  propertyCount: 1,
-  unitCount: 12,
-  openMaintenance: 3,
-  pendingApprovals: 2,
-  expiringDocuments: 1,
-};
+interface Association {
+  id: string;
+  associationId: string;
+  name: string;
+  legalName?: string;
+  type: string;
+  status: string;
+  addressStreet?: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
+  phone?: string;
+  email?: string;
+  fiscalYear?: string;
+  annualMeetingMonth?: string;
+  managementStartDate?: string;
+  assignedManagerId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const mockProperties = [
-  { id: "PROP-001", name: "Ridgeland Condominiums", address: "6722 S Ridgeland Ave, Chicago, IL 60649", type: "Condominium", units: 12 },
-];
+interface Property {
+  id: string;
+  propertyId: string;
+  name: string;
+  addressStreet: string;
+  type: string;
+  totalUnits: number;
+}
 
-const mockPeople = [
-  { id: "CONT-001", firstName: "John", lastName: "Smith", role: "Board President", unit: "1N", email: "john@example.com", isBoard: true },
-  { id: "CONT-002", firstName: "Jane", lastName: "Doe", role: "Board Treasurer", unit: "2N", email: "jane@example.com", isBoard: true },
-  { id: "CONT-003", firstName: "Mike", lastName: "Johnson", role: "Owner", unit: "3S", email: "mike@example.com", isBoard: false },
-];
+interface Contact {
+  id: string;
+  contactId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
 
-const mockMaintenance = [
-  { id: "MNT-001", requestNumber: "MNT-2026-0047", title: "HVAC Repair", status: "in_progress", priority: "high", property: "Ridgeland Condominiums" },
-  { id: "MNT-002", requestNumber: "MNT-2026-0048", title: "Plumbing Issue", status: "scheduled", priority: "medium", property: "Ridgeland Condominiums" },
-];
-
-const mockInspections = [
-  { id: "INSP-001", type: "Annual", date: "2026-08-15", status: "scheduled", property: "Ridgeland Condominiums" },
-  { id: "INSP-002", type: "Fire Safety", date: "2026-07-01", status: "completed", property: "Ridgeland Condominiums" },
-];
-
-const mockDocuments = [
-  { id: "DOC-001", name: "Insurance Certificate 2026.pdf", type: "Insurance", date: "2026-01-15", expiring: true },
-  { id: "DOC-002", name: "Annual Budget.xlsx", type: "Financial", date: "2026-01-10", expiring: false },
-];
-
-const mockCompliance = [
-  { id: "COMP-001", title: "Annual Fire Inspection", dueDate: "2026-08-15", status: "compliant", property: "Ridgeland Condominiums" },
-  { id: "COMP-002", title: "Elevator Certification", dueDate: "2026-09-01", status: "pending", property: "Ridgeland Condominiums" },
-];
-
-const mockCommunications = [
-  { id: "COMM-001", subject: "Pool Maintenance Schedule", from: "Sarah Johnson", date: "2026-07-30", type: "announcement" },
-  { id: "COMM-002", subject: "Annual Meeting Notice", from: "Board", date: "2026-07-25", type: "notice" },
-];
-
-const mockFinancialLinks = [
-  { name: "Operating Account", institution: "Chase Bank", accountNumber: "****4567", balance: "$45,230.00" },
-  { name: "Reserve Account", institution: "Chase Bank", accountNumber: "****8901", balance: "$125,000.00" },
-];
+interface MaintenanceRequest {
+  id: string;
+  requestNumber: string;
+  title: string;
+  status: string;
+  urgency?: string;
+}
 
 export default function AssociationDetailPage() {
   const params = useParams();
-  const [association, setAssociation] = useState(mockAssociation);
+  const associationId = params.id as string;
+  
+  const [association, setAssociation] = useState<Association | null>(null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    setTimeout(() => setIsLoading(false), 500);
-  }, []);
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        
+        // Fetch association details
+        const assocRes = await fetch(`/api/associations/${associationId}`);
+        if (!assocRes.ok) throw new Error("Failed to fetch association");
+        const assocData = await assocRes.json();
+        if (!assocData.success) throw new Error(assocData.error);
+        setAssociation(assocData.data);
+        
+        // Fetch properties for this association
+        const propsRes = await fetch(`/api/properties?associationId=${associationId}`);
+        if (propsRes.ok) {
+          const propsData = await propsRes.json();
+          if (propsData.success) setProperties(propsData.data.data || []);
+        }
+        
+        // Fetch maintenance requests
+        const maintRes = await fetch(`/api/maintenance?associationId=${associationId}`);
+        if (maintRes.ok) {
+          const maintData = await maintRes.json();
+          if (maintData.success) setMaintenanceRequests(maintData.data.data || []);
+        }
+        
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [associationId]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -113,6 +135,19 @@ export default function AssociationDetailPage() {
     }
   };
 
+  const getUrgencyBadge = (urgency?: string) => {
+    switch (urgency) {
+      case "emergency":
+        return <Badge className="bg-red-100 text-red-700">Emergency</Badge>;
+      case "urgent":
+        return <Badge className="bg-orange-100 text-orange-700">Urgent</Badge>;
+      case "high":
+        return <Badge className="bg-amber-100 text-amber-700">High</Badge>;
+      default:
+        return <Badge variant="secondary">{urgency || "Normal"}</Badge>;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -120,6 +155,23 @@ export default function AssociationDetailPage() {
       </div>
     );
   }
+
+  if (error || !association) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-600">{error || "Association not found"}</p>
+        <Link href="/management/associations">
+          <Button variant="outline">Back to Associations</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const openMaintenanceCount = maintenanceRequests.filter(
+    m => !["completed", "closed", "cancelled"].includes(m.status)
+  ).length;
+
+  const totalUnits = properties.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -139,7 +191,7 @@ export default function AssociationDetailPage() {
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">{association.name}</h1>
             {getStatusBadge(association.status)}
           </div>
-          <p className="text-[var(--secondary-text)]">{association.id} • {association.legalName}</p>
+          <p className="text-[var(--secondary-text)]">{association.associationId} • {association.legalName}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">
@@ -159,7 +211,7 @@ export default function AssociationDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Properties</p>
-                <p className="text-2xl font-semibold">{association.propertyCount}</p>
+                <p className="text-2xl font-semibold">{properties.length}</p>
               </div>
             </div>
           </CardContent>
@@ -172,7 +224,7 @@ export default function AssociationDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                <p className="text-2xl font-semibold">{association.unitCount}</p>
+                <p className="text-2xl font-semibold">{totalUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -185,7 +237,7 @@ export default function AssociationDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Open Maintenance</p>
-                <p className="text-2xl font-semibold">{association.openMaintenance}</p>
+                <p className="text-2xl font-semibold">{openMaintenanceCount}</p>
               </div>
             </div>
           </CardContent>
@@ -198,7 +250,7 @@ export default function AssociationDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Pending Approvals</p>
-                <p className="text-2xl font-semibold">{association.pendingApprovals}</p>
+                <p className="text-2xl font-semibold">0</p>
               </div>
             </div>
           </CardContent>
@@ -210,14 +262,7 @@ export default function AssociationDetailPage() {
         <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)]">
           <TabsTrigger value="overview" className="px-3 py-1.5 text-sm">Overview</TabsTrigger>
           <TabsTrigger value="properties" className="px-3 py-1.5 text-sm">Properties</TabsTrigger>
-          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People & Board</TabsTrigger>
           <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance</TabsTrigger>
-          <TabsTrigger value="inspections" className="px-3 py-1.5 text-sm">Inspections</TabsTrigger>
-          <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents</TabsTrigger>
-          <TabsTrigger value="compliance" className="px-3 py-1.5 text-sm">Compliance</TabsTrigger>
-          <TabsTrigger value="communications" className="px-3 py-1.5 text-sm">Communications</TabsTrigger>
-          <TabsTrigger value="financial" className="px-3 py-1.5 text-sm">Financial</TabsTrigger>
-          <TabsTrigger value="activity" className="px-3 py-1.5 text-sm">Activity</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -236,33 +281,38 @@ export default function AssociationDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Fiscal Year</p>
-                    <p className="font-medium">{association.fiscalYear}</p>
+                    <p className="font-medium">{association.fiscalYear || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Annual Meeting</p>
-                    <p className="font-medium">{association.annualMeetingMonth}</p>
+                    <p className="font-medium">{association.annualMeetingMonth || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Management Start</p>
-                    <p className="font-medium">{association.managementStartDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Assigned Manager</p>
-                    <p className="font-medium">{association.assignedManager}</p>
+                    <p className="font-medium">{association.managementStartDate || "N/A"}</p>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-[var(--secondary-text)]">Address</p>
-                  <p className="font-medium">{association.address}</p>
+                  <p className="font-medium">
+                    {association.addressStreet && (
+                      <>
+                        {association.addressStreet}
+                        {association.addressCity && `, ${association.addressCity}`}
+                        {association.addressState && `, ${association.addressState}`}
+                        {association.addressZip && ` ${association.addressZip}`}
+                      </>
+                    )}
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Phone</p>
-                    <p className="font-medium">{association.phone}</p>
+                    <p className="font-medium">{association.phone || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Email</p>
-                    <p className="font-medium">{association.email}</p>
+                    <p className="font-medium">{association.email || "N/A"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -332,303 +382,81 @@ export default function AssociationDetailPage() {
         {/* Properties Tab */}
         <TabsContent value="properties" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Properties ({mockProperties.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Property
-            </Button>
+            <h3 className="text-lg font-medium">Properties ({properties.length})</h3>
+            <Link href={`/management/properties/new?associationId=${association.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Property
+              </Button>
+            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockProperties.map((property) => (
+            {properties.map((property) => (
               <Card key={property.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <Home className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
-                      <Link
-                        href={`/management/properties/${property.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {property.name}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{property.address}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{property.type} • {property.units} units</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* People & Board Tab */}
-        <TabsContent value="people" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">People ({mockPeople.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Person
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockPeople.map((person) => (
-              <Card key={person.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                      <Users className="h-5 w-5 text-[var(--teal)]" />
-                    </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/management/people/${person.id}`}
-                          className="font-medium text-[var(--teal)] hover:underline"
-                        >
-                          {person.firstName} {person.lastName}
-                        </Link>
-                        {person.isBoard && (
-                          <Badge className="bg-purple-100 text-purple-700 text-xs">Board</Badge>
-                        )}
+                      <Link href={`/management/properties/${property.id}`}>
+                        <p className="font-medium hover:text-[var(--teal)] transition-colors">{property.name}</p>
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{property.addressStreet}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary">{property.type}</Badge>
+                        <span className="text-sm text-[var(--secondary-text)]">{property.totalUnits} units</span>
                       </div>
-                      <p className="text-sm text-[var(--secondary-text)]">{person.role}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">Unit {person.unit} • {person.email}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {properties.length === 0 && (
+              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No properties found</p>
+            )}
           </div>
         </TabsContent>
 
         {/* Maintenance Tab */}
         <TabsContent value="maintenance" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Maintenance Requests ({mockMaintenance.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Request
-            </Button>
+            <h3 className="text-lg font-medium">Maintenance Requests ({maintenanceRequests.length})</h3>
+            <Link href={`/management/maintenance/new?associationId=${association.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Request
+              </Button>
+            </Link>
           </div>
-          <div className="space-y-4">
-            {mockMaintenance.map((request) => (
+          <div className="space-y-3">
+            {maintenanceRequests.map((request) => (
               <Card key={request.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/maintenance/${request.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {request.title}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{request.property}</p>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                        <Wrench className="h-5 w-5 text-[var(--teal)]" />
+                      </div>
+                      <div>
+                        <Link href={`/management/maintenance/${request.id}`}>
+                          <p className="font-medium hover:text-[var(--teal)] transition-colors">{request.title}</p>
+                        </Link>
+                        <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge className="bg-teal-100 text-teal-700">{request.status}</Badge>
-                      <Badge className={request.priority === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
-                        {request.priority}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Inspections Tab */}
-        <TabsContent value="inspections" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Inspections ({mockInspections.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule Inspection
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockInspections.map((inspection) => (
-              <Card key={inspection.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/inspections/${inspection.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {inspection.type} Inspection
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{inspection.property}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{inspection.date}</p>
-                    </div>
-                    <Badge className={inspection.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
-                      {inspection.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Documents ({mockDocuments.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Upload Document
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockDocuments.map((doc) => (
-              <Card key={doc.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-[var(--teal)]" />
-                    </div>
-                    <div className="flex-1">
-                      <Link
-                        href={`/management/documents/${doc.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {doc.name}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{doc.type} • {doc.date}</p>
-                    </div>
-                    {doc.expiring && (
-                      <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Compliance Tab */}
-        <TabsContent value="compliance" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Compliance Matters ({mockCompliance.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Compliance Matter
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockCompliance.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/compliance/${item.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {item.title}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{item.property}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">Due: {item.dueDate}</p>
-                    </div>
-                    <Badge className={item.status === "compliant" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
-                      {item.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Communications Tab */}
-        <TabsContent value="communications" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Communications ({mockCommunications.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Send Announcement
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockCommunications.map((comm) => (
-              <Card key={comm.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                      <MessageSquare className="h-5 w-5 text-[var(--teal)]" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{comm.subject}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">From: {comm.from} • {comm.date}</p>
-                      <Badge className="mt-1" variant="secondary">{comm.type}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline">{request.status}</Badge>
+                      {getUrgencyBadge(request.urgency)}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {maintenanceRequests.length === 0 && (
+              <p className="text-[var(--secondary-text)] text-center py-8">No maintenance requests found</p>
+            )}
           </div>
-        </TabsContent>
-
-        {/* Financial Links Tab */}
-        <TabsContent value="financial" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Accounts</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {mockFinancialLinks.map((account, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{account.name}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{account.institution} • {account.accountNumber}</p>
-                    </div>
-                  </div>
-                  <p className="font-semibold">{account.balance}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Activity Tab */}
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 pb-4 border-b border-[var(--border-color)]">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Association record created</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: System • 2024-01-01 10:30 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 pb-4 border-b border-[var(--border-color)]">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Management agreement signed</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: Sarah Johnson • 2024-01-01 11:00 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Property added</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: Admin • 2024-01-02 09:15 AM</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
