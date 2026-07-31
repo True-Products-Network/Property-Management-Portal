@@ -8,6 +8,7 @@ import {
   Search,
   HelpCircle,
   User,
+  Users,
   Wrench,
   UserPlus,
   Megaphone,
@@ -15,6 +16,7 @@ import {
   LogOut,
   Settings,
   Shield,
+  FileText,
   ChevronDown,
 } from "lucide-react";
 
@@ -171,14 +173,52 @@ export function Header({
               </Link>
 
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
-                  onClick={() => setIsUserMenuOpen(false)}
-                >
-                  <Shield className="h-4 w-4 text-[var(--secondary-text)]" />
-                  Admin
-                </Link>
+                <>
+                  <div className="border-t border-[var(--border-color)] my-2" />
+                  <p className="px-4 py-1 text-xs font-medium text-[var(--secondary-text)] uppercase">
+                    Admin
+                  </p>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Shield className="h-4 w-4 text-[var(--secondary-text)]" />
+                    Admin Home
+                  </Link>
+                  <Link
+                    href="/admin/dropdowns"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Settings className="h-4 w-4 text-[var(--secondary-text)]" />
+                    Dropdown Settings
+                  </Link>
+                  <Link
+                    href="/admin/users"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Users className="h-4 w-4 text-[var(--secondary-text)]" />
+                    User Maintenance
+                  </Link>
+                  <Link
+                    href="/admin/roles"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <CheckSquare className="h-4 w-4 text-[var(--secondary-text)]" />
+                    Roles & Permissions
+                  </Link>
+                  <Link
+                    href="/admin/audit"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <FileText className="h-4 w-4 text-[var(--secondary-text)]" />
+                    Audit Log
+                  </Link>
+                </>
               )}
 
               <div className="border-t border-[var(--border-color)] my-2" />
