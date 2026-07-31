@@ -27,15 +27,14 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
     const result = await getAppointments({
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       associationId: searchParams.get("associationId") || undefined,
       startDate: searchParams.get("startDate") || undefined,
       endDate: searchParams.get("endDate") || undefined,
-      filters: {
-        status: searchParams.get("status") || undefined,
-      },
+      filters: status ? { status } : undefined,
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });
