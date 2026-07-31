@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getMenuForRole, getAdminMenu, type MenuItem } from "@/lib/permissions/roles";
+import { getMenuForRole, type MenuItem } from "@/lib/permissions/roles";
 import { PortalRole } from "@/schemas/portal/auth";
 import {
   LayoutDashboard,
@@ -63,6 +63,47 @@ interface GhlStatus {
   locationName?: string;
 }
 
+// Menu groups with dividers
+const MENU_GROUPS = [
+  {
+    id: "dashboard",
+    items: [{ label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" }],
+  },
+  {
+    id: "entities",
+    items: [
+      { label: "Associations", href: "/management/associations", icon: "Building2" },
+      { label: "Properties", href: "/management/properties", icon: "Home" },
+      { label: "Units", href: "/management/units", icon: "DoorOpen" },
+      { label: "People", href: "/management/people", icon: "Users" },
+      { label: "Vendors", href: "/management/vendors", icon: "Truck" },
+    ],
+  },
+  {
+    id: "operations",
+    items: [
+      { label: "Maintenance", href: "/management/maintenance", icon: "Wrench" },
+      { label: "Inspections", href: "/management/inspections", icon: "ClipboardCheck" },
+      { label: "Approvals", href: "/management/approvals", icon: "CheckSquare" },
+      { label: "Compliance", href: "/management/compliance", icon: "Scale" },
+    ],
+  },
+  {
+    id: "financial",
+    items: [
+      { label: "Payments", href: "/management/payments", icon: "CircleDollarSign" },
+    ],
+  },
+  {
+    id: "communications",
+    items: [
+      { label: "Communications", href: "/management/communications", icon: "MessageSquare" },
+      { label: "Reports", href: "/management/reports", icon: "BarChart3" },
+      { label: "Settings", href: "/management/settings", icon: "Settings" },
+    ],
+  },
+];
+
 function MenuItemComponent({
   item,
   depth = 0,
@@ -83,10 +124,10 @@ function MenuItemComponent({
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "sidebar-item w-full justify-between",
-            isActive && "active"
+            "w-full flex items-center justify-between px-4 py-3 text-[15px] font-medium text-white/80 hover:bg-[var(--crimson)] hover:text-white transition-colors rounded-lg mx-2",
+            isActive && "bg-[var(--orange-gold)] text-white"
           )}
-          style={{ paddingLeft: `${1 + depth * 0.5}rem` }}
+          style={{ width: "calc(100% - 16px)" }}
         >
           <span className="flex items-center gap-3">
             {Icon && <Icon className="h-4 w-4" />}
@@ -112,8 +153,11 @@ function MenuItemComponent({
   return (
     <Link
       href={item.href}
-      className={cn("sidebar-item", isActive && "active")}
-      style={{ paddingLeft: `${1 + depth * 0.5}rem` }}
+      className={cn(
+        "flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-white/80 hover:bg-[var(--crimson)] hover:text-white transition-colors rounded-lg mx-2",
+        isActive && "bg-[var(--orange-gold)] text-white"
+      )}
+      style={{ width: "calc(100% - 16px)" }}
     >
       {Icon && <Icon className="h-4 w-4" />}
       {item.label}
@@ -121,9 +165,7 @@ function MenuItemComponent({
   );
 }
 
-export function Sidebar({ role, userName, userEmail, isAdmin }: SidebarProps & { isAdmin?: boolean }) {
-  const menuItems = getMenuForRole(role);
-  const adminMenuItems = isAdmin ? getAdminMenu() : [];
+export function Sidebar({ role, userName, userEmail }: SidebarProps) {
   const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
 
   useEffect(() => {
@@ -151,23 +193,18 @@ export function Sidebar({ role, userName, userEmail, isAdmin }: SidebarProps & {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {menuItems.map((item) => (
-          <MenuItemComponent key={item.href} item={item} />
-        ))}
-        
-        {/* Admin Section */}
-        {isAdmin && adminMenuItems.length > 0 && (
-          <>
-            <div className="mt-6 pt-4 border-t border-white/10">
-              <p className="px-4 text-xs font-medium text-white/40 uppercase tracking-wider mb-2">
-                Admin
-              </p>
-              {adminMenuItems.map((item) => (
+        {MENU_GROUPS.map((group, index) => (
+          <div key={group.id}>
+            {index > 0 && (
+              <div className="my-3 mx-4 border-t border-white/20" />
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => (
                 <MenuItemComponent key={item.href} item={item} />
               ))}
             </div>
-          </>
-        )}
+          </div>
+        ))}
       </nav>
 
       {/* User Info */}

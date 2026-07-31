@@ -26,6 +26,10 @@
   --status-closed: #64748B;
   --status-board-review: #8B5CF6;
 
+  /* Navigation Colors */
+  --crimson: #DC143C;
+  --orange-gold: #FFA500;
+
   /* Spacing */
   --sidebar-width: 256px;
   --sidebar-collapsed: 64px;
@@ -43,6 +47,8 @@
   --color-teal: var(--teal);
   --color-teal-hover: var(--teal-hover);
   --color-gold: var(--gold-accent);
+  --color-crimson: var(--crimson);
+  --color-orange-gold: var(--orange-gold);
   --color-page-bg: var(--page-background);
   --color-card-bg: var(--card-background);
   --color-main-text: var(--main-text);
