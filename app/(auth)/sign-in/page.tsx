@@ -178,7 +178,16 @@ export default function SignInPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-sm text-[var(--secondary-text)]">
+              Need an account?{" "}
+              <Link
+                href="/sign-up"
+                className="text-[var(--teal)] hover:text-[var(--teal-hover)] font-medium"
+              >
+                Create user
+              </Link>
+            </p>
             <p className="text-sm text-[var(--secondary-text)]">
               Need help?{" "}
               <Link
