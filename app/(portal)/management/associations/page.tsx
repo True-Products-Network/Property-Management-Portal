@@ -80,11 +80,52 @@ export default function AssociationsPage() {
     );
   }
 
-  if (error) {
+  // Show empty state - no data in database yet
+  if (associations.length === 0 && !isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <p className="text-red-600">{error}</p>
-        <Button onClick={loadAssociations} variant="outline">Retry</Button>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Associations</h1>
+            <p className="text-[var(--secondary-text)] mt-1">
+              Manage homeowner associations and communities
+            </p>
+          </div>
+          <Link href="/management/associations/new">
+            <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Association
+            </Button>
+          </Link>
+        </div>
+
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 bg-[var(--page-background)] rounded-full flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-[var(--secondary-text)]" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-[var(--main-text)]">No Associations Found</h3>
+                <p className="text-[var(--secondary-text)] mt-1 max-w-md">
+                  Get started by adding your first association or refresh to check for data.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={loadAssociations} variant="outline">
+                  <Loader2 className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Link href="/management/associations/new">
+                  <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Association
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
