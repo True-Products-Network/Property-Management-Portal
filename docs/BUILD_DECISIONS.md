@@ -22,14 +22,19 @@
 - GHL (limited, workflow-focused)
 - Google Drive (good integration, permissions)
 - AWS S3 (most flexible, scalable)
+- **Supabase Storage** (native integration, RLS policies, signed URLs)
 
-**Recommendation:** AWS S3 with CloudFront
-- Most scalable and cost-effective
-- Full control over permissions
-- Easy integration with Supabase
-- Can use signed URLs for security
+**Recommendation:** Supabase Storage
+- Native integration with Supabase (already using for database)
+- Row Level Security (RLS) policies for access control
+- Signed URLs for secure file access
+- No additional infrastructure needed
+- Cost-effective for our scale
+- Automatic backups and CDN
 
-**Decision:** AWS S3 (pending final approval)
+**Decision:** Supabase Storage ✅
+
+**Alternative for large files:** AWS S3 can be added later if needed for high-volume storage
 
 #### 4. GHL Workflow Mapping
 **Status:** Unknown - needs discovery
