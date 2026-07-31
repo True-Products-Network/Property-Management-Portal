@@ -32,17 +32,9 @@ export async function getGhlCredentials(): Promise<GhlCredentials | null> {
       .select("*")
       .single();
     
-    if (error) {
-      console.error("[GHL] Database error fetching credentials:", error);
+    if (error || !data) {
       return null;
     }
-    
-    if (!data) {
-      console.log("[GHL] No credentials found in database");
-      return null;
-    }
-    
-    console.log("[GHL] Credentials found:", { type: data.type, locationId: data.location_id, hasAccessToken: !!data.access_token });
     
     // Check if OAuth token needs refresh
     if (data.type === "oauth" && data.token_expiry) {
@@ -242,10 +234,7 @@ export async function getGhlConnectionStatus(): Promise<{
 }> {
   const creds = await getGhlCredentials();
   
-  console.log("[GHL] getGhlConnectionStatus - creds:", creds ? { type: creds.type, hasAccessToken: !!creds.accessToken, hasRefreshToken: !!creds.refreshToken, locationId: creds.locationId } : null);
-  
   if (!creds) {
-    console.log("[GHL] No credentials found, returning not connected");
     return {
       connected: false,
       connectionType: null,
@@ -259,8 +248,6 @@ export async function getGhlConnectionStatus(): Promise<{
   const isConnected = creds.type === "oauth" 
     ? !!(creds.accessToken && creds.refreshToken)
     : !!creds.apiKey;
-  
-  console.log("[GHL] Connection status:", isConnected);
   
   return {
     connected: isConnected,
