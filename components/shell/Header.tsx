@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, HelpCircle, User } from "lucide-react";
+import { Bell, Search, HelpCircle, User, Wrench, UserPlus, Megaphone, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -24,7 +24,39 @@ export function Header({ userName, notificationCount = 0 }: HeaderProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Quick Action Buttons */}
+        <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-[var(--border-color)]">
+          <Link
+            href="/management/maintenance/new"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[var(--teal)] hover:bg-[var(--teal-hover)] rounded-lg transition-colors"
+          >
+            <Wrench className="h-4 w-4" />
+            <span>New Maintenance Request</span>
+          </Link>
+          <Link
+            href="/management/people/new"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Add Owner or Tenant</span>
+          </Link>
+          <Link
+            href="/management/communications/announcement"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+          >
+            <Megaphone className="h-4 w-4" />
+            <span>Send Announcement</span>
+          </Link>
+          <Link
+            href="/management/approvals/request"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            <span>Request Board Approval</span>
+          </Link>
+        </div>
+
         {/* Notifications */}
         <button className="relative p-2 text-[var(--secondary-text)] hover:text-[var(--main-text)] transition-colors">
           <Bell className="h-5 w-5" />

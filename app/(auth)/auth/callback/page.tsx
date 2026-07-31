@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -103,5 +103,25 @@ export default function AuthCallbackPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--primary-navy)] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="card p-8 text-center">
+            <Loader2 className="h-12 w-12 text-[var(--teal)] animate-spin mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-[var(--main-text)] mb-2">
+              Loading...
+            </h2>
+            <p className="text-[var(--secondary-text)]">Please wait...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
