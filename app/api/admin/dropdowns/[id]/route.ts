@@ -1,7 +1,6 @@
 // Admin Dropdown Detail API Routes
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { isAdmin } from "@/lib/permissions/roles";
+import { createClient } from "@/lib/supabase/server";
 import {
   updateDropdownSetting,
   deleteDropdownSetting,
@@ -15,19 +14,37 @@ const updateSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
+// Helper function to check admin status
+async function checkAdmin(supabase: any) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { isAdmin: false, userId: null, error: "Unauthorized" };
+  }
+
+  const { data: portalUser, error: userError } = await supabase
+    .from("portal_users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (userError || !portalUser?.is_admin) {
+    return { isAdmin: false, userId: null, error: "Forbidden" };
+  }
+
+  return { isAdmin: true, userId: user.id, error: null };
+}
+
 // PUT /api/admin/dropdowns/[id] - Update dropdown value
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient();
+    const { isAdmin: adminCheck, userId, error } = await checkAdmin(supabase);
 
-    if (!isAdmin(user.roles)) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!adminCheck) {
+      return NextResponse.json({ success: false, error }, { status: error === "Unauthorized" ? 401 : 403 });
     }
 
     const { id } = await params;
@@ -41,7 +58,7 @@ export async function PUT(
       );
     }
 
-    const result = await updateDropdownSetting(id, validation.data, user.id);
+    const result = await updateDropdownSetting(id, validation.data, userId!);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -63,13 +80,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient();
+    const { isAdmin: adminCheck, error } = await checkAdmin(supabase);
 
-    if (!isAdmin(user.roles)) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!adminCheck) {
+      return NextResponse.json({ success: false, error }, { status: error === "Unauthorized" ? 401 : 403 });
     }
 
     const { id } = await params;

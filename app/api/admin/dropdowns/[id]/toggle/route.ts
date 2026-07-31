@@ -1,7 +1,6 @@
 // Admin Dropdown Toggle Status Route
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { isAdmin } from "@/lib/permissions/roles";
+import { createClient } from "@/lib/supabase/server";
 import { toggleDropdownStatus } from "@/lib/api/dropdowns";
 import { z } from "zod";
 
@@ -9,19 +8,37 @@ const toggleSchema = z.object({
   isActive: z.boolean(),
 });
 
+// Helper function to check admin status
+async function checkAdmin(supabase: any) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { isAdmin: false, userId: null, error: "Unauthorized" };
+  }
+
+  const { data: portalUser, error: userError } = await supabase
+    .from("portal_users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (userError || !portalUser?.is_admin) {
+    return { isAdmin: false, userId: null, error: "Forbidden" };
+  }
+
+  return { isAdmin: true, userId: user.id, error: null };
+}
+
 // POST /api/admin/dropdowns/[id]/toggle - Toggle active status
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
+    const supabase = await createClient();
+    const { isAdmin: adminCheck, userId, error } = await checkAdmin(supabase);
 
-    if (!isAdmin(user.roles)) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (!adminCheck) {
+      return NextResponse.json({ success: false, error }, { status: error === "Unauthorized" ? 401 : 403 });
     }
 
     const { id } = await params;
@@ -35,7 +52,7 @@ export async function POST(
       );
     }
 
-    const result = await toggleDropdownStatus(id, validation.data.isActive, user.id);
+    const result = await toggleDropdownStatus(id, validation.data.isActive, userId!);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

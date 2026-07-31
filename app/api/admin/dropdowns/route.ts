@@ -1,7 +1,6 @@
 // Admin Dropdown Settings API Routes
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { isAdmin } from "@/lib/permissions/roles";
+import { createClient } from "@/lib/supabase/server";
 import {
   getDropdownSettingsGrouped,
   createDropdownSetting,
@@ -20,12 +19,22 @@ const createSchema = z.object({
 // GET /api/admin/dropdowns - Get all dropdowns grouped
 export async function GET(request: NextRequest) {
   try {
-    const user = await getSession();
-    if (!user) {
+    const supabase = await createClient();
+
+    // Check if user is admin using the is_admin column (avoids RLS recursion)
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!isAdmin(user.roles)) {
+    // Check admin status from user metadata or portal_users table
+    const { data: portalUser, error: userError } = await supabase
+      .from("portal_users")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !portalUser?.is_admin) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
@@ -52,12 +61,22 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/dropdowns - Create new dropdown value
 export async function POST(request: NextRequest) {
   try {
-    const user = await getSession();
-    if (!user) {
+    const supabase = await createClient();
+
+    // Check if user is admin using the is_admin column (avoids RLS recursion)
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!isAdmin(user.roles)) {
+    // Check admin status from portal_users table
+    const { data: portalUser, error: userError } = await supabase
+      .from("portal_users")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !portalUser?.is_admin) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
