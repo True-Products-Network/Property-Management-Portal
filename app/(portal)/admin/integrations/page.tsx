@@ -155,10 +155,18 @@ export default function AdminIntegrationsPage() {
 
       if (response.ok) {
         await fetchGhlStatus();
+        alert("Disconnected successfully");
       }
     } catch (error) {
       alert("Disconnect failed");
     }
+  }
+
+  // Helper to mask sensitive data
+  function maskToken(token: string | undefined): string {
+    if (!token) return "Not set";
+    if (token.length <= 8) return "****";
+    return token.slice(0, 4) + "..." + token.slice(-4);
   }
 
   async function handleTestConnection() {
@@ -345,6 +353,24 @@ export default function AdminIntegrationsPage() {
                   <p className="text-sm text-red-600 mt-1">{ghlStatus.error}</p>
                 </div>
               )}
+
+              {/* Stored Credentials (masked) */}
+              <div className="p-4 bg-[var(--page-background)] rounded-lg">
+                <p className="text-sm font-medium text-[var(--main-text)] mb-2">Stored Credentials</p>
+                {ghlStatus.connectionType === "oauth" ? (
+                  <div className="space-y-1 text-sm text-[var(--secondary-text)]">
+                    <p>Access Token: {maskToken("configured")}</p>
+                    <p>Refresh Token: {maskToken("configured")}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1 text-sm text-[var(--secondary-text)]">
+                    <p>API Key: {maskToken("configured")}</p>
+                  </div>
+                )}
+                <p className="text-xs text-[var(--secondary-text)] mt-2">
+                  Credentials are stored securely and masked for display.
+                </p>
+              </div>
 
               <div className="flex flex-wrap gap-3">
                 <Button

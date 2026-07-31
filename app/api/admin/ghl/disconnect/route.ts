@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
+import { clearGhlCredentials } from "@/lib/ghl/credentials";
 
 // POST /api/admin/ghl/disconnect - Disconnect from GHL
 export async function POST(request: NextRequest) {
@@ -14,10 +15,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In production, this would:
-    // 1. Remove stored credentials from database
-    // 2. Delete webhooks from GHL
-    // 3. Clear any cached data
+    // Clear stored credentials
+    await clearGhlCredentials();
 
     return NextResponse.json({
       success: true,

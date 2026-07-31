@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
+import { getGhlConnectionStatus } from "@/lib/ghl/credentials";
 
 // GET /api/admin/ghl/status - Check GHL connection status
 export async function GET(request: NextRequest) {
@@ -14,32 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Determine connection type
-    const hasApiKey = !!process.env.GHL_API_KEY;
-    const hasAccessToken = !!process.env.GHL_ACCESS_TOKEN;
-    const hasRefreshToken = !!process.env.GHL_REFRESH_TOKEN;
-
-    let connectionType: "api_key" | "oauth" | null = null;
-    if (hasAccessToken && hasRefreshToken) {
-      connectionType = "oauth";
-    } else if (hasApiKey) {
-      connectionType = "api_key";
-    }
-
-    const status = {
-      connected: hasApiKey || hasAccessToken,
-      connectionType,
-      apiKeyConfigured: hasApiKey,
-      accessTokenConfigured: hasAccessToken,
-      refreshTokenConfigured: hasRefreshToken,
-      webhooksConfigured: !!process.env.GHL_WEBHOOK_SECRET,
-      locationId: process.env.GHL_LOCATION_ID,
-      locationName: process.env.GHL_LOCATION_NAME,
-      companyId: process.env.GHL_COMPANY_ID,
-      scopes: process.env.GHL_SCOPES?.split(",") || [],
-      lastSync: null,
-    };
-
+    const status = await getGhlConnectionStatus();
     return NextResponse.json(status);
   } catch (error) {
     console.error("Error checking GHL status:", error);

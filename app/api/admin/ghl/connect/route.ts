@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
+import { storeGhlCredentials } from "@/lib/ghl/credentials";
 
 // POST /api/admin/ghl/connect - Connect to GHL with API Key or OAuth tokens
 export async function POST(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Basic validation - GHL tokens are typically JWTs
+      // Basic validation
       if (accessToken.length < 20) {
         return NextResponse.json(
           { error: "Access token appears to be invalid (too short)" },
@@ -36,8 +37,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Try to test the connection, but don't fail if GHL is unreachable
-      let locationData = null;
+      // Try to test the connection and get location info
+      let locationData: { id?: string; name?: string; companyId?: string } = {};
       let testSuccess = false;
       
       try {
@@ -54,24 +55,30 @@ export async function POST(request: NextRequest) {
           testSuccess = true;
         } else {
           console.warn("GHL OAuth test returned non-OK status:", testResponse.status);
-          // Continue anyway - we'll store the credentials
         }
       } catch (apiError) {
         console.warn("GHL OAuth test failed (network error):", apiError);
-        // Continue anyway - we'll store the credentials
       }
 
-      // Store credentials (in production, these would be encrypted and saved to DB)
-      // For now, we return success if the tokens look valid
+      // Store credentials
+      await storeGhlCredentials({
+        type: "oauth",
+        accessToken,
+        refreshToken,
+        locationId: locationData.id,
+        locationName: locationData.name,
+        companyId: locationData.companyId,
+      });
+
       return NextResponse.json({
         success: true,
         message: testSuccess 
           ? "Connected successfully via OAuth" 
-          : "Credentials accepted. Connection will be verified when GHL is reachable.",
+          : "Credentials saved. Connection will be verified when GHL is reachable.",
         connectionType: "oauth",
-        locationId: locationData?.id,
-        locationName: locationData?.name,
-        companyId: locationData?.companyId,
+        locationId: locationData.id,
+        locationName: locationData.name,
+        companyId: locationData.companyId,
         testSuccess,
       });
 
@@ -94,8 +101,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Try to test the connection, but don't fail if GHL is unreachable
-      let locationData = null;
+      // Try to test the connection and get location info
+      let locationData: { id?: string; name?: string } = {};
       let testSuccess = false;
       
       try {
@@ -111,22 +118,27 @@ export async function POST(request: NextRequest) {
           testSuccess = true;
         } else {
           console.warn("GHL API key test returned non-OK status:", testResponse.status);
-          // Continue anyway - we'll store the credentials
         }
       } catch (apiError) {
         console.warn("GHL API key test failed (network error):", apiError);
-        // Continue anyway - we'll store the credentials
       }
 
-      // Store credentials (in production, these would be encrypted and saved to DB)
+      // Store credentials
+      await storeGhlCredentials({
+        type: "api_key",
+        apiKey,
+        locationId: locationData.id,
+        locationName: locationData.name,
+      });
+
       return NextResponse.json({
         success: true,
         message: testSuccess 
           ? "Connected successfully via API Key" 
-          : "Credentials accepted. Connection will be verified when GHL is reachable.",
+          : "Credentials saved. Connection will be verified when GHL is reachable.",
         connectionType: "api_key",
-        locationId: locationData?.id,
-        locationName: locationData?.name,
+        locationId: locationData.id,
+        locationName: locationData.name,
         testSuccess,
       });
 

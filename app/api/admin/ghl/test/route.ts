@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
+import { getGhlCredentials } from "@/lib/ghl/credentials";
 
 // POST /api/admin/ghl/test - Test GHL connection
 export async function POST(request: NextRequest) {
@@ -14,44 +15,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get credentials from request body or environment
-    const body = await request.json().catch(() => ({}));
-    const { 
-      type: requestType, 
-      accessToken: reqAccessToken, 
-      refreshToken: reqRefreshToken, 
-      apiKey: reqApiKey 
-    } = body;
+    // Get stored credentials
+    const credentials = await getGhlCredentials();
 
-    // Determine which credentials to use
-    let type = requestType;
-    let accessToken = reqAccessToken || process.env.GHL_ACCESS_TOKEN;
-    let refreshToken = reqRefreshToken || process.env.GHL_REFRESH_TOKEN;
-    let apiKey = reqApiKey || process.env.GHL_API_KEY;
-
-    // Auto-detect type if not specified
-    if (!type) {
-      if (accessToken && refreshToken) {
-        type = "oauth";
-      } else if (apiKey) {
-        type = "api_key";
-      }
-    }
-
-    if (!accessToken && !apiKey) {
+    if (!credentials) {
       return NextResponse.json(
-        { error: "No credentials provided or configured" },
+        { error: "No credentials configured. Please connect to GHL first." },
         { status: 400 }
       );
     }
 
     // Test OAuth connection
-    if (type === "oauth" && accessToken) {
+    if (credentials.type === "oauth" && credentials.accessToken) {
       try {
         const testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${accessToken}`,
+            "Authorization": `Bearer ${credentials.accessToken}`,
             "Version": "2021-07-28",
           },
         });
@@ -93,12 +73,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Test API Key connection
-    if (type === "api_key" && apiKey) {
+    if (credentials.type === "api_key" && credentials.apiKey) {
       try {
         const testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${apiKey}`,
+            "Authorization": `Bearer ${credentials.apiKey}`,
           },
         });
 
