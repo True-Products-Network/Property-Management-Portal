@@ -18,6 +18,7 @@ import {
   Shield,
   FileText,
   ChevronDown,
+  CheckSquare,
 } from "lucide-react";
 
 interface HeaderProps {
