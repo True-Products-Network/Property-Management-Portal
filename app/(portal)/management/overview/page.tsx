@@ -125,7 +125,7 @@ export default async function ManagementDashboardPage() {
           </p>
         </div>
         <Link href="/management/reports">
-          <Button variant="outline">
+          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white border-2 border-transparent">
             <TrendingUp className="h-4 w-4 mr-2" />
             View Reports
           </Button>

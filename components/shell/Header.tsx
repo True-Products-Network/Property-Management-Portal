@@ -76,28 +76,28 @@ export function Header({
         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-[var(--border-color)]">
           <Link
             href="/management/maintenance/new"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[var(--teal)] hover:bg-[var(--teal-hover)] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[var(--teal)] hover:bg-[var(--teal-hover)] rounded-lg border-2 border-transparent transition-colors"
           >
             <Wrench className="h-4 w-4" />
             <span>New Maintenance Request</span>
           </Link>
           <Link
             href="/management/people/new"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border-2 border-[var(--border-color)] hover:border-[var(--primary-navy)] hover:bg-[var(--primary-navy)]/5 rounded-lg transition-colors"
           >
             <UserPlus className="h-4 w-4" />
             <span>Add Owner or Tenant</span>
           </Link>
           <Link
             href="/management/communications/announcement"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border-2 border-[var(--border-color)] hover:border-[var(--primary-navy)] hover:bg-[var(--primary-navy)]/5 rounded-lg transition-colors"
           >
             <Megaphone className="h-4 w-4" />
             <span>Send Announcement</span>
           </Link>
           <Link
             href="/management/approvals/request"
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border-2 border-[var(--border-color)] hover:border-[var(--primary-navy)] hover:bg-[var(--primary-navy)]/5 rounded-lg transition-colors"
           >
             <ClipboardCheck className="h-4 w-4" />
             <span>Request Board Approval</span>
