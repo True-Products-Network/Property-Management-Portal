@@ -32,7 +32,11 @@ export async function GET(request: NextRequest) {
     const result = await getDropdownSettingsGrouped();
 
     if (!result.success) {
-      return NextResponse.json(result, { status: 400 });
+      console.error("Dropdown settings error:", result.error);
+      return NextResponse.json(
+        { success: false, error: result.error || "Database query failed" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(result);
