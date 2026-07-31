@@ -145,3 +145,16 @@ export function getMenuForRole(role: PortalRole): MenuItem[] {
       return [];
   }
 }
+
+// Get admin menu items (only for Admin Users)
+export function getAdminMenu(): MenuItem[] {
+  return [
+    { label: "Admin Home", href: "/admin", icon: "Shield" },
+    { label: "Dropdown Settings", href: "/admin/dropdowns", icon: "Settings" },
+    { label: "User Maintenance", href: "/admin/users", icon: "Users" },
+    { label: "Roles & Permissions", href: "/admin/roles", icon: "CheckSquare" },
+    { label: "Workflow Settings", href: "/admin/workflows", icon: "Activity" },
+    { label: "Integration Settings", href: "/admin/integrations", icon: "Settings" },
+    { label: "Audit Log", href: "/admin/audit", icon: "FileText" },
+  ];
+}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getMenuForRole, type MenuItem } from "@/lib/permissions/roles";
+import { getMenuForRole, getAdminMenu, type MenuItem } from "@/lib/permissions/roles";
 import { PortalRole } from "@/schemas/portal/auth";
 import {
   LayoutDashboard,
@@ -121,8 +121,9 @@ function MenuItemComponent({
   );
 }
 
-export function Sidebar({ role, userName, userEmail }: SidebarProps) {
+export function Sidebar({ role, userName, userEmail, isAdmin }: SidebarProps & { isAdmin?: boolean }) {
   const menuItems = getMenuForRole(role);
+  const adminMenuItems = isAdmin ? getAdminMenu() : [];
   const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
 
   useEffect(() => {
@@ -153,6 +154,20 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
         {menuItems.map((item) => (
           <MenuItemComponent key={item.href} item={item} />
         ))}
+        
+        {/* Admin Section */}
+        {isAdmin && adminMenuItems.length > 0 && (
+          <>
+            <div className="mt-6 pt-4 border-t border-white/10">
+              <p className="px-4 text-xs font-medium text-white/40 uppercase tracking-wider mb-2">
+                Admin
+              </p>
+              {adminMenuItems.map((item) => (
+                <MenuItemComponent key={item.href} item={item} />
+              ))}
+            </div>
+          </>
+        )}
       </nav>
 
       {/* User Info */}
