@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
-    // Check database connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Check Supabase connection
+    const supabase = await createClient();
+    const { data, error } = await supabase.from("audit_events").select("id").limit(1);
+
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 = table not found, which is OK if migrations haven't run
+      throw error;
+    }
 
     return NextResponse.json({
       status: "healthy",

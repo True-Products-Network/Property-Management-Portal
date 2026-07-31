@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { generateEventId, generateCorrelationId } from "@/lib/utils";
 
 export interface AuditEventData {
@@ -31,22 +31,23 @@ export class AuditLogger {
     const correlationId = data.correlationId || generateCorrelationId();
 
     try {
-      await prisma.auditEvent.create({
-        data: {
-          eventId,
-          actorId: data.actorId,
-          role: data.role,
-          action: data.action,
-          associationId: data.associationId,
-          recordType: data.recordType,
-          recordId: data.recordId,
-          previousValue: data.previousValue ? JSON.parse(JSON.stringify(data.previousValue)) : null,
-          newValue: data.newValue ? JSON.parse(JSON.stringify(data.newValue)) : null,
-          correlationId,
-          ipAddress: data.ipAddress,
-          userAgent: data.userAgent,
-          reason: data.reason,
-        },
+      const supabase = await createClient();
+      
+      await supabase.from("audit_events").insert({
+        event_id: eventId,
+        actor_id: data.actorId,
+        role: data.role,
+        action: data.action,
+        association_id: data.associationId,
+        record_type: data.recordType,
+        record_id: data.recordId,
+        previous_value: data.previousValue,
+        new_value: data.newValue,
+        correlation_id: correlationId,
+        ip_address: data.ipAddress,
+        user_agent: data.userAgent,
+        reason: data.reason,
+        occurred_at: new Date().toISOString(),
       });
     } catch (error) {
       // Log to console as fallback - don't fail the operation due to audit logging
@@ -57,15 +58,16 @@ export class AuditLogger {
 
   async logIntegrationEvent(data: IntegrationEventData): Promise<void> {
     try {
-      await prisma.integrationEvent.create({
-        data: {
-          provider: data.provider,
-          eventType: data.eventType,
-          status: data.status,
-          payload: data.payload ? JSON.parse(JSON.stringify(data.payload)) : null,
-          error: data.error ? JSON.parse(JSON.stringify(data.error)) : null,
-          correlationId: data.correlationId,
-        },
+      const supabase = await createClient();
+      
+      await supabase.from("integration_events").insert({
+        provider: data.provider,
+        event_type: data.eventType,
+        status: data.status,
+        payload: data.payload,
+        error: data.error,
+        correlation_id: data.correlationId,
+        created_at: new Date().toISOString(),
       });
     } catch (error) {
       console.error("Failed to write integration event:", error);
@@ -87,38 +89,30 @@ export class AuditLogger {
     events: unknown[];
     total: number;
   }> {
-    const where: Record<string, unknown> = {};
+    const supabase = await createClient();
+    
+    let query = supabase
+      .from("audit_events")
+      .select("*, actor:actor_id(email, ghl_contact_id)", { count: "exact" });
 
-    if (options.actorId) where.actorId = options.actorId;
-    if (options.associationId) where.associationId = options.associationId;
-    if (options.recordType) where.recordType = options.recordType;
-    if (options.recordId) where.recordId = options.recordId;
-    if (options.action) where.action = options.action;
-    if (options.startDate || options.endDate) {
-      where.occurredAt = {};
-      if (options.startDate) (where.occurredAt as Record<string, Date>).gte = options.startDate;
-      if (options.endDate) (where.occurredAt as Record<string, Date>).lte = options.endDate;
+    if (options.actorId) query = query.eq("actor_id", options.actorId);
+    if (options.associationId) query = query.eq("association_id", options.associationId);
+    if (options.recordType) query = query.eq("record_type", options.recordType);
+    if (options.recordId) query = query.eq("record_id", options.recordId);
+    if (options.action) query = query.eq("action", options.action);
+    if (options.startDate) query = query.gte("occurred_at", options.startDate.toISOString());
+    if (options.endDate) query = query.lte("occurred_at", options.endDate.toISOString());
+
+    const { data, error, count } = await query
+      .order("occurred_at", { ascending: false })
+      .range(options.offset || 0, (options.offset || 0) + (options.limit || 50) - 1);
+
+    if (error) {
+      console.error("Failed to fetch audit events:", error);
+      return { events: [], total: 0 };
     }
 
-    const [events, total] = await Promise.all([
-      prisma.auditEvent.findMany({
-        where,
-        orderBy: { occurredAt: "desc" },
-        take: options.limit || 50,
-        skip: options.offset || 0,
-        include: {
-          actor: {
-            select: {
-              email: true,
-              ghlContactId: true,
-            },
-          },
-        },
-      }),
-      prisma.auditEvent.count({ where }),
-    ]);
-
-    return { events, total };
+    return { events: data || [], total: count || 0 };
   }
 }
 
