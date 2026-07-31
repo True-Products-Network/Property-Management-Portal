@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const status = await getGhlConnectionStatus();
+    console.log("[GHL Status API] Returning status:", status);
     return NextResponse.json(status);
   } catch (error) {
     console.error("Error checking GHL status:", error);
