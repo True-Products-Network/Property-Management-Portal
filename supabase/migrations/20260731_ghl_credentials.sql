@@ -33,16 +33,21 @@ CREATE INDEX IF NOT EXISTS idx_ghl_credentials_type ON ghl_credentials(type);
 -- Enable RLS (Row Level Security)
 ALTER TABLE ghl_credentials ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Admin users can manage GHL credentials" ON ghl_credentials;
+DROP POLICY IF EXISTS "Allow authenticated users to manage GHL credentials" ON ghl_credentials;
+
 -- Create policy: Only admin users can access credentials
+-- Uses portal_users.is_admin column for database-level security
 CREATE POLICY "Admin users can manage GHL credentials"
     ON ghl_credentials
     FOR ALL
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM users 
-            WHERE users.id = auth.uid() 
-            AND users.role = 'ADMIN_USER'
+            SELECT 1 FROM portal_users 
+            WHERE portal_users.id = auth.uid() 
+            AND portal_users.is_admin = true
         )
     );
 

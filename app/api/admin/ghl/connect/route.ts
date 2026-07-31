@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (type === "oauth") {
       // OAuth Token connection
-      const { accessToken, refreshToken } = body;
+      const { accessToken, refreshToken, locationId: providedLocationId } = body;
 
       if (!accessToken || !refreshToken) {
         return NextResponse.json(
@@ -88,12 +88,13 @@ export async function POST(request: NextRequest) {
       tokenExpiry.setHours(tokenExpiry.getHours() + 24);
 
       // Store credentials even if test failed
+      // Use provided locationId if API test failed
       await storeGhlCredentials({
         type: "oauth",
         accessToken,
         refreshToken,
         tokenExpiry: tokenExpiry.toISOString(),
-        locationId: locationData.id,
+        locationId: locationData.id || providedLocationId,
         locationName: locationData.name,
         companyId: locationData.companyId,
       });
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     } else if (type === "api_key") {
       // API Key connection (legacy)
-      const { apiKey } = body;
+      const { apiKey, locationId: providedLocationId } = body;
 
       if (!apiKey) {
         return NextResponse.json(
@@ -157,10 +158,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Store credentials
+      // Use provided locationId if API test failed
       await storeGhlCredentials({
         type: "api_key",
         apiKey,
-        locationId: locationData.id,
+        locationId: locationData.id || providedLocationId,
         locationName: locationData.name,
       });
 

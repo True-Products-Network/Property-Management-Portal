@@ -50,6 +50,7 @@ export default function AdminIntegrationsPage() {
   // OAuth mode
   const [accessToken, setAccessToken] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
+  const [locationId, setLocationId] = useState("");
   
   const [showInput, setShowInput] = useState(false);
 
@@ -98,8 +99,8 @@ export default function AdminIntegrationsPage() {
     setIsConnecting(true);
     try {
       const payload = useOAuth 
-        ? { type: "oauth", accessToken, refreshToken }
-        : { type: "api_key", apiKey };
+        ? { type: "oauth", accessToken, refreshToken, locationId }
+        : { type: "api_key", apiKey, locationId };
 
       // Validate inputs
       if (useOAuth && (!accessToken || !refreshToken)) {
@@ -109,6 +110,11 @@ export default function AdminIntegrationsPage() {
       }
       if (!useOAuth && !apiKey) {
         alert("API Key is required");
+        setIsConnecting(false);
+        return;
+      }
+      if (!locationId) {
+        alert("Location ID is required");
         setIsConnecting(false);
         return;
       }
@@ -127,6 +133,7 @@ export default function AdminIntegrationsPage() {
         setApiKey("");
         setAccessToken("");
         setRefreshToken("");
+        setLocationId("");
         
         // Show appropriate message based on test success
         if (data.testSuccess) {
@@ -466,11 +473,27 @@ export default function AdminIntegrationsPage() {
 
               {showInput ? (
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Location ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={locationId}
+                      onChange={(e) => setLocationId(e.target.value)}
+                      placeholder="e.g., UCrGt3hb89xvDiJjYqmp"
+                      className="input w-full"
+                    />
+                    <p className="text-xs text-[var(--secondary-text)] mt-1">
+                      Your GHL Location ID (required)
+                    </p>
+                  </div>
+                  
                   {useOAuth ? (
                     <>
                       <div>
                         <label className="block text-sm font-medium mb-2">
-                          Access Token
+                          Access Token <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="password"
@@ -485,7 +508,7 @@ export default function AdminIntegrationsPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-2">
-                          Refresh Token
+                          Refresh Token <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="password"
@@ -502,7 +525,7 @@ export default function AdminIntegrationsPage() {
                   ) : (
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        API Key
+                        API Key <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="password"
@@ -519,7 +542,7 @@ export default function AdminIntegrationsPage() {
                   <div className="flex gap-3">
                     <Button
                       onClick={handleConnect}
-                      disabled={isConnecting || (useOAuth ? (!accessToken || !refreshToken) : !apiKey)}
+                      disabled={isConnecting || !locationId || (useOAuth ? (!accessToken || !refreshToken) : !apiKey)}
                       className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
                     >
                       {isConnecting ? (
