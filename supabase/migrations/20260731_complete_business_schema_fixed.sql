@@ -712,7 +712,7 @@ CREATE POLICY "Management can manage units" ON units
     FOR ALL USING (
         EXISTS (
             SELECT 1 FROM user_roles ur
-            JOIN properties p ON p.association_id = ur.association_id
+            JOIN properties p ON p.association_id::TEXT = ur.association_id
             WHERE ur.user_id = auth.uid()
             AND p.id = units.property_id
             AND ur.role IN ('ADMIN_USER', 'MANAGEMENT_STAFF')
