@@ -41,7 +41,31 @@ export default function NewAssociationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    shortName: string;
+    legalName: string;
+    type: string;
+    status: string;
+    addressStreet: string;
+    addressCity: string;
+    addressState: string;
+    addressZip: string;
+    mailingAddress: string;
+    phone: string;
+    email: string;
+    taxId: string;
+    fiscalYear: string;
+    fiscalYearEndMonth: string;
+    fiscalYearEndDay: number | '';
+    annualMeetingMonth: string;
+    managementStartDate: string;
+    financialPlatform: string;
+    financialPortalLink: string;
+    documentStorageLink: string;
+    emergencyInstructions: string;
+    generalNotes: string;
+  }>({
     name: "",
     shortName: "",
     legalName: "",
@@ -57,7 +81,7 @@ export default function NewAssociationPage() {
     taxId: "",
     fiscalYear: "",
     fiscalYearEndMonth: "",
-    fiscalYearEndDay: "",
+    fiscalYearEndDay: '',
     annualMeetingMonth: "",
     managementStartDate: "",
     financialPlatform: "",
