@@ -44,3 +44,11 @@ export function CardFooter({ children, className }: CardProps) {
     </div>
   );
 }
+
+export function CardDescription({ children, className }: CardProps) {
+  return (
+    <p className={cn("text-sm text-[var(--secondary-text)]", className)}>
+      {children}
+    </p>
+  );
+}

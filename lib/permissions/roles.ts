@@ -83,26 +83,27 @@ export function getMenuForRole(role: PortalRole): MenuItem[] {
     case "ADMIN_USER":
     case "MANAGEMENT_STAFF":
       return [
-        { label: "Overview", href: "/management/overview" },
-        { label: "Associations", href: "/management/associations" },
-        { label: "Properties", href: "/management/properties" },
-        { label: "Units", href: "/management/units" },
-        { label: "People", href: "/management/people" },
-        { label: "Maintenance", href: "/management/maintenance" },
-        { label: "Vendors", href: "/management/vendors" },
-        { label: "Inspections", href: "/management/inspections" },
-        { label: "Documents", href: "/management/documents" },
-        { label: "Compliance", href: "/management/compliance" },
-        { label: "Approvals", href: "/management/approvals" },
-        { label: "Payments", href: "/management/payments" },
-        { label: "Communications", href: "/management/communications" },
-        { label: "Reports", href: "/management/reports" },
-        { label: "Workflow Activity", href: "/management/workflow-activity" },
+        { label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
+        { label: "Associations", href: "/management/associations", icon: "Building2" },
+        { label: "Properties", href: "/management/properties", icon: "Home" },
+        { label: "Units", href: "/management/units", icon: "Users" },
+        { label: "People", href: "/management/people", icon: "Users" },
+        { label: "Maintenance", href: "/management/maintenance", icon: "Wrench" },
+        { label: "Vendors", href: "/management/vendors", icon: "Truck" },
+        { label: "Inspections", href: "/management/inspections", icon: "ClipboardCheck" },
+        { label: "Documents", href: "/management/documents", icon: "FileText" },
+        { label: "Compliance", href: "/management/compliance", icon: "Scale" },
+        { label: "Approvals", href: "/management/approvals", icon: "CheckSquare" },
+        { label: "Payments", href: "/management/payments", icon: "CreditCard" },
+        { label: "Communications", href: "/management/communications", icon: "MessageSquare" },
+        { label: "Reports", href: "/management/reports", icon: "BarChart3" },
+        { label: "Settings", href: "/management/settings", icon: "Settings" },
         ...(role === "ADMIN_USER"
           ? [
               {
                 label: "Admin",
                 href: "/admin",
+                icon: "Shield",
                 children: [
                   { label: "User Maintenance", href: "/admin/users" },
                   { label: "Roles & Permissions", href: "/admin/roles" },
