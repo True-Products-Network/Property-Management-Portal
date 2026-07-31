@@ -891,10 +891,17 @@ CREATE TABLE appointment_participants (
     role TEXT CHECK (role IN ('organizer', 'attendee', 'optional')),
     
     accepted BOOLEAN,
-    responded_at TIMESTAMP WITH TIME ZONE,
-    
-    UNIQUE(appointment_id, COALESCE(contact_id, '00000000-0000-0000-0000-000000000000'), COALESCE(user_id, '00000000-0000-0000-0000-000000000000'))
+    responded_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Unique constraint: one participant per appointment (either contact or user)
+CREATE UNIQUE INDEX idx_apt_participants_unique_contact 
+ON appointment_participants(appointment_id, contact_id) 
+WHERE contact_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_apt_participants_unique_user 
+ON appointment_participants(appointment_id, user_id) 
+WHERE user_id IS NOT NULL;
 
 CREATE INDEX idx_apt_participants_appointment ON appointment_participants(appointment_id);
 
