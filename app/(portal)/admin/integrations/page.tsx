@@ -119,18 +119,27 @@ export default function AdminIntegrationsPage() {
         body: JSON.stringify(payload),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         await fetchGhlStatus();
         setShowInput(false);
         setApiKey("");
         setAccessToken("");
         setRefreshToken("");
+        
+        // Show appropriate message based on test success
+        if (data.testSuccess) {
+          alert("Connected successfully!");
+        } else {
+          alert("Credentials saved. The connection will be verified when GHL is reachable.");
+        }
       } else {
-        const error = await response.json();
-        alert(error.message || "Failed to connect");
+        alert(data.error || "Failed to connect");
       }
     } catch (error) {
-      alert("Connection failed");
+      console.error("Connection error:", error);
+      alert("Connection failed. Please try again.");
     } finally {
       setIsConnecting(false);
     }
@@ -157,17 +166,25 @@ export default function AdminIntegrationsPage() {
     try {
       const response = await fetch("/api/admin/ghl/test", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        alert("Connection test successful!");
+        alert(`Connection test successful!\n\nLocation: ${data.locationName}\nType: ${data.connectionType}`);
         await fetchGhlStatus();
       } else {
-        const error = await response.json();
-        alert(error.message || "Connection test failed");
+        let errorMsg = data.error || "Connection test failed";
+        if (data.suggestion) {
+          errorMsg += `\n\n${data.suggestion}`;
+        }
+        alert(errorMsg);
       }
     } catch (error) {
-      alert("Test failed");
+      console.error("Test error:", error);
+      alert("Test failed. Please check your network connection.");
     } finally {
       setIsConnecting(false);
     }

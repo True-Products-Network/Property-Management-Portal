@@ -14,33 +14,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine connection type and get credentials
-    const hasApiKey = !!process.env.GHL_API_KEY;
-    const hasAccessToken = !!process.env.GHL_ACCESS_TOKEN;
+    // Get credentials from request body or environment
+    const body = await request.json().catch(() => ({}));
+    const { 
+      type: requestType, 
+      accessToken: reqAccessToken, 
+      refreshToken: reqRefreshToken, 
+      apiKey: reqApiKey 
+    } = body;
 
-    if (!hasApiKey && !hasAccessToken) {
+    // Determine which credentials to use
+    let type = requestType;
+    let accessToken = reqAccessToken || process.env.GHL_ACCESS_TOKEN;
+    let refreshToken = reqRefreshToken || process.env.GHL_REFRESH_TOKEN;
+    let apiKey = reqApiKey || process.env.GHL_API_KEY;
+
+    // Auto-detect type if not specified
+    if (!type) {
+      if (accessToken && refreshToken) {
+        type = "oauth";
+      } else if (apiKey) {
+        type = "api_key";
+      }
+    }
+
+    if (!accessToken && !apiKey) {
       return NextResponse.json(
-        { error: "No credentials configured" },
+        { error: "No credentials provided or configured" },
         { status: 400 }
       );
     }
 
     // Test OAuth connection
-    if (hasAccessToken) {
+    if (type === "oauth" && accessToken) {
       try {
         const testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${process.env.GHL_ACCESS_TOKEN}`,
+            "Authorization": `Bearer ${accessToken}`,
             "Version": "2021-07-28",
           },
         });
 
         if (!testResponse.ok) {
-          const errorData = await testResponse.json().catch(() => ({}));
-          console.error("GHL OAuth test failed:", errorData);
+          const errorText = await testResponse.text();
+          console.error("GHL OAuth test failed:", testResponse.status, errorText);
           return NextResponse.json(
-            { error: "OAuth connection test failed. Token may be expired or invalid." },
+            { 
+              error: "OAuth connection test failed", 
+              details: `HTTP ${testResponse.status}: ${errorText}`,
+              suggestion: "Your token may be expired or invalid. Try reconnecting with fresh tokens."
+            },
             { status: 400 }
           );
         }
@@ -58,27 +82,35 @@ export async function POST(request: NextRequest) {
       } catch (apiError) {
         console.error("GHL OAuth API error during test:", apiError);
         return NextResponse.json(
-          { error: "OAuth connection test failed. Could not reach GHL API." },
+          { 
+            error: "OAuth connection test failed", 
+            details: apiError instanceof Error ? apiError.message : "Network error",
+            suggestion: "Could not reach GHL API. Please check your network connection."
+          },
           { status: 500 }
         );
       }
     }
 
     // Test API Key connection
-    if (hasApiKey) {
+    if (type === "api_key" && apiKey) {
       try {
         const testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${process.env.GHL_API_KEY}`,
+            "Authorization": `Bearer ${apiKey}`,
           },
         });
 
         if (!testResponse.ok) {
-          const errorData = await testResponse.json().catch(() => ({}));
-          console.error("GHL API key test failed:", errorData);
+          const errorText = await testResponse.text();
+          console.error("GHL API key test failed:", testResponse.status, errorText);
           return NextResponse.json(
-            { error: "API Key connection test failed. Key may be invalid." },
+            { 
+              error: "API Key connection test failed", 
+              details: `HTTP ${testResponse.status}: ${errorText}`,
+              suggestion: "Your API key may be invalid. Please check your key and try again."
+            },
             { status: 400 }
           );
         }
@@ -96,20 +128,24 @@ export async function POST(request: NextRequest) {
       } catch (apiError) {
         console.error("GHL API key error during test:", apiError);
         return NextResponse.json(
-          { error: "API Key connection test failed. Could not reach GHL API." },
+          { 
+            error: "API Key connection test failed", 
+            details: apiError instanceof Error ? apiError.message : "Network error",
+            suggestion: "Could not reach GHL API. Please check your network connection."
+          },
           { status: 500 }
         );
       }
     }
 
     return NextResponse.json(
-      { error: "No valid credentials found" },
+      { error: "No valid credentials found for the specified connection type" },
       { status: 400 }
     );
   } catch (error) {
     console.error("Error testing GHL connection:", error);
     return NextResponse.json(
-      { error: "Connection test failed" },
+      { error: "Connection test failed: " + (error instanceof Error ? error.message : "Unknown error") },
       { status: 500 }
     );
   }
