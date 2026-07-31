@@ -1,6 +1,5 @@
 // GHL Credentials Storage
-// In production, these would be stored encrypted in the database
-// For now, we use environment variables with in-memory fallback
+// Reads from environment variables for persistence across deployments
 
 export interface GhlCredentials {
   type: "oauth" | "api_key";
@@ -18,21 +17,28 @@ export interface GhlCredentials {
   connectedAt?: string;
 }
 
-// In-memory storage for runtime (resets on server restart)
-let inMemoryCredentials: GhlCredentials | null = null;
-
 /**
- * Get stored GHL credentials
+ * Get stored GHL credentials from environment variables
  */
 export async function getGhlCredentials(): Promise<GhlCredentials | null> {
-  // First check environment variables (for production)
-  const envType = process.env.GHL_CONNECTION_TYPE as "oauth" | "api_key" | undefined;
+  const connectionType = process.env.GHL_CONNECTION_TYPE as "oauth" | "api_key" | undefined;
   
-  if (envType === "oauth") {
+  if (!connectionType) {
+    return null;
+  }
+  
+  if (connectionType === "oauth") {
+    const accessToken = process.env.GHL_ACCESS_TOKEN;
+    const refreshToken = process.env.GHL_REFRESH_TOKEN;
+    
+    if (!accessToken || !refreshToken) {
+      return null;
+    }
+    
     return {
       type: "oauth",
-      accessToken: process.env.GHL_ACCESS_TOKEN,
-      refreshToken: process.env.GHL_REFRESH_TOKEN,
+      accessToken,
+      refreshToken,
       locationId: process.env.GHL_LOCATION_ID,
       locationName: process.env.GHL_LOCATION_NAME,
       companyId: process.env.GHL_COMPANY_ID,
@@ -40,43 +46,77 @@ export async function getGhlCredentials(): Promise<GhlCredentials | null> {
     };
   }
   
-  if (envType === "api_key") {
+  if (connectionType === "api_key") {
+    const apiKey = process.env.GHL_API_KEY;
+    
+    if (!apiKey) {
+      return null;
+    }
+    
     return {
       type: "api_key",
-      apiKey: process.env.GHL_API_KEY,
+      apiKey,
       locationId: process.env.GHL_LOCATION_ID,
       locationName: process.env.GHL_LOCATION_NAME,
     };
   }
   
-  // Fall back to in-memory storage
-  return inMemoryCredentials;
+  return null;
 }
 
 /**
  * Store GHL credentials
+ * Note: In production with env vars, this just validates. 
+ * Use the setup script to actually store credentials.
  */
 export async function storeGhlCredentials(credentials: GhlCredentials): Promise<void> {
-  // Store in memory for now
-  inMemoryCredentials = {
-    ...credentials,
-    connectedAt: new Date().toISOString(),
-  };
+  // Validate that the credentials match the environment
+  const existingCreds = await getGhlCredentials();
   
-  // In production, this would:
-  // 1. Encrypt the credentials
-  // 2. Store in Supabase database
-  // 3. Set up token refresh scheduler for OAuth
+  if (!existingCreds) {
+    throw new Error(
+      "No GHL credentials configured in environment. " +
+      "Please run: npm run setup:ghl"
+    );
+  }
   
-  console.log("[GHL] Credentials stored (type:", credentials.type, ")");
+  // Validate OAuth credentials
+  if (credentials.type === "oauth") {
+    if (
+      existingCreds.type !== "oauth" ||
+      existingCreds.accessToken !== credentials.accessToken ||
+      existingCreds.refreshToken !== credentials.refreshToken
+    ) {
+      throw new Error(
+        "Provided credentials don't match environment configuration. " +
+        "Please update credentials using: npm run setup:ghl"
+      );
+    }
+  }
+  
+  // Validate API Key credentials
+  if (credentials.type === "api_key") {
+    if (
+      existingCreds.type !== "api_key" ||
+      existingCreds.apiKey !== credentials.apiKey
+    ) {
+      throw new Error(
+        "Provided API key doesn't match environment configuration. " +
+        "Please update credentials using: npm run setup:ghl"
+      );
+    }
+  }
+  
+  console.log("[GHL] Credentials validated against environment");
 }
 
 /**
  * Clear stored GHL credentials
+ * Note: This only clears runtime state, not env vars
  */
 export async function clearGhlCredentials(): Promise<void> {
-  inMemoryCredentials = null;
-  console.log("[GHL] Credentials cleared");
+  console.log("[GHL] Note: Credentials are stored in environment variables.");
+  console.log("[GHL] To fully disconnect, remove GHL_ variables from .env.local");
 }
 
 /**
@@ -142,6 +182,5 @@ export async function getGhlConnectionStatus(): Promise<{
     locationName: creds.locationName,
     companyId: creds.companyId,
     scopes: creds.scopes,
-    lastSync: creds.connectedAt,
   };
 }

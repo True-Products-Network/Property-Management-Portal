@@ -1,6 +1,7 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { PortalRole } from "@/schemas/portal/auth";
+import { isAdmin } from "@/lib/permissions/roles";
 
 interface PortalShellProps {
   children: React.ReactNode;
@@ -17,6 +18,8 @@ export function PortalShell({
   userEmail,
   notificationCount = 0,
 }: PortalShellProps) {
+  const userIsAdmin = isAdmin([role]);
+
   return (
     <div className="min-h-screen bg-[var(--page-background)]">
       {/* Sidebar */}
@@ -24,7 +27,12 @@ export function PortalShell({
 
       {/* Main Content */}
       <div className="ml-[var(--sidebar-width)] min-h-screen flex flex-col">
-        <Header userName={userName} notificationCount={notificationCount} />
+        <Header
+          userName={userName}
+          userEmail={userEmail}
+          notificationCount={notificationCount}
+          isAdmin={userIsAdmin}
+        />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>

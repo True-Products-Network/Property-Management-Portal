@@ -98,24 +98,6 @@ export function getMenuForRole(role: PortalRole): MenuItem[] {
         { label: "Communications", href: "/management/communications", icon: "MessageSquare" },
         { label: "Reports", href: "/management/reports", icon: "BarChart3" },
         { label: "Settings", href: "/management/settings", icon: "Settings" },
-        ...(role === "ADMIN_USER"
-          ? [
-              {
-                label: "Admin",
-                href: "/admin",
-                icon: "Shield",
-                children: [
-                  { label: "User Maintenance", href: "/admin/users" },
-                  { label: "Roles & Permissions", href: "/admin/roles" },
-                  { label: "GHL Role Mapping", href: "/admin/ghl-mapping" },
-                  { label: "Workflow Settings", href: "/admin/workflows" },
-                  { label: "Integrations", href: "/admin/integrations" },
-                  { label: "System Lists", href: "/admin/lists" },
-                  { label: "Audit Log", href: "/admin/audit" },
-                ],
-              },
-            ]
-          : []),
       ];
 
     case "BOARD_MEMBER":

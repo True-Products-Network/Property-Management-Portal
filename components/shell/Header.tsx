@@ -1,14 +1,61 @@
 "use client";
 
-import { Bell, Search, HelpCircle, User, Wrench, UserPlus, Megaphone, ClipboardCheck } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Bell,
+  Search,
+  HelpCircle,
+  User,
+  Wrench,
+  UserPlus,
+  Megaphone,
+  ClipboardCheck,
+  LogOut,
+  Settings,
+  Shield,
+  ChevronDown,
+} from "lucide-react";
 
 interface HeaderProps {
   userName: string;
+  userEmail?: string;
   notificationCount?: number;
+  isAdmin?: boolean;
 }
 
-export function Header({ userName, notificationCount = 0 }: HeaderProps) {
+export function Header({
+  userName,
+  userEmail,
+  notificationCount = 0,
+  isAdmin = false,
+}: HeaderProps) {
+  const router = useRouter();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleSignOut() {
+    try {
+      await fetch("/api/auth/sign-out", { method: "POST" });
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  }
+
   return (
     <header className="h-16 bg-white border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-10">
       {/* Search */}
@@ -76,13 +123,78 @@ export function Header({ userName, notificationCount = 0 }: HeaderProps) {
         </Link>
 
         {/* User Menu */}
-        <div className="flex items-center gap-3 pl-4 border-l border-[var(--border-color)]">
-          <span className="text-sm text-[var(--main-text)] hidden sm:block">
-            {userName}
-          </span>
-          <button className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white">
-            <User className="h-4 w-4" />
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="flex items-center gap-3 pl-4 border-l border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg p-2 transition-colors"
+          >
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-medium text-[var(--main-text)]">
+                {userName}
+              </p>
+              {userEmail && (
+                <p className="text-xs text-[var(--secondary-text)]">{userEmail}</p>
+              )}
+            </div>
+            <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white">
+              <User className="h-4 w-4" />
+            </div>
+            <ChevronDown className="h-4 w-4 text-[var(--secondary-text)]" />
           </button>
+
+          {/* Dropdown Menu */}
+          {isUserMenuOpen && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-[var(--border-color)] py-2 z-50">
+              <div className="px-4 py-2 border-b border-[var(--border-color)] sm:hidden">
+                <p className="font-medium text-[var(--main-text)]">{userName}</p>
+                {userEmail && (
+                  <p className="text-xs text-[var(--secondary-text)]">{userEmail}</p>
+                )}
+              </div>
+
+              <Link
+                href="/management/profile"
+                className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                onClick={() => setIsUserMenuOpen(false)}
+              >
+                <User className="h-4 w-4 text-[var(--secondary-text)]" />
+                Profile
+              </Link>
+
+              <Link
+                href="/management/settings"
+                className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                onClick={() => setIsUserMenuOpen(false)}
+              >
+                <Settings className="h-4 w-4 text-[var(--secondary-text)]" />
+                Settings
+              </Link>
+
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  <Shield className="h-4 w-4 text-[var(--secondary-text)]" />
+                  Admin
+                </Link>
+              )}
+
+              <div className="border-t border-[var(--border-color)] my-2" />
+
+              <button
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  handleSignOut();
+                }}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
