@@ -1,5 +1,7 @@
-// GHL Credentials Storage
-// Reads from environment variables for persistence across deployments
+// GHL Credentials Storage with AES-256 encryption and automatic token refresh
+
+import { createClient } from "@/lib/supabase/server";
+import { encrypt, decrypt } from "./crypto";
 
 export interface GhlCredentials {
   type: "oauth" | "api_key";
@@ -18,105 +20,181 @@ export interface GhlCredentials {
 }
 
 /**
- * Get stored GHL credentials from environment variables
+ * Get stored GHL credentials from database
+ * Automatically refreshes access token if expired
  */
 export async function getGhlCredentials(): Promise<GhlCredentials | null> {
-  const connectionType = process.env.GHL_CONNECTION_TYPE as "oauth" | "api_key" | undefined;
-  
-  if (!connectionType) {
+  try {
+    const supabase = await createClient();
+    
+    const { data, error } = await supabase
+      .from("ghl_credentials")
+      .select("*")
+      .single();
+    
+    if (error || !data) {
+      return null;
+    }
+    
+    // Check if OAuth token needs refresh
+    if (data.type === "oauth" && data.token_expiry) {
+      const expiryDate = new Date(data.token_expiry);
+      const now = new Date();
+      
+      // Refresh if token expires within 5 minutes
+      if (expiryDate.getTime() - now.getTime() < 5 * 60 * 1000) {
+        console.log("[GHL] Access token expired, refreshing...");
+        const refreshed = await refreshAccessToken(data);
+        if (refreshed) {
+          return refreshed;
+        }
+      }
+    }
+    
+    if (data.type === "oauth") {
+      return {
+        type: "oauth",
+        accessToken: decrypt(data.access_token),
+        refreshToken: decrypt(data.refresh_token),
+        tokenExpiry: data.token_expiry,
+        locationId: data.location_id,
+        locationName: data.location_name,
+        companyId: data.company_id,
+        scopes: data.scopes?.split(",") || [],
+        connectedAt: data.created_at,
+      };
+    }
+    
+    if (data.type === "api_key") {
+      return {
+        type: "api_key",
+        apiKey: decrypt(data.api_key),
+        locationId: data.location_id,
+        locationName: data.location_name,
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error getting GHL credentials:", error);
     return null;
   }
-  
-  if (connectionType === "oauth") {
-    const accessToken = process.env.GHL_ACCESS_TOKEN;
-    const refreshToken = process.env.GHL_REFRESH_TOKEN;
-    
-    if (!accessToken || !refreshToken) {
-      return null;
-    }
-    
-    return {
-      type: "oauth",
-      accessToken,
-      refreshToken,
-      locationId: process.env.GHL_LOCATION_ID,
-      locationName: process.env.GHL_LOCATION_NAME,
-      companyId: process.env.GHL_COMPANY_ID,
-      scopes: process.env.GHL_SCOPES?.split(",") || [],
-    };
-  }
-  
-  if (connectionType === "api_key") {
-    const apiKey = process.env.GHL_API_KEY;
-    
-    if (!apiKey) {
-      return null;
-    }
-    
-    return {
-      type: "api_key",
-      apiKey,
-      locationId: process.env.GHL_LOCATION_ID,
-      locationName: process.env.GHL_LOCATION_NAME,
-    };
-  }
-  
-  return null;
 }
 
 /**
- * Store GHL credentials
- * Note: In production with env vars, this just validates. 
- * Use the setup script to actually store credentials.
+ * Refresh OAuth access token using refresh token
+ */
+async function refreshAccessToken(data: any): Promise<GhlCredentials | null> {
+  try {
+    const refreshToken = decrypt(data.refresh_token);
+    
+    // Call GHL token refresh endpoint
+    const response = await fetch("https://services.leadconnectorhq.com/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: process.env.GHL_CLIENT_ID,
+        client_secret: process.env.GHL_CLIENT_SECRET,
+      }),
+    });
+    
+    if (!response.ok) {
+      console.error("Token refresh failed:", await response.text());
+      return null;
+    }
+    
+    const tokenData = await response.json();
+    
+    // Calculate new expiry (typically 24 hours)
+    const expiryDate = new Date();
+    expiryDate.setSeconds(expiryDate.getSeconds() + tokenData.expires_in);
+    
+    // Update database with new tokens
+    const supabase = await createClient();
+    await supabase
+      .from("ghl_credentials")
+      .update({
+        access_token: encrypt(tokenData.access_token),
+        refresh_token: encrypt(tokenData.refresh_token),
+        token_expiry: expiryDate.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    
+    console.log("[GHL] Token refreshed successfully");
+    
+    return {
+      type: "oauth",
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      tokenExpiry: expiryDate.toISOString(),
+      locationId: data.location_id,
+      locationName: data.location_name,
+      companyId: data.company_id,
+      scopes: data.scopes?.split(",") || [],
+      connectedAt: data.created_at,
+    };
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return null;
+  }
+}
+
+/**
+ * Store GHL credentials in database (encrypted with AES-256)
  */
 export async function storeGhlCredentials(credentials: GhlCredentials): Promise<void> {
-  // Validate that the credentials match the environment
-  const existingCreds = await getGhlCredentials();
-  
-  if (!existingCreds) {
-    throw new Error(
-      "No GHL credentials configured in environment. " +
-      "Please run: npm run setup:ghl"
-    );
-  }
-  
-  // Validate OAuth credentials
-  if (credentials.type === "oauth") {
-    if (
-      existingCreds.type !== "oauth" ||
-      existingCreds.accessToken !== credentials.accessToken ||
-      existingCreds.refreshToken !== credentials.refreshToken
-    ) {
-      throw new Error(
-        "Provided credentials don't match environment configuration. " +
-        "Please update credentials using: npm run setup:ghl"
-      );
+  try {
+    const supabase = await createClient();
+    
+    // Delete any existing credentials first (only one location per portal)
+    await supabase.from("ghl_credentials").delete().neq("id", 0);
+    
+    const data: any = {
+      type: credentials.type,
+      location_id: credentials.locationId,
+      location_name: credentials.locationName,
+    };
+    
+    if (credentials.type === "oauth") {
+      data.access_token = encrypt(credentials.accessToken!);
+      data.refresh_token = encrypt(credentials.refreshToken!);
+      data.token_expiry = credentials.tokenExpiry;
+      data.company_id = credentials.companyId;
+      data.scopes = credentials.scopes?.join(",") || "";
+    } else {
+      data.api_key = encrypt(credentials.apiKey!);
     }
-  }
-  
-  // Validate API Key credentials
-  if (credentials.type === "api_key") {
-    if (
-      existingCreds.type !== "api_key" ||
-      existingCreds.apiKey !== credentials.apiKey
-    ) {
-      throw new Error(
-        "Provided API key doesn't match environment configuration. " +
-        "Please update credentials using: npm run setup:ghl"
-      );
+    
+    const { error } = await supabase.from("ghl_credentials").insert(data);
+    
+    if (error) {
+      throw new Error(`Failed to store credentials: ${error.message}`);
     }
+    
+    console.log("[GHL] Credentials stored in database (encrypted)");
+  } catch (error) {
+    console.error("Error storing GHL credentials:", error);
+    throw error;
   }
-  
-  console.log("[GHL] Credentials validated against environment");
 }
 
 /**
  * Clear stored GHL credentials
- * Note: This only clears runtime state, not env vars
  */
 export async function clearGhlCredentials(): Promise<void> {
-  console.log("[GHL] Note: Credentials are stored in environment variables.");
-  console.log("[GHL] To fully disconnect, remove GHL_ variables from .env.local");
+  try {
+    const supabase = await createClient();
+    await supabase.from("ghl_credentials").delete().neq("id", 0);
+    console.log("[GHL] Credentials cleared from database");
+  } catch (error) {
+    console.error("Error clearing GHL credentials:", error);
+    throw error;
+  }
 }
 
 /**
@@ -163,7 +241,7 @@ export async function getGhlConnectionStatus(): Promise<{
       apiKeyConfigured: false,
       accessTokenConfigured: false,
       refreshTokenConfigured: false,
-      webhooksConfigured: !!process.env.GHL_WEBHOOK_SECRET,
+      webhooksConfigured: false,
     };
   }
   
@@ -182,5 +260,6 @@ export async function getGhlConnectionStatus(): Promise<{
     locationName: creds.locationName,
     companyId: creds.companyId,
     scopes: creds.scopes,
+    lastSync: creds.connectedAt,
   };
 }

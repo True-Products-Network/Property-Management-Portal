@@ -83,11 +83,16 @@ export async function POST(request: NextRequest) {
         console.warn("GHL OAuth test failed (network error):", testError);
       }
 
+      // Calculate token expiry (GHL tokens typically expire in 24 hours)
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 24);
+
       // Store credentials even if test failed
       await storeGhlCredentials({
         type: "oauth",
         accessToken,
         refreshToken,
+        tokenExpiry: tokenExpiry.toISOString(),
         locationId: locationData.id,
         locationName: locationData.name,
         companyId: locationData.companyId,
