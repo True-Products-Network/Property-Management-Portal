@@ -24,16 +24,28 @@ CREATE INDEX idx_dropdown_settings_sort ON dropdown_settings(record_type, field_
 -- Enable RLS
 ALTER TABLE dropdown_settings ENABLE ROW LEVEL SECURITY;
 
+-- Create a security definer function to check admin status
+-- Uses auth.users metadata directly to avoid RLS recursion
+CREATE OR REPLACE FUNCTION is_admin_user(user_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+    is_admin_flag BOOLEAN;
+BEGIN
+    -- Check raw auth.users metadata (bypasses RLS)
+    SELECT COALESCE(
+        (raw_user_meta_data->>'is_admin')::boolean,
+        false
+    ) INTO is_admin_flag
+    FROM auth.users
+    WHERE id = user_id;
+    
+    RETURN COALESCE(is_admin_flag, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Only admins can manage dropdown settings
 CREATE POLICY "Admins can manage dropdown settings" ON dropdown_settings
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM user_roles 
-            WHERE user_id = auth.uid() 
-            AND role = 'ADMIN_USER'
-            AND revoked_at IS NULL
-        )
-    );
+    FOR ALL USING (is_admin_user(auth.uid()));
 
 -- All authenticated users can read active dropdowns
 CREATE POLICY "Users can read active dropdowns" ON dropdown_settings
