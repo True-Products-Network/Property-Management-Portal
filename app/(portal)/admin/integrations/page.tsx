@@ -4,21 +4,21 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
-  Settings,
+  Database,
   CheckCircle2,
   XCircle,
   RefreshCw,
   ExternalLink,
   Key,
-  Webhook,
-  Database,
+  Lock,
   AlertTriangle,
   Loader2,
   Shield,
-  Lock,
-  ToggleLeft,
-  ToggleRight,
+  Eye,
+  EyeOff,
+  Clock,
 } from "lucide-react";
 
 interface GhlConnectionStatus {
@@ -40,19 +40,13 @@ export default function AdminIntegrationsPage() {
   const [ghlStatus, setGhlStatus] = useState<GhlConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showConnectForm, setShowConnectForm] = useState(false);
   
-  // Connection type toggle
-  const [useOAuth, setUseOAuth] = useState(true);
-  
-  // API Key mode
-  const [apiKey, setApiKey] = useState("");
-  
-  // OAuth mode
+  // Form fields
+  const [locationId, setLocationId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
-  const [locationId, setLocationId] = useState("");
-  
-  const [showInput, setShowInput] = useState(false);
+  const [showTokens, setShowTokens] = useState(false);
 
   // Fetch GHL connection status
   useEffect(() => {
@@ -65,99 +59,51 @@ export default function AdminIntegrationsPage() {
       if (response.ok) {
         const data = await response.json();
         setGhlStatus(data);
-        // Set the toggle based on existing connection type
-        if (data.connectionType) {
-          setUseOAuth(data.connectionType === "oauth");
-        }
-      } else {
-        setGhlStatus({
-          connected: false,
-          connectionType: null,
-          apiKeyConfigured: false,
-          accessTokenConfigured: false,
-          refreshTokenConfigured: false,
-          webhooksConfigured: false,
-          error: "Failed to fetch status",
-        });
       }
     } catch (error) {
-      setGhlStatus({
-        connected: false,
-        connectionType: null,
-        apiKeyConfigured: false,
-        accessTokenConfigured: false,
-        refreshTokenConfigured: false,
-        webhooksConfigured: false,
-        error: "Connection error",
-      });
+      console.error("Error fetching GHL status:", error);
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleConnect() {
+    if (!locationId || !accessToken || !refreshToken) {
+      alert("Please fill in all fields: Location ID, Access Token, and Refresh Token");
+      return;
+    }
+
     setIsConnecting(true);
     try {
-      const payload = useOAuth 
-        ? { type: "oauth", accessToken, refreshToken, locationId }
-        : { type: "api_key", apiKey, locationId };
-
-      // Validate inputs
-      if (useOAuth && (!accessToken || !refreshToken)) {
-        alert("Both Access Token and Refresh Token are required for OAuth");
-        setIsConnecting(false);
-        return;
-      }
-      if (!useOAuth && !apiKey) {
-        alert("API Key is required");
-        setIsConnecting(false);
-        return;
-      }
-      if (!locationId) {
-        alert("Location ID is required");
-        setIsConnecting(false);
-        return;
-      }
-
       const response = await fetch("/api/admin/ghl/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          type: "oauth",
+          locationId,
+          accessToken,
+          refreshToken,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // Force refresh the status
         await fetchGhlStatus();
-        
-        // Small delay to ensure state updates
-        setTimeout(async () => {
-          await fetchGhlStatus();
-        }, 500);
-        
-        setShowInput(false);
-        setApiKey("");
+        setShowConnectForm(false);
         setAccessToken("");
         setRefreshToken("");
         setLocationId("");
         
-        // Show appropriate message based on test success
         if (data.testSuccess) {
-          alert(`Connected successfully!\n\nLocation: ${data.locationName || data.locationId || "Unknown"}`);
+          alert(`✅ Connected successfully to ${data.locationName || data.locationId}!`);
         } else {
-          let msg = "Credentials saved but connection test failed.";
-          if (data.testError) {
-            msg += `\n\nError: ${data.testError}`;
-          }
-          msg += "\n\nThe token may be expired or invalid. You can try testing again or reconnect with fresh tokens.";
-          alert(msg);
+          alert(`⚠️ Credentials saved but connection test failed.\n\nError: ${data.testError || "Unknown error"}\n\nYou may need to reconnect with fresh tokens.`);
         }
       } else {
         alert(data.error || "Failed to connect");
       }
     } catch (error) {
-      console.error("Connection error:", error);
       alert("Connection failed. Please try again.");
     } finally {
       setIsConnecting(false);
@@ -165,7 +111,9 @@ export default function AdminIntegrationsPage() {
   }
 
   async function handleDisconnect() {
-    if (!confirm("Are you sure you want to disconnect from GHL?")) return;
+    if (!confirm("Are you sure you want to disconnect from GHL?\n\nThis will remove all stored credentials.")) {
+      return;
+    }
 
     try {
       const response = await fetch("/api/admin/ghl/disconnect", {
@@ -174,6 +122,7 @@ export default function AdminIntegrationsPage() {
 
       if (response.ok) {
         await fetchGhlStatus();
+        setShowConnectForm(false);
         alert("Disconnected successfully");
       }
     } catch (error) {
@@ -181,45 +130,49 @@ export default function AdminIntegrationsPage() {
     }
   }
 
-  // Helper to mask sensitive data
-  function maskToken(token: string | undefined): string {
-    if (!token) return "Not set";
-    if (token.length <= 8) return "****";
-    return token.slice(0, 4) + "..." + token.slice(-4);
-  }
-
   async function handleTestConnection() {
     setIsConnecting(true);
     try {
       const response = await fetch("/api/admin/ghl/test", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert(`Connection test successful!\n\nLocation: ${data.locationName}\nType: ${data.connectionType}`);
+        alert(`✅ Connection test successful!\n\nLocation: ${data.locationName}\nType: ${data.connectionType}`);
         await fetchGhlStatus();
       } else {
-        let errorMsg = data.error || "Connection test failed";
-        if (data.status) {
-          errorMsg += `\n\nStatus: ${data.status}`;
-        }
-        if (data.details) {
-          errorMsg += `\nDetails: ${data.details}`;
-        }
-        if (data.suggestion) {
-          errorMsg += `\n\n${data.suggestion}`;
-        }
-        alert(errorMsg);
+        alert(`❌ Connection test failed:\n${data.error || "Unknown error"}`);
       }
     } catch (error) {
-      console.error("Test error:", error);
       alert("Test failed. Please check your network connection.");
     } finally {
       setIsConnecting(false);
+    }
+  }
+
+  // Mask token for display
+  function maskToken(token: string | undefined): string {
+    if (!token) return "Not set";
+    if (token.length <= 8) return "••••••••";
+    return token.slice(0, 4) + "••••••••••••" + token.slice(-4);
+  }
+
+  // Calculate token expiry status
+  function getTokenExpiryStatus(lastSync?: string): { status: "good" | "warning" | "expired"; message: string } {
+    if (!lastSync) return { status: "expired", message: "Token status unknown" };
+    
+    const syncDate = new Date(lastSync);
+    const now = new Date();
+    const hoursSinceSync = (now.getTime() - syncDate.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSinceSync > 23) {
+      return { status: "expired", message: "Token may be expired (24h+ old)" };
+    } else if (hoursSinceSync > 20) {
+      return { status: "warning", message: `Token expires in ${Math.round(24 - hoursSinceSync)} hours` };
+    } else {
+      return { status: "good", message: `Token valid (${Math.round(24 - hoursSinceSync)} hours remaining)` };
     }
   }
 
@@ -230,6 +183,8 @@ export default function AdminIntegrationsPage() {
       </div>
     );
   }
+
+  const tokenStatus = getTokenExpiryStatus(ghlStatus?.lastSync);
 
   return (
     <div className="space-y-6">
@@ -271,137 +226,114 @@ export default function AdminIntegrationsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {ghlStatus?.connected ? (
-            <>
-              {/* Connected State */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      ghlStatus.apiKeyConfigured || ghlStatus.accessTokenConfigured
-                        ? "bg-green-100 text-green-600"
-                        : "bg-red-100 text-red-600"
-                    }`}
-                  >
-                    {ghlStatus.apiKeyConfigured || ghlStatus.accessTokenConfigured ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <XCircle className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {ghlStatus.connectionType === "oauth" ? "Access Token" : "API Key"}
-                    </p>
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      {ghlStatus.apiKeyConfigured || ghlStatus.accessTokenConfigured ? "Valid" : "Invalid"}
-                    </p>
-                  </div>
+            /* CONNECTED STATE */
+            <div className="space-y-6">
+              {/* Connection Details */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="font-medium text-green-800">Connected to GHL</span>
                 </div>
-
-                {ghlStatus.connectionType === "oauth" && (
-                  <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        ghlStatus.refreshTokenConfigured
-                          ? "bg-green-100 text-green-600"
-                          : "bg-red-100 text-red-600"
-                      }`}
-                    >
-                      {ghlStatus.refreshTokenConfigured ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <XCircle className="h-4 w-4" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Refresh Token</p>
-                      <p className="text-xs text-[var(--secondary-text)]">
-                        {ghlStatus.refreshTokenConfigured ? "Valid" : "Invalid"}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      ghlStatus.webhooksConfigured
-                        ? "bg-green-100 text-green-600"
-                        : "bg-yellow-100 text-yellow-600"
-                    }`}
-                  >
-                    {ghlStatus.webhooksConfigured ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Webhooks</p>
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      {ghlStatus.webhooksConfigured ? "Active" : "Not configured"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {(ghlStatus.locationName || ghlStatus.companyId) && (
-                <div className="p-4 bg-[var(--page-background)] rounded-lg">
-                  <p className="text-sm text-[var(--secondary-text)]">Connected Location</p>
+                
+                <div className="space-y-2 text-sm">
                   {ghlStatus.locationName && (
-                    <p className="font-medium">{ghlStatus.locationName}</p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location:</span>
+                      <span className="font-medium">{ghlStatus.locationName}</span>
+                    </div>
                   )}
                   {ghlStatus.locationId && (
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      Location ID: {ghlStatus.locationId}
-                    </p>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Location ID:</span>
+                      <span className="font-mono text-xs">{ghlStatus.locationId}</span>
+                    </div>
                   )}
-                  {ghlStatus.companyId && (
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      Company ID: {ghlStatus.companyId}
-                    </p>
-                  )}
-                  {ghlStatus.connectionType && (
-                    <Badge className="mt-2" variant="secondary">
-                      {ghlStatus.connectionType === "oauth" ? "OAuth" : "API Key"}
-                    </Badge>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Connection Type:</span>
+                    <span className="font-medium capitalize">{ghlStatus.connectionType}</span>
+                  </div>
+                  {ghlStatus.lastSync && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Connected Since:</span>
+                      <span>{new Date(ghlStatus.lastSync).toLocaleString()}</span>
+                    </div>
                   )}
                 </div>
-              )}
-
-              {ghlStatus.error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-red-600">
-                    <AlertTriangle className="h-4 w-4" />
-                    <p className="text-sm font-medium">Connection Error</p>
-                  </div>
-                  <p className="text-sm text-red-600 mt-1">{ghlStatus.error}</p>
-                </div>
-              )}
-
-              {/* Stored Credentials (masked) */}
-              <div className="p-4 bg-[var(--page-background)] rounded-lg">
-                <p className="text-sm font-medium text-[var(--main-text)] mb-2">Stored Credentials</p>
-                {ghlStatus.connectionType === "oauth" ? (
-                  <div className="space-y-1 text-sm text-[var(--secondary-text)]">
-                    <p>Access Token: {maskToken("configured")}</p>
-                    <p>Refresh Token: {maskToken("configured")}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1 text-sm text-[var(--secondary-text)]">
-                    <p>API Key: {maskToken("configured")}</p>
-                  </div>
-                )}
-                <p className="text-xs text-[var(--secondary-text)] mt-2">
-                  Credentials are stored securely and masked for display.
-                </p>
               </div>
 
+              {/* Token Status */}
+              <div className={`p-4 rounded-lg border ${
+                tokenStatus.status === "good" ? "bg-blue-50 border-blue-200" :
+                tokenStatus.status === "warning" ? "bg-amber-50 border-amber-200" :
+                "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className={`h-5 w-5 ${
+                    tokenStatus.status === "good" ? "text-blue-600" :
+                    tokenStatus.status === "warning" ? "text-amber-600" :
+                    "text-red-600"
+                  }`} />
+                  <span className={`font-medium ${
+                    tokenStatus.status === "good" ? "text-blue-800" :
+                    tokenStatus.status === "warning" ? "text-amber-800" :
+                    "text-red-800"
+                  }`}>
+                    {tokenStatus.status === "good" ? "Token Status: Good" :
+                     tokenStatus.status === "warning" ? "Token Status: Expiring Soon" :
+                     "Token Status: Expired"}
+                  </span>
+                </div>
+                <p className={`text-sm ${
+                  tokenStatus.status === "good" ? "text-blue-700" :
+                  tokenStatus.status === "warning" ? "text-amber-700" :
+                  "text-red-700"
+                }`}>
+                  {tokenStatus.message}
+                </p>
+                {tokenStatus.status !== "good" && (
+                  <p className="text-sm mt-2">
+                    <button 
+                      onClick={() => setShowConnectForm(true)}
+                      className="text-[var(--teal)] hover:underline"
+                    >
+                      Click here to update your tokens
+                    </button>
+                  </p>
+                )}
+              </div>
+
+              {/* Stored Credentials (Masked) */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium text-gray-700">Stored Credentials</span>
+                  </div>
+                  <span className="text-xs text-gray-500">AES-256 Encrypted</span>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Access Token:</span>
+                    <span className="font-mono text-xs bg-gray-200 px-2 py-1 rounded">
+                      {maskToken("configured")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Refresh Token:</span>
+                    <span className="font-mono text-xs bg-gray-200 px-2 py-1 rounded">
+                      {maskToken("configured")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
               <div className="flex flex-wrap gap-3">
                 <Button
-                  variant="outline"
                   onClick={handleTestConnection}
                   disabled={isConnecting}
+                  variant="outline"
                 >
                   {isConnecting ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -410,191 +342,163 @@ export default function AdminIntegrationsPage() {
                   )}
                   Test Connection
                 </Button>
-                <Button variant="outline" onClick={handleDisconnect} className="text-red-600">
+                
+                <Button
+                  onClick={() => setShowConnectForm(true)}
+                  variant="outline"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Update Tokens
+                </Button>
+                
+                <Button
+                  onClick={handleDisconnect}
+                  variant="destructive"
+                >
                   <XCircle className="h-4 w-4 mr-2" />
                   Disconnect
                 </Button>
               </div>
-            </>
+            </div>
           ) : (
-            <>
-              {/* Not Connected State */}
-              <div className="p-4 bg-[var(--page-background)] rounded-lg">
-                <p className="text-sm text-[var(--secondary-text)]">
-                  Connect your GoHighLevel account to enable data synchronization.
-                  Choose your preferred connection method below.
-                </p>
-              </div>
-
-              {/* Connection Type Toggle */}
-              <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
-                <div className="flex items-center gap-3">
-                  {useOAuth ? <Lock className="h-5 w-5 text-[var(--teal)]" /> : <Key className="h-5 w-5 text-[var(--teal)]" />}
-                  <div>
-                    <p className="font-medium">{useOAuth ? "OAuth (Tokens)" : "API Key"}</p>
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      {useOAuth 
-                        ? "Use Access Token + Refresh Token (recommended for new accounts)" 
-                        : "Use Legacy API Key (for older GHL accounts)"}
-                    </p>
+            /* NOT CONNECTED STATE */
+            <div className="space-y-6">
+              {!showConnectForm ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Database className="h-8 w-8 text-gray-400" />
                   </div>
-                </div>
-                <button
-                  onClick={() => setUseOAuth(!useOAuth)}
-                  className="relative inline-flex h-6 w-11 items-center rounded-full bg-[var(--teal)] transition-colors"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      useOAuth ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {useOAuth ? (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">OAuth Required Scopes</p>
-                      <p className="text-sm text-blue-800 mt-1">
-                        Your token must include: contacts, locations, opportunities, 
-                        conversations, calendars, users, workflows, and custom-objects (read/write).
-                      </p>
-                    </div>
-                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Not Connected to GHL
+                  </h3>
+                  <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                    Connect your GoHighLevel account to enable data synchronization between your portal and GHL.
+                  </p>
+                  <Button
+                    onClick={() => setShowConnectForm(true)}
+                    className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    Connect to GHL
+                  </Button>
                 </div>
               ) : (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-amber-900">Legacy API Key</p>
-                      <p className="text-sm text-amber-800 mt-1">
-                        API Key authentication is for older GHL accounts. Newer accounts should use OAuth tokens.
-                      </p>
+                /* CONNECT FORM */
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-medium mb-1">Enter your GHL credentials</p>
+                        <p>These will be encrypted and stored securely. Tokens expire after 24 hours and will be automatically refreshed.</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {showInput ? (
-                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Location ID <span className="text-red-500">*</span>
                     </label>
-                    <input
+                    <Input
                       type="text"
                       value={locationId}
                       onChange={(e) => setLocationId(e.target.value)}
                       placeholder="e.g., UCrGt3hb89xvDiJjYqmp"
-                      className="input w-full"
                     />
-                    <p className="text-xs text-[var(--secondary-text)] mt-1">
-                      Your GHL Location ID (required)
+                    <p className="text-xs text-gray-500 mt-1">
+                      Found in your GHL Location Settings
                     </p>
                   </div>
-                  
-                  {useOAuth ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Access Token <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="password"
-                          value={accessToken}
-                          onChange={(e) => setAccessToken(e.target.value)}
-                          placeholder="Enter your GHL Access Token"
-                          className="input w-full"
-                        />
-                        <p className="text-xs text-[var(--secondary-text)] mt-1">
-                          Short-lived token for API access (expires in ~24 hours)
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Refresh Token <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="password"
-                          value={refreshToken}
-                          onChange={(e) => setRefreshToken(e.target.value)}
-                          placeholder="Enter your GHL Refresh Token"
-                          className="input w-full"
-                        />
-                        <p className="text-xs text-[var(--secondary-text)] mt-1">
-                          Long-lived token to refresh the access token
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        API Key <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="password"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="Enter your GHL API Key"
-                        className="input w-full"
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Access Token <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showTokens ? "text" : "password"}
+                        value={accessToken}
+                        onChange={(e) => setAccessToken(e.target.value)}
+                        placeholder="Enter your GHL Access Token"
                       />
-                      <p className="text-xs text-[var(--secondary-text)] mt-1">
-                        Your API key from GHL Location Settings
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowTokens(!showTokens)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
-                  )}
-                  <div className="flex gap-3">
+                    <p className="text-xs text-gray-500 mt-1">
+                      Short-lived token (expires in ~24 hours)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Refresh Token <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showTokens ? "text" : "password"}
+                        value={refreshToken}
+                        onChange={(e) => setRefreshToken(e.target.value)}
+                        placeholder="Enter your GHL Refresh Token"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowTokens(!showTokens)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Long-lived token used to refresh access token automatically
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
                     <Button
                       onClick={handleConnect}
-                      disabled={isConnecting || !locationId || (useOAuth ? (!accessToken || !refreshToken) : !apiKey)}
+                      disabled={isConnecting || !locationId || !accessToken || !refreshToken}
                       className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
                     >
                       {isConnecting ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        <Shield className="h-4 w-4 mr-2" />
                       )}
-                      Connect
+                      Connect & Encrypt
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setShowInput(false)}
+                      onClick={() => setShowConnectForm(false)}
                     >
                       Cancel
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <Button
-                  onClick={() => setShowInput(true)}
-                  className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
-                >
-                  {useOAuth ? <Lock className="h-4 w-4 mr-2" /> : <Key className="h-4 w-4 mr-2" />}
-                  Connect to GHL
-                </Button>
               )}
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Integration Help */}
-      <Card>
-        <CardHeader>
-          <CardTitle>How to Connect</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {useOAuth ? (
-            <ol className="space-y-3 text-sm text-[var(--secondary-text)]">
+      {/* Help Section */}
+      {!ghlStatus?.connected && (
+        <Card>
+          <CardHeader>
+            <CardTitle>How to Get Your GHL Tokens</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3 text-sm text-gray-600">
               <li className="flex items-start gap-3">
                 <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
                   1
                 </span>
                 <span>
-                  Go to your GHL Agency Dashboard and navigate to Settings → API
+                  Go to your GHL Location Dashboard → Settings → Business Profile
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -602,7 +506,7 @@ export default function AdminIntegrationsPage() {
                   2
                 </span>
                 <span>
-                  Create a Private Integration or use an existing one with the required scopes
+                  Copy your Location ID from the URL or settings page
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -610,7 +514,7 @@ export default function AdminIntegrationsPage() {
                   3
                 </span>
                 <span>
-                  Generate an Access Token (valid for ~24 hours) and Refresh Token
+                  Go to Settings → API → Generate Access Token & Refresh Token
                 </span>
               </li>
               <li className="flex items-start gap-3">
@@ -622,47 +526,20 @@ export default function AdminIntegrationsPage() {
                 </span>
               </li>
             </ol>
-          ) : (
-            <ol className="space-y-3 text-sm text-[var(--secondary-text)]">
-              <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
-                  1
-                </span>
-                <span>
-                  Log in to your GoHighLevel account and navigate to Settings → Business Profile
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
-                  2
-                </span>
-                <span>
-                  Copy your API Key from the API section
-                </span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
-                  3
-                </span>
-                <span>
-                  Return to this page and paste your API key
-                </span>
-              </li>
-            </ol>
-          )}
-          <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
-            <a
-              href="https://highlevel.stoplight.io/docs/integrations/0443d7d1a4bd0-overview"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center gap-1"
-            >
-              <ExternalLink className="h-4 w-4" />
-              View GHL API Documentation
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-4 pt-4 border-t">
+              <a
+                href="https://highlevel.stoplight.io/docs/integrations/0443d7d1a4bd0-overview"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center gap-1"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View GHL API Documentation
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
