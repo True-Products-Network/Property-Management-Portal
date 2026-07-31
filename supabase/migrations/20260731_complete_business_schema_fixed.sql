@@ -653,10 +653,10 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION get_user_association_ids(user_id UUID)
-RETURNS TABLE(association_id UUID) AS $$
+RETURNS TABLE(association_id TEXT) AS $$
 BEGIN
     RETURN QUERY
-    SELECT DISTINCT ur.association_id::UUID
+    SELECT DISTINCT ur.association_id
     FROM user_roles ur
     WHERE ur.user_id = $1
     AND ur.association_id IS NOT NULL
@@ -667,7 +667,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- RLS Policies
 CREATE POLICY "Users can view their associations" ON associations
     FOR SELECT USING (
-        id IN (SELECT get_user_association_ids(auth.uid()))
+        id::TEXT IN (SELECT get_user_association_ids(auth.uid()))
         OR is_admin_user(auth.uid())
     );
 
@@ -684,7 +684,7 @@ CREATE POLICY "Management can manage associations" ON associations
 
 CREATE POLICY "Users can view properties in their associations" ON properties
     FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
+        association_id::TEXT IN (SELECT get_user_association_ids(auth.uid()))
         OR is_admin_user(auth.uid())
     );
 
