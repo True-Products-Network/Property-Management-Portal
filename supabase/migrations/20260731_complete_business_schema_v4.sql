@@ -614,8 +614,9 @@ CREATE INDEX idx_apt_participants_appointment ON appointment_participants(appoin
 -- ============================================
 
 -- Drop existing functions if they exist (to allow recreation)
-DROP FUNCTION IF EXISTS is_admin_user(UUID);
-DROP FUNCTION IF EXISTS get_user_association_ids(UUID);
+-- Use CASCADE to drop dependent policies too
+DROP FUNCTION IF EXISTS is_admin_user(UUID) CASCADE;
+DROP FUNCTION IF EXISTS get_user_association_ids(UUID) CASCADE;
 
 ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
