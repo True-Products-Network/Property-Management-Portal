@@ -24,8 +24,9 @@ import {
   DollarSign,
   Upload,
   Shield,
-  CreditCard,
+  CircleDollarSign,
   Megaphone,
+  DoorOpen,
 } from "lucide-react";
 
 // Mock data - replace with actual API calls
@@ -275,51 +276,51 @@ export default function AssociationDetailPage() {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <Link href={`/management/properties/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Plus className="h-5 w-5" />
                       <span className="text-xs text-center">Add Property</span>
                     </Button>
                   </Link>
                   <Link href={`/management/people/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Users className="h-5 w-5" />
                       <span className="text-xs text-center">Add People</span>
                     </Button>
                   </Link>
                   <Link href={`/management/documents/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Upload className="h-5 w-5" />
-                      <span className="text-xs text-center">Upload Doc</span>
+                      <span className="text-xs text-center leading-tight">Upload<br/>Document</span>
                     </Button>
                   </Link>
                   <Link href={`/management/compliance/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Shield className="h-5 w-5" />
-                      <span className="text-xs text-center">Add Compliance</span>
+                      <span className="text-xs text-center leading-tight">Add Compliance<br/>Matter</span>
                     </Button>
                   </Link>
                   <Link href={`/management/inspections/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <ClipboardCheck className="h-5 w-5" />
-                      <span className="text-xs text-center">Schedule Insp</span>
+                      <span className="text-xs text-center leading-tight">Schedule<br/>Inspection</span>
                     </Button>
                   </Link>
                   <Link href={`/management/maintenance/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Wrench className="h-5 w-5" />
-                      <span className="text-xs text-center">New Maint</span>
+                      <span className="text-xs text-center leading-tight">New Maintenance<br/>Request</span>
                     </Button>
                   </Link>
                   <Link href={`/management/payments/new?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
+                      <CircleDollarSign className="h-5 w-5" />
                       <span className="text-xs text-center">Make Payment</span>
                     </Button>
                   </Link>
                   <Link href={`/management/communications/announcement?associationId=${association.id}`}>
-                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2 border-2 border-[var(--border-color)] hover:border-[var(--teal)] hover:bg-[var(--teal)]/5 transition-all">
                       <Megaphone className="h-5 w-5" />
-                      <span className="text-xs text-center">Send Announce</span>
+                      <span className="text-xs text-center leading-tight">Send<br/>Announcement</span>
                     </Button>
                   </Link>
                 </div>

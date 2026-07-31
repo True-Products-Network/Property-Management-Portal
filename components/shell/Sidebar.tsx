@@ -25,6 +25,8 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronRight,
+  DoorOpen,
+  CircleDollarSign,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -40,12 +42,14 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Scale,
   CheckSquare,
   CreditCard,
+  CircleDollarSign,
   MessageSquare,
   BarChart3,
   Activity,
   Settings,
   Shield,
   HelpCircle,
+  DoorOpen,
 };
 
 interface SidebarProps {
