@@ -14,11 +14,11 @@ const updateSchema = z.object({
   addressState: z.string().optional(),
   addressZip: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email().optional().nullable(),
+  email: z.string().email().optional(),
   fiscalYear: z.string().optional(),
   annualMeetingMonth: z.string().optional(),
-  managementStartDate: z.string().optional().nullable(),
-  assignedManagerId: z.string().uuid().optional().nullable(),
+  managementStartDate: z.string().optional(),
+  assignedManagerId: z.string().uuid().optional(),
 });
 
 export async function GET(
