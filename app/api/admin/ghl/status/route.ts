@@ -17,11 +17,14 @@ export async function GET(request: NextRequest) {
     // In production, this would check the database for stored credentials
     // and verify the connection to GHL
     const status = {
-      connected: process.env.GHL_API_KEY ? true : false,
-      apiKeyConfigured: process.env.GHL_API_KEY ? true : false,
+      connected: process.env.GHL_ACCESS_TOKEN ? true : false,
+      accessTokenConfigured: process.env.GHL_ACCESS_TOKEN ? true : false,
+      refreshTokenConfigured: process.env.GHL_REFRESH_TOKEN ? true : false,
       webhooksConfigured: process.env.GHL_WEBHOOK_SECRET ? true : false,
       locationId: process.env.GHL_LOCATION_ID,
       locationName: process.env.GHL_LOCATION_NAME,
+      companyId: process.env.GHL_COMPANY_ID,
+      scopes: process.env.GHL_SCOPES?.split(",") || [],
       lastSync: null,
     };
 

@@ -15,24 +15,57 @@ import {
   Database,
   AlertTriangle,
   Loader2,
+  Shield,
+  Lock,
 } from "lucide-react";
 
 interface GhlConnectionStatus {
   connected: boolean;
   locationId?: string;
   locationName?: string;
-  apiKeyConfigured: boolean;
+  companyId?: string;
+  accessTokenConfigured: boolean;
+  refreshTokenConfigured: boolean;
   webhooksConfigured: boolean;
+  scopes?: string[];
   lastSync?: string;
   error?: string;
 }
+
+// GHL OAuth Configuration
+const GHL_OAUTH_CONFIG = {
+  // Production GHL OAuth endpoints
+  authorizationUrl: "https://marketplace.gohighlevel.com/oauth/chooselocation",
+  tokenUrl: "https://services.leadconnectorhq.com/oauth/token",
+  // Scopes needed for the portal
+  scopes: [
+    "contacts.readonly",
+    "contacts.write",
+    "locations.readonly",
+    "locations.write",
+    "opportunities.readonly",
+    "opportunities.write",
+    "conversations.readonly",
+    "conversations.write",
+    "calendars.readonly",
+    "calendars.write",
+    "users.readonly",
+    "users.write",
+    "workflows.readonly",
+    "workflows.write",
+    "custom-objects.readonly",
+    "custom-objects.write",
+    "webhooks.write",
+  ],
+};
 
 export default function AdminIntegrationsPage() {
   const [ghlStatus, setGhlStatus] = useState<GhlConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [accessToken, setAccessToken] = useState("");
+  const [refreshToken, setRefreshToken] = useState("");
+  const [showTokenInput, setShowTokenInput] = useState(false);
 
   // Fetch GHL connection status
   useEffect(() => {
@@ -48,7 +81,8 @@ export default function AdminIntegrationsPage() {
       } else {
         setGhlStatus({
           connected: false,
-          apiKeyConfigured: false,
+          accessTokenConfigured: false,
+          refreshTokenConfigured: false,
           webhooksConfigured: false,
           error: "Failed to fetch status",
         });
@@ -56,7 +90,8 @@ export default function AdminIntegrationsPage() {
     } catch (error) {
       setGhlStatus({
         connected: false,
-        apiKeyConfigured: false,
+        accessTokenConfigured: false,
+        refreshTokenConfigured: false,
         webhooksConfigured: false,
         error: "Connection error",
       });
@@ -66,18 +101,27 @@ export default function AdminIntegrationsPage() {
   }
 
   async function handleConnect() {
+    if (!accessToken || !refreshToken) {
+      alert("Both Access Token and Refresh Token are required");
+      return;
+    }
+
     setIsConnecting(true);
     try {
       const response = await fetch("/api/admin/ghl/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey }),
+        body: JSON.stringify({ 
+          accessToken,
+          refreshToken,
+        }),
       });
 
       if (response.ok) {
         await fetchGhlStatus();
-        setShowApiKeyInput(false);
-        setApiKey("");
+        setShowTokenInput(false);
+        setAccessToken("");
+        setRefreshToken("");
       } else {
         const error = await response.json();
         alert(error.message || "Failed to connect");
@@ -116,7 +160,8 @@ export default function AdminIntegrationsPage() {
         alert("Connection test successful!");
         await fetchGhlStatus();
       } else {
-        alert("Connection test failed");
+        const error = await response.json();
+        alert(error.message || "Connection test failed");
       }
     } catch (error) {
       alert("Test failed");
@@ -179,21 +224,43 @@ export default function AdminIntegrationsPage() {
                 <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      ghlStatus.apiKeyConfigured
+                      ghlStatus.accessTokenConfigured
                         ? "bg-green-100 text-green-600"
                         : "bg-red-100 text-red-600"
                     }`}
                   >
-                    {ghlStatus.apiKeyConfigured ? (
+                    {ghlStatus.accessTokenConfigured ? (
                       <CheckCircle2 className="h-4 w-4" />
                     ) : (
                       <XCircle className="h-4 w-4" />
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">API Key</p>
+                    <p className="text-sm font-medium">Access Token</p>
                     <p className="text-xs text-[var(--secondary-text)]">
-                      {ghlStatus.apiKeyConfigured ? "Configured" : "Not configured"}
+                      {ghlStatus.accessTokenConfigured ? "Valid" : "Invalid"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      ghlStatus.refreshTokenConfigured
+                        ? "bg-green-100 text-green-600"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {ghlStatus.refreshTokenConfigured ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <XCircle className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Refresh Token</p>
+                    <p className="text-xs text-[var(--secondary-text)]">
+                      {ghlStatus.refreshTokenConfigured ? "Valid" : "Invalid"}
                     </p>
                   </div>
                 </div>
@@ -219,29 +286,37 @@ export default function AdminIntegrationsPage() {
                     </p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3 p-4 bg-[var(--page-background)] rounded-lg">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <RefreshCw className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Last Sync</p>
-                    <p className="text-xs text-[var(--secondary-text)]">
-                      {ghlStatus.lastSync
-                        ? new Date(ghlStatus.lastSync).toLocaleString()
-                        : "Never"}
-                    </p>
-                  </div>
-                </div>
               </div>
 
-              {ghlStatus.locationName && (
+              {(ghlStatus.locationName || ghlStatus.companyId) && (
                 <div className="p-4 bg-[var(--page-background)] rounded-lg">
                   <p className="text-sm text-[var(--secondary-text)]">Connected Location</p>
-                  <p className="font-medium">{ghlStatus.locationName}</p>
-                  <p className="text-xs text-[var(--secondary-text)]">
-                    ID: {ghlStatus.locationId}
-                  </p>
+                  {ghlStatus.locationName && (
+                    <p className="font-medium">{ghlStatus.locationName}</p>
+                  )}
+                  {ghlStatus.locationId && (
+                    <p className="text-xs text-[var(--secondary-text)]">
+                      Location ID: {ghlStatus.locationId}
+                    </p>
+                  )}
+                  {ghlStatus.companyId && (
+                    <p className="text-xs text-[var(--secondary-text)]">
+                      Company ID: {ghlStatus.companyId}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {ghlStatus.scopes && ghlStatus.scopes.length > 0 && (
+                <div className="p-4 bg-[var(--page-background)] rounded-lg">
+                  <p className="text-sm text-[var(--secondary-text)] mb-2">Granted Scopes</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ghlStatus.scopes.map((scope) => (
+                      <Badge key={scope} variant="secondary" className="text-xs">
+                        {scope}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -280,31 +355,59 @@ export default function AdminIntegrationsPage() {
               <div className="p-4 bg-[var(--page-background)] rounded-lg">
                 <p className="text-sm text-[var(--secondary-text)]">
                   Connect your GoHighLevel account to enable data synchronization.
-                  You will need your GHL API key from your location settings.
+                  You will need to provide your GHL Access Token and Refresh Token with the required scopes.
                 </p>
               </div>
 
-              {showApiKeyInput ? (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Required Scopes</p>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Your token must include these scopes: contacts, locations, opportunities, 
+                      conversations, calendars, users, workflows, and custom-objects (read/write).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {showTokenInput ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      GHL API Key
+                      Access Token
                     </label>
                     <input
                       type="password"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Enter your GHL API key"
+                      value={accessToken}
+                      onChange={(e) => setAccessToken(e.target.value)}
+                      placeholder="Enter your GHL Access Token"
                       className="input w-full"
                     />
                     <p className="text-xs text-[var(--secondary-text)] mt-1">
-                      Your API key is stored securely and never shared.
+                      Short-lived token for API access (expires in ~24 hours)
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Refresh Token
+                    </label>
+                    <input
+                      type="password"
+                      value={refreshToken}
+                      onChange={(e) => setRefreshToken(e.target.value)}
+                      placeholder="Enter your GHL Refresh Token"
+                      className="input w-full"
+                    />
+                    <p className="text-xs text-[var(--secondary-text)] mt-1">
+                      Long-lived token to refresh the access token
                     </p>
                   </div>
                   <div className="flex gap-3">
                     <Button
                       onClick={handleConnect}
-                      disabled={!apiKey || isConnecting}
+                      disabled={!accessToken || !refreshToken || isConnecting}
                       className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
                     >
                       {isConnecting ? (
@@ -316,7 +419,7 @@ export default function AdminIntegrationsPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setShowApiKeyInput(false)}
+                      onClick={() => setShowTokenInput(false)}
                     >
                       Cancel
                     </Button>
@@ -324,10 +427,10 @@ export default function AdminIntegrationsPage() {
                 </div>
               ) : (
                 <Button
-                  onClick={() => setShowApiKeyInput(true)}
+                  onClick={() => setShowTokenInput(true)}
                   className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
                 >
-                  <Key className="h-4 w-4 mr-2" />
+                  <Lock className="h-4 w-4 mr-2" />
                   Connect to GHL
                 </Button>
               )}
@@ -339,7 +442,7 @@ export default function AdminIntegrationsPage() {
       {/* Integration Help */}
       <Card>
         <CardHeader>
-          <CardTitle>How to Connect</CardTitle>
+          <CardTitle>How to Get Your Tokens</CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="space-y-3 text-sm text-[var(--secondary-text)]">
@@ -348,31 +451,37 @@ export default function AdminIntegrationsPage() {
                 1
               </span>
               <span>
-                Log in to your GoHighLevel account and navigate to Settings &gt; Business Profile
+                Go to your GHL Agency Dashboard and navigate to Settings &gt; API
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
                 2
               </span>
-              <span>Copy your API Key from the API section</span>
+              <span>
+                Create a Private Integration or use an existing one with the required scopes
+              </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
                 3
               </span>
-              <span>Return to this page and click "Connect to GHL"</span>
+              <span>
+                Generate an Access Token (valid for ~24 hours) and Refresh Token
+              </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full bg-[var(--teal)] text-white flex items-center justify-center text-xs flex-shrink-0">
                 4
               </span>
-              <span>Paste your API key and click Connect</span>
+              <span>
+                Copy both tokens and paste them here to connect
+              </span>
             </li>
           </ol>
           <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
             <a
-              href="https://help.gohighlevel.com/support/solutions/articles/48001164185-api-documentation"
+              href="https://highlevel.stoplight.io/docs/integrations/0443d7d1a4bd0-overview"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center gap-1"
