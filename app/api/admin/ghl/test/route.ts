@@ -28,22 +28,49 @@ export async function POST(request: NextRequest) {
     // Test OAuth connection
     if (credentials.type === "oauth" && credentials.accessToken) {
       try {
-        const testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
+        // Try the newer v2 API first
+        let testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${credentials.accessToken}`,
             "Version": "2021-07-28",
+            "Accept": "application/json",
           },
         });
+
+        // If that fails, try the v1 API
+        if (!testResponse.ok && testResponse.status === 401) {
+          console.log("Trying v1 API...");
+          testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${credentials.accessToken}`,
+              "Accept": "application/json",
+            },
+          });
+        }
 
         if (!testResponse.ok) {
           const errorText = await testResponse.text();
           console.error("GHL OAuth test failed:", testResponse.status, errorText);
+          
+          // Provide more specific error messages
+          let suggestion = "Your token may be expired or invalid.";
+          if (testResponse.status === 401) {
+            suggestion = "Authentication failed. The token may be expired or doesn't have the required scopes. Try generating a new token.";
+          } else if (testResponse.status === 403) {
+            suggestion = "Forbidden. The token doesn't have permission to access this resource.";
+          } else if (testResponse.status === 404) {
+            suggestion = "API endpoint not found. The token may be for a different GHL environment.";
+          }
+          
           return NextResponse.json(
             { 
               error: "OAuth connection test failed", 
-              details: `HTTP ${testResponse.status}: ${errorText}`,
-              suggestion: "Your token may be expired or invalid. Try reconnecting with fresh tokens."
+              status: testResponse.status,
+              details: errorText,
+              suggestion,
+              tokenPrefix: credentials.accessToken.substring(0, 10) + "...",
             },
             { status: 400 }
           );
@@ -55,8 +82,8 @@ export async function POST(request: NextRequest) {
           success: true,
           message: "OAuth connection test successful",
           connectionType: "oauth",
-          locationName: locationData.name,
-          locationId: locationData.id,
+          locationName: locationData.name || locationData.location?.name,
+          locationId: locationData.id || locationData.location?.id,
           timestamp: new Date().toISOString(),
         });
       } catch (apiError) {
@@ -79,17 +106,25 @@ export async function POST(request: NextRequest) {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${credentials.apiKey}`,
+            "Accept": "application/json",
           },
         });
 
         if (!testResponse.ok) {
           const errorText = await testResponse.text();
           console.error("GHL API key test failed:", testResponse.status, errorText);
+          
+          let suggestion = "Your API key may be invalid.";
+          if (testResponse.status === 401) {
+            suggestion = "Authentication failed. The API key may be expired or invalid.";
+          }
+          
           return NextResponse.json(
             { 
               error: "API Key connection test failed", 
-              details: `HTTP ${testResponse.status}: ${errorText}`,
-              suggestion: "Your API key may be invalid. Please check your key and try again."
+              status: testResponse.status,
+              details: errorText,
+              suggestion,
             },
             { status: 400 }
           );

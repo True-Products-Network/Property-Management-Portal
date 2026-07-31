@@ -130,9 +130,14 @@ export default function AdminIntegrationsPage() {
         
         // Show appropriate message based on test success
         if (data.testSuccess) {
-          alert("Connected successfully!");
+          alert(`Connected successfully!\n\nLocation: ${data.locationName || "Unknown"}`);
         } else {
-          alert("Credentials saved. The connection will be verified when GHL is reachable.");
+          let msg = "Credentials saved but connection test failed.";
+          if (data.testError) {
+            msg += `\n\nError: ${data.testError}`;
+          }
+          msg += "\n\nThe token may be expired or invalid. You can try testing again or reconnect with fresh tokens.";
+          alert(msg);
         }
       } else {
         alert(data.error || "Failed to connect");
@@ -185,6 +190,12 @@ export default function AdminIntegrationsPage() {
         await fetchGhlStatus();
       } else {
         let errorMsg = data.error || "Connection test failed";
+        if (data.status) {
+          errorMsg += `\n\nStatus: ${data.status}`;
+        }
+        if (data.details) {
+          errorMsg += `\nDetails: ${data.details}`;
+        }
         if (data.suggestion) {
           errorMsg += `\n\n${data.suggestion}`;
         }

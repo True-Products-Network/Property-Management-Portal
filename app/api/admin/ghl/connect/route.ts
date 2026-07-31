@@ -40,27 +40,50 @@ export async function POST(request: NextRequest) {
       // Try to test the connection and get location info
       let locationData: { id?: string; name?: string; companyId?: string } = {};
       let testSuccess = false;
+      let testError = "";
       
       try {
-        const testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
+        // Try v2 API first
+        let testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${accessToken}`,
             "Version": "2021-07-28",
+            "Accept": "application/json",
           },
         });
 
+        // If v2 fails with 401, try v1 API
+        if (!testResponse.ok && testResponse.status === 401) {
+          console.log("V2 API failed, trying v1 API...");
+          testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Accept": "application/json",
+            },
+          });
+        }
+
         if (testResponse.ok) {
-          locationData = await testResponse.json();
+          const data = await testResponse.json();
+          // Handle different response formats
+          locationData = {
+            id: data.id || data.location?.id,
+            name: data.name || data.location?.name,
+            companyId: data.companyId || data.location?.companyId,
+          };
           testSuccess = true;
         } else {
-          console.warn("GHL OAuth test returned non-OK status:", testResponse.status);
+          testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
+          console.warn("GHL OAuth test failed:", testError);
         }
       } catch (apiError) {
-        console.warn("GHL OAuth test failed (network error):", apiError);
+        testError = apiError instanceof Error ? apiError.message : "Network error";
+        console.warn("GHL OAuth test failed (network error):", testError);
       }
 
-      // Store credentials
+      // Store credentials even if test failed
       await storeGhlCredentials({
         type: "oauth",
         accessToken,
@@ -74,12 +97,13 @@ export async function POST(request: NextRequest) {
         success: true,
         message: testSuccess 
           ? "Connected successfully via OAuth" 
-          : "Credentials saved. Connection will be verified when GHL is reachable.",
+          : "Credentials saved but connection test failed. The token may be expired or invalid.",
         connectionType: "oauth",
         locationId: locationData.id,
         locationName: locationData.name,
         companyId: locationData.companyId,
         testSuccess,
+        testError: testError || undefined,
       });
 
     } else if (type === "api_key") {
@@ -104,12 +128,14 @@ export async function POST(request: NextRequest) {
       // Try to test the connection and get location info
       let locationData: { id?: string; name?: string } = {};
       let testSuccess = false;
+      let testError = "";
       
       try {
         const testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
+            "Accept": "application/json",
           },
         });
 
@@ -117,10 +143,12 @@ export async function POST(request: NextRequest) {
           locationData = await testResponse.json();
           testSuccess = true;
         } else {
-          console.warn("GHL API key test returned non-OK status:", testResponse.status);
+          testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
+          console.warn("GHL API key test failed:", testError);
         }
       } catch (apiError) {
-        console.warn("GHL API key test failed (network error):", apiError);
+        testError = apiError instanceof Error ? apiError.message : "Network error";
+        console.warn("GHL API key test failed (network error):", testError);
       }
 
       // Store credentials
@@ -135,11 +163,12 @@ export async function POST(request: NextRequest) {
         success: true,
         message: testSuccess 
           ? "Connected successfully via API Key" 
-          : "Credentials saved. Connection will be verified when GHL is reachable.",
+          : "Credentials saved but connection test failed. The API key may be invalid.",
         connectionType: "api_key",
         locationId: locationData.id,
         locationName: locationData.name,
         testSuccess,
+        testError: testError || undefined,
       });
 
     } else {
