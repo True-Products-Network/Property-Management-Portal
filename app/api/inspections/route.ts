@@ -1,0 +1,57 @@
+// Inspections API Routes
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
+import { getInspections, createInspection } from "@/lib/api/inspections";
+import { z } from "zod";
+
+const createSchema = z.object({
+  propertyId: z.string().uuid(),
+  unitId: z.string().uuid().optional(),
+  inspectionType: z.enum(["annual", "move_in", "move_out", "fire_safety", "elevator", "hvac", "roof", "pool", "emergency_systems", "insurance", "other"]),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+  inspectorId: z.string().uuid().optional(),
+  inspectorVendorId: z.string().uuid().optional(),
+});
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getSession();
+    if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const result = await getInspections({
+      page: parseInt(searchParams.get("page") || "1"),
+      pageSize: parseInt(searchParams.get("pageSize") || "20"),
+      propertyId: searchParams.get("propertyId") || undefined,
+      filters: {
+        status: searchParams.get("status") || undefined,
+        inspectionType: searchParams.get("inspectionType") || undefined,
+      },
+    });
+
+    if (!result.success) return NextResponse.json(result, { status: 400 });
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getSession();
+    if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    const body = await request.json();
+    const validation = createSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
+    }
+
+    const result = await createInspection(validation.data, user.id);
+    if (!result.success) return NextResponse.json(result, { status: 400 });
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}
