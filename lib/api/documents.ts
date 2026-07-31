@@ -130,7 +130,7 @@ export async function createDocument(input: CreateDocumentInput, userId: string)
   }
 }
 
-export async function updateDocument(id: string, input: Partial<CreateDocumentInput>, userId: string): Promise<ApiResponse<Document>> {
+export async function updateDocument(id: string, input: Partial<CreateDocumentInput> & { status?: string }, userId: string): Promise<ApiResponse<Document>> {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.from("documents").update({
