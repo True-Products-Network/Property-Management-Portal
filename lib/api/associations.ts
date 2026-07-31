@@ -29,18 +29,29 @@ export interface Association {
 
 export interface CreateAssociationInput {
   name: string;
+  shortName?: string;
   legalName?: string;
   type: string;
+  status?: string;
   addressStreet?: string;
   addressCity?: string;
   addressState?: string;
   addressZip?: string;
+  mailingAddress?: string;
   phone?: string;
   email?: string;
+  taxId?: string;
   fiscalYear?: string;
+  fiscalYearEndMonth?: string;
+  fiscalYearEndDay?: number;
   annualMeetingMonth?: string;
   managementStartDate?: string;
   assignedManagerId?: string;
+  financialPlatform?: string;
+  financialPortalLink?: string;
+  documentStorageLink?: string;
+  emergencyInstructions?: string;
+  generalNotes?: string;
 }
 
 export interface UpdateAssociationInput extends Partial<CreateAssociationInput> {
@@ -156,40 +167,51 @@ export async function createAssociation(
 ): Promise<ApiResponse<Association>> {
   try {
     const supabase = await createClient();
-    
+
     // Generate association_id
     const associationId = `ASSOC-${Date.now()}`;
-    
+
     const { data, error } = await supabase
       .from("associations")
       .insert({
         association_id: associationId,
         name: input.name,
+        short_name: input.shortName,
         legal_name: input.legalName,
         type: input.type,
+        status: input.status || 'active',
         address_street: input.addressStreet,
         address_city: input.addressCity,
         address_state: input.addressState,
         address_zip: input.addressZip,
+        mailing_address: input.mailingAddress,
         phone: input.phone,
         email: input.email,
+        tax_id: input.taxId,
         fiscal_year: input.fiscalYear,
+        fiscal_year_end_month: input.fiscalYearEndMonth,
+        fiscal_year_end_day: input.fiscalYearEndDay,
         annual_meeting_month: input.annualMeetingMonth,
         management_start_date: input.managementStartDate,
         assigned_manager_id: input.assignedManagerId,
+        financial_platform: input.financialPlatform,
+        financial_portal_link: input.financialPortalLink,
+        document_storage_link: input.documentStorageLink,
+        emergency_instructions: input.emergencyInstructions,
+        general_notes: input.generalNotes,
         created_by: userId,
         updated_by: userId,
       })
       .select()
       .single();
-    
+
     if (error) {
       return {
         success: false,
         error: error.message,
       };
     }
-    
+
     return {
       success: true,
       data,
