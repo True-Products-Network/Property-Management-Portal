@@ -613,6 +613,10 @@ CREATE INDEX idx_apt_participants_appointment ON appointment_participants(appoin
 -- ROW LEVEL SECURITY
 -- ============================================
 
+-- Drop existing functions if they exist (to allow recreation)
+DROP FUNCTION IF EXISTS is_admin_user(UUID);
+DROP FUNCTION IF EXISTS get_user_association_ids(UUID);
+
 ALTER TABLE associations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
 ALTER TABLE units ENABLE ROW LEVEL SECURITY;
