@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { signInSchema, type SignInInput } from "@/schemas/portal/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignInPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,22 +32,22 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/sign-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Invalid email or password");
+      if (signInError) {
+        setError(signInError.message);
         return;
       }
 
-      // Redirect based on role
-      router.push(data.redirectUrl || "/management/overview");
-      router.refresh();
+      if (data.user) {
+        // Get redirect URL from user metadata
+        const redirectUrl = data.user.user_metadata?.redirect_url || "/management/overview";
+        router.push(redirectUrl);
+        router.refresh();
+      }
     } catch {
       setError("An error occurred. Please try again.");
     } finally {

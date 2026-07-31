@@ -1,51 +1,35 @@
-import { cookies } from "next/headers";
-import { jwtVerify, SignJWT } from "jose";
-import { SessionUser } from "@/schemas/portal/auth";
+import { createClient as createServerClient } from "@/lib/supabase/server";
+import { PortalRole } from "@/schemas/portal/auth";
 
-const SESSION_COOKIE = "portal_session";
-const SESSION_DURATION = 60 * 60 * 24 * 7; // 7 days
-
-// Use environment variable in production
-const SECRET = new TextEncoder().encode(
-  process.env.APP_SECRET || "default-secret-change-in-production"
-);
-
-export async function createSession(user: SessionUser): Promise<string> {
-  const token = await new SignJWT({ user })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(SECRET);
-
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: SESSION_DURATION,
-    path: "/",
-  });
-
-  return token;
+export interface SessionUser {
+  id: string;
+  email: string;
+  ghlContactId: string;
+  roles: PortalRole[];
+  mfaEnabled: boolean;
+  status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING_INVITE";
 }
 
 export async function getSession(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-
-  if (!token) return null;
-
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload.user as SessionUser;
-  } catch {
+  const supabase = await createServerClient();
+  
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
     return null;
   }
-}
 
-export async function destroySession(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
+  // Get user metadata which includes GHL contact ID and roles
+  const metadata = user.user_metadata;
+  
+  return {
+    id: user.id,
+    email: user.email!,
+    ghlContactId: metadata?.ghl_contact_id || "",
+    roles: metadata?.roles || [],
+    mfaEnabled: metadata?.mfa_enabled || false,
+    status: metadata?.status || "ACTIVE",
+  };
 }
 
 export async function requireAuth(): Promise<SessionUser> {
@@ -67,4 +51,9 @@ export async function requireRole(allowedRoles: string[]): Promise<SessionUser> 
 
 export async function requireAdmin(): Promise<SessionUser> {
   return requireRole(["ADMIN_USER"]);
+}
+
+export async function signOut(): Promise<void> {
+  const supabase = await createServerClient();
+  await supabase.auth.signOut();
 }

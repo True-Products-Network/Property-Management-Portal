@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { destroySession, getSession } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import { auditLogger } from "@/lib/audit/logger";
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getSession();
+    const supabase = await createClient();
+    
+    // Get current user before signing out
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
+      const roles = user.user_metadata?.roles || [];
+      
       // Log sign out
       await auditLogger.logAuditEvent({
         actorId: user.id,
-        role: user.roles[0],
+        role: roles[0] || "unknown",
         action: "sign_out",
         ipAddress: request.headers.get("x-forwarded-for") || undefined,
         userAgent: request.headers.get("user-agent") || undefined,
       });
     }
 
-    await destroySession();
+    // Sign out from Supabase
+    await supabase.auth.signOut();
 
     return NextResponse.json({ success: true });
   } catch (error) {

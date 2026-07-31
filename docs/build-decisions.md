@@ -27,7 +27,7 @@
 
 ### D-001 — Portal Authentication Provider
 **Date:** 2026-07-31  
-**Status:** PROPOSED  
+**Status:** APPROVED  
 **Context:** Need to select authentication solution for portal users  
 **Options Considered:**
 - Supabase Auth (built-in, works with our PostgreSQL choice)
@@ -40,8 +40,9 @@
 - Built-in RLS support
 - Handles MFA, password reset, session management
 - No additional vendor needed
+- Approved by Nigel
 **Consequences:** Tightly coupled to Supabase, but that's acceptable given our stack choice  
-**Authority:** Pending Nigel approval
+**Authority:** Nigel Lear
 
 ---
 
