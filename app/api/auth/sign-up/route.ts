@@ -46,6 +46,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create portal_users record
+    if (data.user) {
+      const { error: portalError } = await supabase.from("portal_users").insert({
+        id: data.user.id,
+        ghl_contact_id: ghlContactId || `TEST-${Date.now()}`,
+        email: email,
+        is_admin: role === "ADMIN_USER",
+        status: "ACTIVE",
+      });
+
+      if (portalError) {
+        console.error("Failed to create portal_users record:", portalError);
+        // Don't fail the signup, but log the error
+      }
+
+      // Create user_roles record
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: data.user.id,
+        role: role,
+        is_primary: true,
+      });
+
+      if (roleError) {
+        console.error("Failed to create user_roles record:", roleError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       user: data.user,

@@ -43,8 +43,11 @@ export async function POST(request: NextRequest) {
       let testError = "";
       
       try {
-        // Try v2 API first
-        let testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
+        // Use the provided location ID for the test
+        const testLocationId = providedLocationId || "me";
+        
+        // Try v2 API with specific location ID
+        let testResponse = await fetch(`https://services.leadconnectorhq.com/locations/${testLocationId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${accessToken}`,
@@ -53,10 +56,10 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // If v2 fails with 401, try v1 API
-        if (!testResponse.ok && testResponse.status === 401) {
+        // If v2 fails with 401/403, try v1 API
+        if (!testResponse.ok && (testResponse.status === 401 || testResponse.status === 403)) {
           console.log("V2 API failed, trying v1 API...");
-          testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
+          testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
             method: "GET",
             headers: {
               "Authorization": `Bearer ${accessToken}`,
@@ -137,7 +140,10 @@ export async function POST(request: NextRequest) {
       let testError = "";
       
       try {
-        const testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
+        // Use the provided location ID for the test
+        const testLocationId = providedLocationId || "me";
+        
+        const testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
