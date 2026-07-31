@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RelatedRecordCard } from "@/components/relationships/RelatedRecordCard";
 import {
   ArrowLeft,
   Building2,
@@ -21,6 +20,8 @@ import {
   Activity,
   Edit,
   Plus,
+  Loader2,
+  ImageIcon,
 } from "lucide-react";
 
 // Mock data - replace with actual API calls
@@ -32,10 +33,14 @@ const mockProperty = {
   status: "active",
   yearBuilt: 1985,
   unitCount: 12,
+  occupiedUnits: 10,
+  vacantUnits: 2,
+  openMaintenance: 3,
   managementStartDate: "2024-01-01",
-  accessInstructions: "Key fob required for entry",
-  emergencyNotes: "Emergency contact: 555-0123",
+  accessInstructions: "Key fob required for entry. Main entrance on south side.",
+  emergencyNotes: "Emergency contact: 555-0123. Fire panel located in lobby.",
   assignedStaff: "Sarah Johnson",
+  image: "/images/property-placeholder.jpg",
   association: {
     id: "ASSOC-001",
     name: "Ridgeland Condominium Association",
@@ -43,20 +48,19 @@ const mockProperty = {
 };
 
 const mockUnits = [
-  { id: "UNIT-001", name: "Unit 1N", type: "2BR/2BA", status: "occupied", owner: "John Smith" },
-  { id: "UNIT-002", name: "Unit 2N", type: "2BR/2BA", status: "occupied", owner: "Jane Doe" },
-  { id: "UNIT-003", name: "Unit 3S", type: "3BR/2BA", status: "vacant", owner: "Mike Johnson" },
+  { id: "UNIT-001", unitNumber: "1N", type: "2BR/2BA", status: "occupied", owner: "John Smith" },
+  { id: "UNIT-002", unitNumber: "2N", type: "2BR/2BA", status: "occupied", owner: "Jane Doe" },
+  { id: "UNIT-003", unitNumber: "3S", type: "3BR/2BA", status: "vacant", owner: "Mike Johnson" },
 ];
 
 const mockPeople = [
-  { id: "CONT-001", name: "John Smith", role: "Owner", unit: "Unit 1N", email: "john@example.com" },
-  { id: "CONT-002", name: "Jane Doe", role: "Owner", unit: "Unit 2N", email: "jane@example.com" },
-  { id: "CONT-003", name: "Mike Johnson", role: "Owner", unit: "Unit 3S", email: "mike@example.com" },
+  { id: "CONT-001", firstName: "John", lastName: "Smith", role: "Owner", unit: "1N", email: "john@example.com" },
+  { id: "CONT-002", firstName: "Jane", lastName: "Doe", role: "Owner", unit: "2N", email: "jane@example.com" },
 ];
 
 const mockMaintenance = [
-  { id: "MNT-001", title: "HVAC Repair", status: "in_progress", priority: "high", date: "2026-07-30" },
-  { id: "MNT-002", title: "Plumbing Issue", status: "scheduled", priority: "medium", date: "2026-08-01" },
+  { id: "MNT-001", requestNumber: "MNT-2026-0047", title: "HVAC Repair", status: "in_progress", priority: "high", date: "2026-07-30" },
+  { id: "MNT-002", requestNumber: "MNT-2026-0048", title: "Plumbing Issue", status: "scheduled", priority: "medium", date: "2026-08-01" },
 ];
 
 const mockVendors = [
@@ -82,38 +86,120 @@ const mockCompliance = [
 export default function PropertyDetailPage() {
   const params = useParams();
   const [property, setProperty] = useState(mockProperty);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+
+  useEffect(() => {
+    // Simulate loading
+    setTimeout(() => setIsLoading(false), 500);
+  }, []);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-700">Active</Badge>;
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/management/properties">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm text-[var(--secondary-text)]">
+            <Link
+              href="/management/properties"
+              className="flex items-center gap-1 hover:text-[var(--main-text)] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
               Back to Properties
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--main-text)]">{property.name}</h1>
-            <p className="text-[var(--secondary-text)]">{property.id}</p>
+            </Link>
           </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">{property.name}</h1>
+            {getStatusBadge(property.status)}
+          </div>
+          <p className="text-[var(--secondary-text)]">{property.id} • {property.address}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge className={property.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-            {property.status}
-          </Badge>
-          <Button variant="outline" size="sm">
+        <div className="flex items-center gap-2">
+          <Button variant="outline">
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
         </div>
       </div>
 
+      {/* Quick Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                <Home className="h-5 w-5 text-[var(--teal)]" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
+                <p className="text-2xl font-semibold">{property.unitCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Occupied</p>
+                <p className="text-2xl font-semibold">{property.occupiedUnits}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                <Home className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Vacant</p>
+                <p className="text-2xl font-semibold">{property.vacantUnits}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                <Wrench className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Maintenance</p>
+                <p className="text-2xl font-semibold">{property.openMaintenance}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-white border border-[var(--border-color)] p-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 lg:w-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="units">Units</TabsTrigger>
           <TabsTrigger value="people">People</TabsTrigger>
@@ -128,6 +214,18 @@ export default function PropertyDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Property Image */}
+            <Card className="lg:col-span-1">
+              <CardContent className="p-0">
+                <div className="aspect-video bg-gray-100 flex items-center justify-center rounded-t-lg">
+                  <ImageIcon className="h-16 w-16 text-gray-300" />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm text-[var(--secondary-text)] text-center">Property Photo</p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Property Details */}
             <Card className="lg:col-span-2">
               <CardHeader>
@@ -136,20 +234,12 @@ export default function PropertyDetailPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Address</p>
-                    <p className="font-medium">{property.address}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Type</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Property Type</p>
                     <p className="font-medium">{property.type}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Year Built</p>
                     <p className="font-medium">{property.yearBuilt}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                    <p className="font-medium">{property.unitCount}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Management Start</p>
@@ -170,39 +260,30 @@ export default function PropertyDetailPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Association Card - Clickable */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium text-[var(--secondary-text)] uppercase tracking-wide">Association</h3>
-              <RelatedRecordCard
-                type="association"
-                id={property.association.id}
-                title={property.association.name}
-                href={`/management/associations/${property.association.id}`}
-              />
-
-              {/* Open Items Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Open Items</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--secondary-text)]">Maintenance</span>
-                    <span className="font-medium">{mockMaintenance.length}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--secondary-text)]">Inspections</span>
-                    <span className="font-medium">{mockInspections.length}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--secondary-text)]">Compliance</span>
-                    <span className="font-medium">{mockCompliance.length}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
+
+          {/* Association Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Association</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-[var(--teal)]" />
+                </div>
+                <div>
+                  <Link
+                    href={`/management/associations/${property.association.id}`}
+                    className="font-medium text-[var(--teal)] hover:underline"
+                  >
+                    {property.association.name}
+                  </Link>
+                  <p className="text-sm text-[var(--secondary-text)]">{property.association.id}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Units Tab */}
@@ -216,16 +297,25 @@ export default function PropertyDetailPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {mockUnits.map((unit) => (
-              <RelatedRecordCard
-                key={unit.id}
-                type="unit"
-                id={unit.id}
-                title={unit.name}
-                subtitle={unit.type}
-                status={unit.status}
-                badge={unit.owner}
-                href={`/management/units/${unit.id}`}
-              />
+              <Card key={unit.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link
+                        href={`/management/units/${unit.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        Unit {unit.unitNumber}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{unit.type}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">Owner: {unit.owner}</p>
+                    </div>
+                    <Badge className={unit.status === "occupied" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
+                      {unit.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -239,17 +329,27 @@ export default function PropertyDetailPage() {
               Add Person
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mockPeople.map((person) => (
-              <RelatedRecordCard
-                key={person.id}
-                type="contact"
-                id={person.id}
-                title={person.name}
-                subtitle={person.email}
-                badge={person.role}
-                href={`/management/people/${person.id}`}
-              />
+              <Card key={person.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <Users className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div>
+                      <Link
+                        href={`/management/people/${person.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {person.firstName} {person.lastName}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{person.role} • Unit {person.unit}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{person.email}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -263,18 +363,30 @@ export default function PropertyDetailPage() {
               New Request
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {mockMaintenance.map((request) => (
-              <RelatedRecordCard
-                key={request.id}
-                type="maintenance"
-                id={request.id}
-                title={request.title}
-                subtitle={request.date}
-                status={request.status}
-                badge={request.priority}
-                href={`/management/maintenance/${request.id}`}
-              />
+              <Card key={request.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link
+                        href={`/management/maintenance/${request.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {request.title}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{request.date}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge className="bg-teal-100 text-teal-700">{request.status}</Badge>
+                      <Badge className={request.priority === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
+                        {request.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -290,15 +402,25 @@ export default function PropertyDetailPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mockVendors.map((vendor) => (
-              <RelatedRecordCard
-                key={vendor.id}
-                type="vendor"
-                id={vendor.id}
-                title={vendor.name}
-                subtitle={vendor.category}
-                badge={`★ ${vendor.rating}`}
-                href={`/management/vendors/${vendor.id}`}
-              />
+              <Card key={vendor.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <Truck className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div>
+                      <Link
+                        href={`/management/vendors/${vendor.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {vendor.name}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{vendor.category}</p>
+                      <Badge className="mt-1">★ {vendor.rating}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -312,17 +434,26 @@ export default function PropertyDetailPage() {
               Schedule Inspection
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {mockInspections.map((inspection) => (
-              <RelatedRecordCard
-                key={inspection.id}
-                type="inspection"
-                id={inspection.id}
-                title={`${inspection.type} Inspection`}
-                subtitle={inspection.date}
-                status={inspection.status}
-                href={`/management/inspections/${inspection.id}`}
-              />
+              <Card key={inspection.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link
+                        href={`/management/inspections/${inspection.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {inspection.type} Inspection
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{inspection.date}</p>
+                    </div>
+                    <Badge className={inspection.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
+                      {inspection.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -336,17 +467,26 @@ export default function PropertyDetailPage() {
               Upload Document
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {mockDocuments.map((doc) => (
-              <RelatedRecordCard
-                key={doc.id}
-                type="document"
-                id={doc.id}
-                title={doc.name}
-                subtitle={doc.date}
-                badge={doc.type}
-                href={`/management/documents/${doc.id}`}
-              />
+              <Card key={doc.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div>
+                      <Link
+                        href={`/management/documents/${doc.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {doc.name}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{doc.type} • {doc.date}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -360,17 +500,26 @@ export default function PropertyDetailPage() {
               Add Compliance Matter
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {mockCompliance.map((item) => (
-              <RelatedRecordCard
-                key={item.id}
-                type="compliance"
-                id={item.id}
-                title={item.title}
-                subtitle={`Due: ${item.dueDate}`}
-                status={item.status}
-                href={`/management/compliance/${item.id}`}
-              />
+              <Card key={item.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link
+                        href={`/management/compliance/${item.id}`}
+                        className="font-medium text-[var(--teal)] hover:underline"
+                      >
+                        {item.title}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">Due: {item.dueDate}</p>
+                    </div>
+                    <Badge className={item.status === "compliant" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
+                      {item.status}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </TabsContent>
@@ -395,6 +544,13 @@ export default function PropertyDetailPage() {
                   <div>
                     <p className="font-medium">Management agreement signed</p>
                     <p className="text-sm text-[var(--secondary-text)]">By: Sarah Johnson • 2024-01-01 11:00 AM</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
+                  <div>
+                    <p className="font-medium">Unit 1N added</p>
+                    <p className="text-sm text-[var(--secondary-text)]">By: Admin • 2024-01-02 09:15 AM</p>
                   </div>
                 </div>
               </div>
