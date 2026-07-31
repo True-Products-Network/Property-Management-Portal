@@ -21,20 +21,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check if user is admin using the is_admin column (avoids RLS recursion)
+    // Check if user is admin from JWT metadata (avoids RLS recursion)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check admin status from user metadata or portal_users table
-    const { data: portalUser, error: userError } = await supabase
-      .from("portal_users")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
+    // Check admin status from user metadata (set during login/token creation)
+    const isAdmin = user.user_metadata?.is_admin === true || 
+                    user.user_metadata?.roles?.includes("ADMIN_USER");
 
-    if (userError || !portalUser?.is_admin) {
+    if (!isAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
@@ -63,20 +60,17 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check if user is admin using the is_admin column (avoids RLS recursion)
+    // Check if user is admin from JWT metadata (avoids RLS recursion)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check admin status from portal_users table
-    const { data: portalUser, error: userError } = await supabase
-      .from("portal_users")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single();
+    // Check admin status from user metadata
+    const isAdmin = user.user_metadata?.is_admin === true || 
+                    user.user_metadata?.roles?.includes("ADMIN_USER");
 
-    if (userError || !portalUser?.is_admin) {
+    if (!isAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 

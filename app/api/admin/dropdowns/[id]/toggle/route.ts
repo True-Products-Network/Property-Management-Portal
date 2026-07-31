@@ -8,24 +8,14 @@ const toggleSchema = z.object({
   isActive: z.boolean(),
 });
 
-// Helper function to check admin status
-async function checkAdmin(supabase: any) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return { isAdmin: false, userId: null, error: "Unauthorized" };
-  }
-
-  const { data: portalUser, error: userError } = await supabase
-    .from("portal_users")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (userError || !portalUser?.is_admin) {
-    return { isAdmin: false, userId: null, error: "Forbidden" };
-  }
-
-  return { isAdmin: true, userId: user.id, error: null };
+// Helper to check admin from JWT metadata
+function checkAdminFromMetadata(user: any): { isAdmin: boolean; userId: string | null } {
+  if (!user) return { isAdmin: false, userId: null };
+  
+  const isAdmin = user.user_metadata?.is_admin === true || 
+                  user.user_metadata?.roles?.includes("ADMIN_USER");
+  
+  return { isAdmin, userId: user.id };
 }
 
 // POST /api/admin/dropdowns/[id]/toggle - Toggle active status
@@ -35,10 +25,15 @@ export async function POST(
 ) {
   try {
     const supabase = await createClient();
-    const { isAdmin: adminCheck, userId, error } = await checkAdmin(supabase);
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!adminCheck) {
-      return NextResponse.json({ success: false, error }, { status: error === "Unauthorized" ? 401 : 403 });
+    const { isAdmin, userId } = checkAdminFromMetadata(user);
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
     const { id } = await params;
