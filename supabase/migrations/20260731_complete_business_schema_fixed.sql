@@ -677,7 +677,7 @@ CREATE POLICY "Management can manage associations" ON associations
             SELECT 1 FROM user_roles 
             WHERE user_id = auth.uid() 
             AND role IN ('ADMIN_USER', 'MANAGEMENT_STAFF')
-            AND (association_id = associations.id OR association_id IS NULL)
+            AND (association_id = associations.id::TEXT OR association_id IS NULL)
             AND revoked_at IS NULL
         )
     );
@@ -694,7 +694,7 @@ CREATE POLICY "Management can manage properties" ON properties
             SELECT 1 FROM user_roles 
             WHERE user_id = auth.uid() 
             AND role IN ('ADMIN_USER', 'MANAGEMENT_STAFF')
-            AND (association_id = properties.association_id OR association_id IS NULL)
+            AND (association_id = properties.association_id::TEXT OR association_id IS NULL)
             AND revoked_at IS NULL
         )
     );
@@ -703,7 +703,7 @@ CREATE POLICY "Users can view units in their associations" ON units
     FOR SELECT USING (
         property_id IN (
             SELECT id FROM properties 
-            WHERE association_id IN (SELECT get_user_association_ids(auth.uid()))
+            WHERE association_id::TEXT IN (SELECT get_user_association_ids(auth.uid()))
         )
         OR is_admin_user(auth.uid())
     );
