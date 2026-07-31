@@ -148,56 +148,60 @@ export default function AssociationDetailPage() {
         </div>
       </div>
 
-      {/* Quick Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <Link href={`/management/properties/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Plus className="h-5 w-5" />
-            <span className="text-xs">Add Property</span>
-          </Button>
-        </Link>
-        <Link href={`/management/people/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Users className="h-5 w-5" />
-            <span className="text-xs">Add People</span>
-          </Button>
-        </Link>
-        <Link href={`/management/documents/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Upload className="h-5 w-5" />
-            <span className="text-xs">Upload Doc</span>
-          </Button>
-        </Link>
-        <Link href={`/management/compliance/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Shield className="h-5 w-5" />
-            <span className="text-xs">Add Compliance</span>
-          </Button>
-        </Link>
-        <Link href={`/management/inspections/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <ClipboardCheck className="h-5 w-5" />
-            <span className="text-xs">Schedule Insp</span>
-          </Button>
-        </Link>
-        <Link href={`/management/maintenance/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Wrench className="h-5 w-5" />
-            <span className="text-xs">New Maint</span>
-          </Button>
-        </Link>
-        <Link href={`/management/payments/new?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            <span className="text-xs">Make Payment</span>
-          </Button>
-        </Link>
-        <Link href={`/management/communications/announcement?associationId=${association.id}`}>
-          <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
-            <Megaphone className="h-5 w-5" />
-            <span className="text-xs">Send Announce</span>
-          </Button>
-        </Link>
+      {/* Top Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                <Home className="h-5 w-5 text-[var(--teal)]" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Properties</p>
+                <p className="text-2xl font-semibold">{association.propertyCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-[var(--teal)]" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
+                <p className="text-2xl font-semibold">{association.unitCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                <Wrench className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Open Maintenance</p>
+                <p className="text-2xl font-semibold">{association.openMaintenance}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                <Scale className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Pending Approvals</p>
+                <p className="text-2xl font-semibold">{association.pendingApprovals}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
@@ -263,23 +267,61 @@ export default function AssociationDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Stats */}
+            {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Stats</CardTitle>
+                <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-[var(--page-background)] rounded-lg">
-                  <span className="text-[var(--secondary-text)]">Properties</span>
-                  <span className="font-semibold">{association.propertyCount}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-[var(--page-background)] rounded-lg">
-                  <span className="text-[var(--secondary-text)]">Total Units</span>
-                  <span className="font-semibold">{association.unitCount}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
-                  <span className="text-amber-700">Expiring Documents</span>
-                  <span className="font-semibold text-amber-700">{association.expiringDocuments}</span>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href={`/management/properties/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Plus className="h-5 w-5" />
+                      <span className="text-xs text-center">Add Property</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/people/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      <span className="text-xs text-center">Add People</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/documents/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      <span className="text-xs text-center">Upload Doc</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/compliance/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      <span className="text-xs text-center">Add Compliance</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/inspections/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <ClipboardCheck className="h-5 w-5" />
+                      <span className="text-xs text-center">Schedule Insp</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/maintenance/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Wrench className="h-5 w-5" />
+                      <span className="text-xs text-center">New Maint</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/payments/new?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      <span className="text-xs text-center">Make Payment</span>
+                    </Button>
+                  </Link>
+                  <Link href={`/management/communications/announcement?associationId=${association.id}`}>
+                    <Button variant="outline" className="w-full h-auto py-3 flex flex-col items-center gap-2">
+                      <Megaphone className="h-5 w-5" />
+                      <span className="text-xs text-center">Send Announce</span>
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
