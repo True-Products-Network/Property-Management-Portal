@@ -56,7 +56,7 @@ INSERT INTO properties (
 (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb4', 'TEST-PROP-004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3',
     'Marina Towers East', '300 N State Street', 'Chicago', 'IL', '60654',
-    'Cooperative', 'active', 1964, 200, '2024-03-15', NOW(), NOW()
+    'Condominium', 'active', 1964, 200, '2024-03-15', NOW(), NOW()
 );
 
 -- ============================================

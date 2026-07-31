@@ -18,20 +18,20 @@ import {
 
 interface Association {
   id: string;
+  associationId: string;
   name: string;
-  legalName: string;
+  legalName?: string;
   type: string;
-  status: "active" | "inactive" | "onboarding";
+  status: string;
   propertyCount: number;
   unitCount: number;
-  managerName: string;
-  openRequests: number;
-  pendingApprovals: number;
+  assignedManager?: string;
 }
 
 export default function AssociationsPage() {
   const [associations, setAssociations] = useState<Association[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -40,47 +40,14 @@ export default function AssociationsPage() {
 
   async function loadAssociations() {
     try {
-      const mockAssociations: Association[] = [
-        {
-          id: "TEST-ASSOC-RIDGELAND",
-          name: "Ridgeland Condominium Association",
-          legalName: "Ridgeland Condominium Association",
-          type: "Condominium",
-          status: "active",
-          propertyCount: 1,
-          unitCount: 12,
-          managerName: "Sarah Johnson",
-          openRequests: 3,
-          pendingApprovals: 1,
-        },
-        {
-          id: "TEST-ASSOC-OAKWOOD",
-          name: "Oakwood Heights HOA",
-          legalName: "Oakwood Heights Homeowners Association",
-          type: "HOA",
-          status: "active",
-          propertyCount: 5,
-          unitCount: 48,
-          managerName: "Mike Chen",
-          openRequests: 5,
-          pendingApprovals: 2,
-        },
-        {
-          id: "TEST-ASSOC-MAIN",
-          name: "Main Street Association",
-          legalName: "Main Street Business Association",
-          type: "Commercial",
-          status: "onboarding",
-          propertyCount: 3,
-          unitCount: 24,
-          managerName: "Lisa Davis",
-          openRequests: 0,
-          pendingApprovals: 0,
-        },
-      ];
-      setAssociations(mockAssociations);
-    } catch (error) {
-      console.error("Error loading associations:", error);
+      setIsLoading(true);
+      const response = await fetch("/api/associations");
+      if (!response.ok) throw new Error("Failed to fetch associations");
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+      setAssociations(result.data.data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
     }
@@ -88,9 +55,8 @@ export default function AssociationsPage() {
 
   const filteredAssociations = associations.filter(
     (assoc) =>
-      assoc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assoc.legalName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      assoc.managerName.toLowerCase().includes(searchQuery.toLowerCase())
+      assoc.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      assoc.legalName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusBadge = (status: string) => {
@@ -113,6 +79,18 @@ export default function AssociationsPage() {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-600">{error}</p>
+        <Button onClick={loadAssociations} variant="outline">Retry</Button>
+      </div>
+    );
+  }
+
+  const totalProperties = associations.reduce((sum, a) => sum + (a.propertyCount || 0), 0);
+  const totalUnits = associations.reduce((sum, a) => sum + (a.unitCount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -168,9 +146,7 @@ export default function AssociationsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Properties</p>
-                <p className="text-2xl font-semibold">
-                  {associations.reduce((sum, a) => sum + a.propertyCount, 0)}
-                </p>
+                <p className="text-2xl font-semibold">{totalProperties}</p>
               </div>
             </div>
           </CardContent>
@@ -183,9 +159,7 @@ export default function AssociationsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                <p className="text-2xl font-semibold">
-                  {associations.reduce((sum, a) => sum + a.unitCount, 0)}
-                </p>
+                <p className="text-2xl font-semibold">{totalUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -227,9 +201,6 @@ export default function AssociationsPage() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Properties
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Manager
-                  </th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Actions
                   </th>
@@ -248,17 +219,18 @@ export default function AssociationsPage() {
                       >
                         {assoc.name}
                       </Link>
-                      <p className="text-xs text-[var(--secondary-text)]">{assoc.legalName}</p>
+                      {assoc.legalName && assoc.legalName !== assoc.name && (
+                        <p className="text-xs text-[var(--secondary-text)]">{assoc.legalName}</p>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm">{assoc.type}</td>
                     <td className="py-3 px-4">{getStatusBadge(assoc.status)}</td>
                     <td className="py-3 px-4">
                       <div className="text-sm">
-                        <p>{assoc.propertyCount} properties</p>
-                        <p className="text-[var(--secondary-text)]">{assoc.unitCount} units</p>
+                        <p>{assoc.propertyCount || 0} properties</p>
+                        <p className="text-[var(--secondary-text)]">{assoc.unitCount || 0} units</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm">{assoc.managerName}</td>
                     <td className="py-3 px-4 text-right">
                       <Link href={`/management/associations/${assoc.id}`}>
                         <Button variant="ghost" size="sm">
@@ -273,7 +245,7 @@ export default function AssociationsPage() {
           </div>
           {filteredAssociations.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
-              No associations found.
+              {searchQuery ? "No associations found matching your search." : "No associations found."}
             </div>
           )}
         </CardContent>
