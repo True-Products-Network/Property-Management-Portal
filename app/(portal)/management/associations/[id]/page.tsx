@@ -13,84 +13,85 @@ import {
   Home,
   Users,
   Wrench,
-  Truck,
   ClipboardCheck,
   FileText,
   Scale,
+  MessageSquare,
   Activity,
   Edit,
   Plus,
   Loader2,
-  ImageIcon,
+  DollarSign,
 } from "lucide-react";
 
 // Mock data - replace with actual API calls
-const mockProperty = {
-  id: "PROP-001",
-  name: "Ridgeland Condominiums",
-  address: "6722 S Ridgeland Ave, Chicago, IL 60649",
+const mockAssociation = {
+  id: "ASSOC-001",
+  name: "Ridgeland Condominium Association",
+  legalName: "Ridgeland Condominium Association",
   type: "Condominium",
   status: "active",
-  yearBuilt: 1985,
-  unitCount: 12,
-  occupiedUnits: 10,
-  vacantUnits: 2,
-  openMaintenance: 3,
+  address: "6722 S Ridgeland Ave, Chicago, IL 60649",
+  phone: "(773) 555-0123",
+  email: "board@ridgelandcondo.org",
+  fiscalYear: "January - December",
+  annualMeetingMonth: "May",
   managementStartDate: "2024-01-01",
-  accessInstructions: "Key fob required for entry. Main entrance on south side.",
-  emergencyNotes: "Emergency contact: 555-0123. Fire panel located in lobby.",
-  assignedStaff: "Sarah Johnson",
-  image: "/images/property-placeholder.jpg",
-  association: {
-    id: "ASSOC-001",
-    name: "Ridgeland Condominium Association",
-  },
+  assignedManager: "Sarah Johnson",
+  propertyCount: 1,
+  unitCount: 12,
+  openMaintenance: 3,
+  pendingApprovals: 2,
+  expiringDocuments: 1,
 };
 
-const mockUnits = [
-  { id: "UNIT-001", unitNumber: "1N", type: "2BR/2BA", status: "occupied", owner: "John Smith" },
-  { id: "UNIT-002", unitNumber: "2N", type: "2BR/2BA", status: "occupied", owner: "Jane Doe" },
-  { id: "UNIT-003", unitNumber: "3S", type: "3BR/2BA", status: "vacant", owner: "Mike Johnson" },
+const mockProperties = [
+  { id: "PROP-001", name: "Ridgeland Condominiums", address: "6722 S Ridgeland Ave, Chicago, IL 60649", type: "Condominium", units: 12 },
 ];
 
 const mockPeople = [
-  { id: "CONT-001", firstName: "John", lastName: "Smith", role: "Owner", unit: "1N", email: "john@example.com" },
-  { id: "CONT-002", firstName: "Jane", lastName: "Doe", role: "Owner", unit: "2N", email: "jane@example.com" },
+  { id: "CONT-001", firstName: "John", lastName: "Smith", role: "Board President", unit: "1N", email: "john@example.com", isBoard: true },
+  { id: "CONT-002", firstName: "Jane", lastName: "Doe", role: "Board Treasurer", unit: "2N", email: "jane@example.com", isBoard: true },
+  { id: "CONT-003", firstName: "Mike", lastName: "Johnson", role: "Owner", unit: "3S", email: "mike@example.com", isBoard: false },
 ];
 
 const mockMaintenance = [
-  { id: "MNT-001", requestNumber: "MNT-2026-0047", title: "HVAC Repair", status: "in_progress", priority: "high", date: "2026-07-30" },
-  { id: "MNT-002", requestNumber: "MNT-2026-0048", title: "Plumbing Issue", status: "scheduled", priority: "medium", date: "2026-08-01" },
-];
-
-const mockVendors = [
-  { id: "VEND-001", name: "ABC Heating & Cooling", category: "HVAC", rating: 4.8 },
-  { id: "VEND-002", name: "Quick Fix Plumbing", category: "Plumbing", rating: 4.5 },
+  { id: "MNT-001", requestNumber: "MNT-2026-0047", title: "HVAC Repair", status: "in_progress", priority: "high", property: "Ridgeland Condominiums" },
+  { id: "MNT-002", requestNumber: "MNT-2026-0048", title: "Plumbing Issue", status: "scheduled", priority: "medium", property: "Ridgeland Condominiums" },
 ];
 
 const mockInspections = [
-  { id: "INSP-001", type: "Annual", date: "2026-08-15", status: "scheduled" },
-  { id: "INSP-002", type: "Fire Safety", date: "2026-07-01", status: "completed" },
+  { id: "INSP-001", type: "Annual", date: "2026-08-15", status: "scheduled", property: "Ridgeland Condominiums" },
+  { id: "INSP-002", type: "Fire Safety", date: "2026-07-01", status: "completed", property: "Ridgeland Condominiums" },
 ];
 
 const mockDocuments = [
-  { id: "DOC-001", name: "Insurance Certificate 2026.pdf", type: "Insurance", date: "2026-01-15" },
-  { id: "DOC-002", name: "Annual Budget.xlsx", type: "Financial", date: "2026-01-10" },
+  { id: "DOC-001", name: "Insurance Certificate 2026.pdf", type: "Insurance", date: "2026-01-15", expiring: true },
+  { id: "DOC-002", name: "Annual Budget.xlsx", type: "Financial", date: "2026-01-10", expiring: false },
 ];
 
 const mockCompliance = [
-  { id: "COMP-001", title: "Annual Fire Inspection", dueDate: "2026-08-15", status: "compliant" },
-  { id: "COMP-002", title: "Elevator Certification", dueDate: "2026-09-01", status: "pending" },
+  { id: "COMP-001", title: "Annual Fire Inspection", dueDate: "2026-08-15", status: "compliant", property: "Ridgeland Condominiums" },
+  { id: "COMP-002", title: "Elevator Certification", dueDate: "2026-09-01", status: "pending", property: "Ridgeland Condominiums" },
 ];
 
-export default function PropertyDetailPage() {
+const mockCommunications = [
+  { id: "COMM-001", subject: "Pool Maintenance Schedule", from: "Sarah Johnson", date: "2026-07-30", type: "announcement" },
+  { id: "COMM-002", subject: "Annual Meeting Notice", from: "Board", date: "2026-07-25", type: "notice" },
+];
+
+const mockFinancialLinks = [
+  { name: "Operating Account", institution: "Chase Bank", accountNumber: "****4567", balance: "$45,230.00" },
+  { name: "Reserve Account", institution: "Chase Bank", accountNumber: "****8901", balance: "$125,000.00" },
+];
+
+export default function AssociationDetailPage() {
   const params = useParams();
-  const [property, setProperty] = useState(mockProperty);
+  const [association, setAssociation] = useState(mockAssociation);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    // Simulate loading
     setTimeout(() => setIsLoading(false), 500);
   }, []);
 
@@ -100,6 +101,8 @@ export default function PropertyDetailPage() {
         return <Badge className="bg-green-100 text-green-700">Active</Badge>;
       case "inactive":
         return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
+      case "onboarding":
+        return <Badge className="bg-blue-100 text-blue-700">Onboarding</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -120,18 +123,18 @@ export default function PropertyDetailPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-[var(--secondary-text)]">
             <Link
-              href="/management/properties"
+              href="/management/associations"
               className="flex items-center gap-1 hover:text-[var(--main-text)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Properties
+              Back to Associations
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-[var(--main-text)]">{property.name}</h1>
-            {getStatusBadge(property.status)}
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">{association.name}</h1>
+            {getStatusBadge(association.status)}
           </div>
-          <p className="text-[var(--secondary-text)]">{property.id} • {property.address}</p>
+          <p className="text-[var(--secondary-text)]">{association.id} • {association.legalName}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline">
@@ -150,34 +153,21 @@ export default function PropertyDetailPage() {
                 <Home className="h-5 w-5 text-[var(--teal)]" />
               </div>
               <div>
+                <p className="text-sm text-[var(--secondary-text)]">Properties</p>
+                <p className="text-2xl font-semibold">{association.propertyCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-[var(--teal)]" />
+              </div>
+              <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                <p className="text-2xl font-semibold">{property.unitCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                <Users className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[var(--secondary-text)]">Occupied</p>
-                <p className="text-2xl font-semibold">{property.occupiedUnits}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Home className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[var(--secondary-text)]">Vacant</p>
-                <p className="text-2xl font-semibold">{property.vacantUnits}</p>
+                <p className="text-2xl font-semibold">{association.unitCount}</p>
               </div>
             </div>
           </CardContent>
@@ -189,8 +179,21 @@ export default function PropertyDetailPage() {
                 <Wrench className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Maintenance</p>
-                <p className="text-2xl font-semibold">{property.openMaintenance}</p>
+                <p className="text-sm text-[var(--secondary-text)]">Open Maintenance</p>
+                <p className="text-2xl font-semibold">{association.openMaintenance}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                <Scale className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">Pending Approvals</p>
+                <p className="text-2xl font-semibold">{association.pendingApprovals}</p>
               </div>
             </div>
           </CardContent>
@@ -201,118 +204,115 @@ export default function PropertyDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)]">
           <TabsTrigger value="overview" className="px-3 py-1.5 text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="units" className="px-3 py-1.5 text-sm">Units</TabsTrigger>
-          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People</TabsTrigger>
+          <TabsTrigger value="properties" className="px-3 py-1.5 text-sm">Properties</TabsTrigger>
+          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People & Board</TabsTrigger>
           <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance</TabsTrigger>
-          <TabsTrigger value="vendors" className="px-3 py-1.5 text-sm">Vendors</TabsTrigger>
           <TabsTrigger value="inspections" className="px-3 py-1.5 text-sm">Inspections</TabsTrigger>
           <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents</TabsTrigger>
           <TabsTrigger value="compliance" className="px-3 py-1.5 text-sm">Compliance</TabsTrigger>
+          <TabsTrigger value="communications" className="px-3 py-1.5 text-sm">Communications</TabsTrigger>
+          <TabsTrigger value="financial" className="px-3 py-1.5 text-sm">Financial</TabsTrigger>
           <TabsTrigger value="activity" className="px-3 py-1.5 text-sm">Activity</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Property Image */}
-            <Card className="lg:col-span-1">
-              <CardContent className="p-0">
-                <div className="aspect-video bg-gray-100 flex items-center justify-center rounded-t-lg">
-                  <ImageIcon className="h-16 w-16 text-gray-300" />
-                </div>
-                <div className="p-4">
-                  <p className="text-sm text-[var(--secondary-text)] text-center">Property Photo</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Property Details */}
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Association Details */}
+            <Card>
               <CardHeader>
-                <CardTitle>Property Details</CardTitle>
+                <CardTitle>Association Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Property Type</p>
-                    <p className="font-medium">{property.type}</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Association Type</p>
+                    <p className="font-medium">{association.type}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Year Built</p>
-                    <p className="font-medium">{property.yearBuilt}</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Fiscal Year</p>
+                    <p className="font-medium">{association.fiscalYear}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Annual Meeting</p>
+                    <p className="font-medium">{association.annualMeetingMonth}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Management Start</p>
-                    <p className="font-medium">{property.managementStartDate}</p>
+                    <p className="font-medium">{association.managementStartDate}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Assigned Staff</p>
-                    <p className="font-medium">{property.assignedStaff}</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Assigned Manager</p>
+                    <p className="font-medium">{association.assignedManager}</p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Access Instructions</p>
-                  <p className="font-medium">{property.accessInstructions}</p>
+                  <p className="text-sm text-[var(--secondary-text)]">Address</p>
+                  <p className="font-medium">{association.address}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Emergency Notes</p>
-                  <p className="font-medium">{property.emergencyNotes}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Phone</p>
+                    <p className="font-medium">{association.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Email</p>
+                    <p className="font-medium">{association.email}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Stats</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-[var(--page-background)] rounded-lg">
+                  <span className="text-[var(--secondary-text)]">Properties</span>
+                  <span className="font-semibold">{association.propertyCount}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-[var(--page-background)] rounded-lg">
+                  <span className="text-[var(--secondary-text)]">Total Units</span>
+                  <span className="font-semibold">{association.unitCount}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
+                  <span className="text-amber-700">Expiring Documents</span>
+                  <span className="font-semibold text-amber-700">{association.expiringDocuments}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Association Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Association</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-[var(--teal)]" />
-                </div>
-                <div>
-                  <Link
-                    href={`/management/associations/${property.association.id}`}
-                    className="font-medium text-[var(--teal)] hover:underline"
-                  >
-                    {property.association.name}
-                  </Link>
-                  <p className="text-sm text-[var(--secondary-text)]">{property.association.id}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
-        {/* Units Tab */}
-        <TabsContent value="units" className="space-y-4">
+        {/* Properties Tab */}
+        <TabsContent value="properties" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Units ({mockUnits.length})</h3>
+            <h3 className="text-lg font-medium">Properties ({mockProperties.length})</h3>
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Add Unit
+              Add Property
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockUnits.map((unit) => (
-              <Card key={unit.id}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mockProperties.map((property) => (
+              <Card key={property.id}>
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <Home className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
                     <div>
                       <Link
-                        href={`/management/units/${unit.id}`}
+                        href={`/management/properties/${property.id}`}
                         className="font-medium text-[var(--teal)] hover:underline"
                       >
-                        Unit {unit.unitNumber}
+                        {property.name}
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{unit.type}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">Owner: {unit.owner}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{property.address}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{property.type} • {property.units} units</p>
                     </div>
-                    <Badge className={unit.status === "occupied" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
-                      {unit.status}
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -320,7 +320,7 @@ export default function PropertyDetailPage() {
           </div>
         </TabsContent>
 
-        {/* People Tab */}
+        {/* People & Board Tab */}
         <TabsContent value="people" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium">People ({mockPeople.length})</h3>
@@ -337,15 +337,20 @@ export default function PropertyDetailPage() {
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <Users className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
-                      <Link
-                        href={`/management/people/${person.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {person.firstName} {person.lastName}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{person.role} • Unit {person.unit}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{person.email}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/management/people/${person.id}`}
+                          className="font-medium text-[var(--teal)] hover:underline"
+                        >
+                          {person.firstName} {person.lastName}
+                        </Link>
+                        {person.isBoard && (
+                          <Badge className="bg-purple-100 text-purple-700 text-xs">Board</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-[var(--secondary-text)]">{person.role}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">Unit {person.unit} • {person.email}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -376,47 +381,13 @@ export default function PropertyDetailPage() {
                         {request.title}
                       </Link>
                       <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{request.date}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{request.property}</p>
                     </div>
                     <div className="flex gap-2">
                       <Badge className="bg-teal-100 text-teal-700">{request.status}</Badge>
                       <Badge className={request.priority === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
                         {request.priority}
                       </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Vendors Tab */}
-        <TabsContent value="vendors" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Vendors ({mockVendors.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vendor
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockVendors.map((vendor) => (
-              <Card key={vendor.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                      <Truck className="h-5 w-5 text-[var(--teal)]" />
-                    </div>
-                    <div>
-                      <Link
-                        href={`/management/vendors/${vendor.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {vendor.name}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{vendor.category}</p>
-                      <Badge className="mt-1">★ {vendor.rating}</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -446,6 +417,7 @@ export default function PropertyDetailPage() {
                       >
                         {inspection.type} Inspection
                       </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{inspection.property}</p>
                       <p className="text-sm text-[var(--secondary-text)]">{inspection.date}</p>
                     </div>
                     <Badge className={inspection.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
@@ -475,7 +447,7 @@ export default function PropertyDetailPage() {
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <FileText className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <Link
                         href={`/management/documents/${doc.id}`}
                         className="font-medium text-[var(--teal)] hover:underline"
@@ -484,6 +456,9 @@ export default function PropertyDetailPage() {
                       </Link>
                       <p className="text-sm text-[var(--secondary-text)]">{doc.type} • {doc.date}</p>
                     </div>
+                    {doc.expiring && (
+                      <Badge className="bg-amber-100 text-amber-700">Expiring Soon</Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -512,6 +487,7 @@ export default function PropertyDetailPage() {
                       >
                         {item.title}
                       </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{item.property}</p>
                       <p className="text-sm text-[var(--secondary-text)]">Due: {item.dueDate}</p>
                     </div>
                     <Badge className={item.status === "compliant" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
@@ -522,6 +498,60 @@ export default function PropertyDetailPage() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Communications Tab */}
+        <TabsContent value="communications" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Communications ({mockCommunications.length})</h3>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Send Announcement
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {mockCommunications.map((comm) => (
+              <Card key={comm.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{comm.subject}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">From: {comm.from} • {comm.date}</p>
+                      <Badge className="mt-1" variant="secondary">{comm.type}</Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Financial Links Tab */}
+        <TabsContent value="financial" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Financial Accounts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {mockFinancialLinks.map((account, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{account.name}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{account.institution} • {account.accountNumber}</p>
+                    </div>
+                  </div>
+                  <p className="font-semibold">{account.balance}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Activity Tab */}
@@ -535,7 +565,7 @@ export default function PropertyDetailPage() {
                 <div className="flex items-start gap-3 pb-4 border-b border-[var(--border-color)]">
                   <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
                   <div>
-                    <p className="font-medium">Property record created</p>
+                    <p className="font-medium">Association record created</p>
                     <p className="text-sm text-[var(--secondary-text)]">By: System • 2024-01-01 10:30 AM</p>
                   </div>
                 </div>
@@ -549,7 +579,7 @@ export default function PropertyDetailPage() {
                 <div className="flex items-start gap-3">
                   <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
                   <div>
-                    <p className="font-medium">Unit 1N added</p>
+                    <p className="font-medium">Property added</p>
                     <p className="text-sm text-[var(--secondary-text)]">By: Admin • 2024-01-02 09:15 AM</p>
                   </div>
                 </div>
