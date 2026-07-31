@@ -129,7 +129,7 @@ export async function createAppointment(input: CreateAppointmentInput, userId: s
 
 export async function updateAppointment(
   id: string,
-  input: Partial<CreateAppointmentInput>,
+  input: Partial<CreateAppointmentInput> & { status?: string },
   userId: string
 ): Promise<ApiResponse<Appointment>> {
   try {
