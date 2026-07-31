@@ -30,16 +30,19 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
+    const documentType = searchParams.get("documentType");
+    const status = searchParams.get("status");
+    const filters: Record<string, string> = {};
+    if (documentType) filters.documentType = documentType;
+    if (status) filters.status = status;
+    
     const result = await getDocuments({
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       search: searchParams.get("search") || undefined,
       associationId: searchParams.get("associationId") || undefined,
       propertyId: searchParams.get("propertyId") || undefined,
-      filters: {
-        documentType: searchParams.get("documentType") || undefined,
-        status: searchParams.get("status") || undefined,
-      },
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });

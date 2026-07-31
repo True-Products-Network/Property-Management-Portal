@@ -20,14 +20,17 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status");
+    const type = searchParams.get("type");
+    const filters: Record<string, string> = {};
+    if (status) filters.status = status;
+    if (type) filters.type = type;
+    
     const result = await getCommunications({
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       associationId: searchParams.get("associationId") || undefined,
-      filters: {
-        status: searchParams.get("status") || undefined,
-        type: searchParams.get("type") || undefined,
-      },
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });
