@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+:root {
+  /* Design System Colors from Specification Section 3.3 */
+  --primary-navy: #062F52;
+  --secondary-navy: #0B3F69;
+  --teal: #07838B;
+  --teal-hover: #066B72;
+  --gold-accent: #D6A52A;
+  --page-background: #F5F7FA;
+  --card-background: #FFFFFF;
+  --main-text: #17212B;
+  --secondary-text: #64748B;
+  --border-color: #DCE3EA;
+  --success: #2E9D55;
+  --warning: #D88A10;
+  --error: #C93C3C;
+  --info: #2E78D2;
+
+  /* Status Colors */
+  --status-new: #2E78D2;
+  --status-active: #2E9D55;
+  --status-pending: #D6A52A;
+  --status-urgent: #C93C3C;
+  --status-scheduled: #07838B;
+  --status-closed: #64748B;
+  --status-board-review: #8B5CF6;
+
+  /* Spacing */
+  --sidebar-width: 256px;
+  --sidebar-collapsed: 64px;
+  --header-height: 64px;
+  --max-content-width: 1600px;
+
+  /* Border Radius */
+  --card-radius: 10px;
+  --button-radius: 8px;
+}
+
+@theme inline {
+  --color-primary-navy: var(--primary-navy);
+  --color-secondary-navy: var(--secondary-navy);
+  --color-teal: var(--teal);
+  --color-teal-hover: var(--teal-hover);
+  --color-gold: var(--gold-accent);
+  --color-page-bg: var(--page-background);
+  --color-card-bg: var(--card-background);
+  --color-main-text: var(--main-text);
+  --color-secondary-text: var(--secondary-text);
+  --color-border: var(--border-color);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Base Styles */
+html {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--page-background);
+  color: var(--main-text);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--page-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-text);
+}
+
+/* Focus Styles for Accessibility */
+*:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--card-background);
+  border-radius: var(--card-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+}
+
+/* Button Base */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--button-radius);
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--teal);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--teal-hover);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--main-text);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--page-background);
+}
+
+.btn-danger {
+  background-color: var(--error);
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #b03535;
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-new {
+  background-color: rgba(46, 120, 210, 0.1);
+  color: var(--status-new);
+}
+
+.status-active {
+  background-color: rgba(46, 157, 85, 0.1);
+  color: var(--status-active);
+}
+
+.status-pending {
+  background-color: rgba(214, 165, 42, 0.1);
+  color: var(--status-pending);
+}
+
+.status-urgent {
+  background-color: rgba(201, 60, 60, 0.1);
+  color: var(--status-urgent);
+}
+
+.status-scheduled {
+  background-color: rgba(7, 131, 139, 0.1);
+  color: var(--status-scheduled);
+}
+
+.status-closed {
+  background-color: rgba(100, 116, 139, 0.1);
+  color: var(--status-closed);
+}
+
+/* Form Elements */
+.input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--button-radius);
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
+  background-color: white;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(7, 131, 139, 0.1);
+}
+
+.input::placeholder {
+  color: var(--secondary-text);
+}
+
+/* Table Styles */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--secondary-text);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--page-background);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.875rem;
+}
+
+.data-table tr:hover td {
+  background-color: var(--page-background);
+}
+
+/* Sidebar Navigation */
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--primary-navy);
+  color: white;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background-color: var(--secondary-navy);
+  color: white;
+}
+
+.sidebar-item.active {
+  background-color: var(--teal);
+  color: white;
+}
+
+/* Utility Classes */
+.text-secondary {
+  color: var(--secondary-text);
+}
+
+.bg-page {
+  background-color: var(--page-background);
+}
+
+.bg-card {
+  background-color: var(--card-background);
+}
+
+.border-default {
+  border-color: var(--border-color);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Print Styles */
+@media print {
+  .sidebar,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+}

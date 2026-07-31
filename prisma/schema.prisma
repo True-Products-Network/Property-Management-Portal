@@ -1,0 +1,171 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Portal user authentication & sessions
+model PortalUser {
+  id              String       @id @default(cuid())
+  ghlContactId    String       @unique
+  email           String       @unique
+  passwordHash    String?
+  mfaSecret       String?
+  mfaEnabled      Boolean      @default(false)
+  status          UserStatus   @default(ACTIVE)
+  lastSignInAt    DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sessions        PortalSession[]
+  roles           UserRole[]
+  auditEvents     AuditEvent[]
+  preferences     UserPreference?
+}
+
+model PortalSession {
+  id           String       @id @default(cuid())
+  userId       String
+  user         PortalUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String       @unique
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+  revokedAt    DateTime?
+  ipAddress    String?
+  userAgent    String?
+}
+
+model UserRole {
+  id            String       @id @default(cuid())
+  userId        String
+  user          PortalUser   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          PortalRole
+  associationId String?
+  propertyId    String?
+  unitId        String?
+  vendorId      String?
+  grantedAt     DateTime     @default(now())
+  grantedBy     String?
+  revokedAt     DateTime?
+  isPrimary     Boolean      @default(false)
+
+  @@index([userId])
+  @@index([role])
+  @@index([associationId])
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      PortalUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settings  Json     // { theme, notifications, filters, etc. }
+  updatedAt DateTime @updatedAt
+}
+
+// Idempotency & correlation
+model IdempotencyKey {
+  key         String   @id
+  action      String
+  payloadHash String
+  result      Json?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([key])
+  @@index([expiresAt])
+}
+
+model CorrelationRecord {
+  id            String   @id @default(cuid())
+  correlationId String   @unique
+  action        String
+  status        String
+  request       Json
+  response      Json?
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  @@index([correlationId])
+  @@index([createdAt])
+}
+
+// Integration & audit
+model IntegrationEvent {
+  id            String   @id @default(cuid())
+  provider      String   // 'ghl', 'payment', etc.
+  eventType     String
+  status        String   // 'success', 'error', 'retry'
+  payload       Json?
+  error         Json?
+  correlationId String?
+  createdAt     DateTime @default(now())
+
+  @@index([provider, eventType])
+  @@index([createdAt])
+}
+
+model AuditEvent {
+  id            String       @id @default(cuid())
+  eventId       String       @unique
+  occurredAt    DateTime     @default(now())
+  actorId       String
+  actor         PortalUser   @relation(fields: [actorId], references: [id])
+  role          String
+  associationId String?
+  recordType    String?
+  recordId      String?
+  action        String
+  previousValue Json?
+  newValue      Json?
+  correlationId String?
+  ipAddress     String?
+  userAgent     String?
+  reason        String?
+
+  @@index([actorId])
+  @@index([occurredAt])
+  @@index([associationId])
+  @@index([action])
+}
+
+// File metadata
+model FileReference {
+  id            String   @id @default(cuid())
+  fileName      String
+  storageKey    String   @unique
+  contentType   String
+  size          Int
+  associationId String
+  relatedType   String?
+  relatedId     String?
+  uploadedBy    String
+  uploadedAt    DateTime @default(now())
+  expiresAt     DateTime?
+  scanStatus    String   @default('pending') // 'pending', 'clean', 'infected', 'error'
+  ghlDocumentId String?
+
+  @@index([associationId])
+  @@index([relatedType, relatedId])
+  @@index([uploadedAt])
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  PENDING_INVITE
+}
+
+enum PortalRole {
+  ADMIN_USER
+  MANAGEMENT_STAFF
+  OWNER
+  RESIDENT
+  BOARD_MEMBER
+  VENDOR
+}
