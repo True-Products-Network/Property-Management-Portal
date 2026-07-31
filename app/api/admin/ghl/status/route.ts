@@ -14,13 +14,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // In production, this would check the database for stored credentials
-    // and verify the connection to GHL
+    // Determine connection type
+    const hasApiKey = !!process.env.GHL_API_KEY;
+    const hasAccessToken = !!process.env.GHL_ACCESS_TOKEN;
+    const hasRefreshToken = !!process.env.GHL_REFRESH_TOKEN;
+
+    let connectionType: "api_key" | "oauth" | null = null;
+    if (hasAccessToken && hasRefreshToken) {
+      connectionType = "oauth";
+    } else if (hasApiKey) {
+      connectionType = "api_key";
+    }
+
     const status = {
-      connected: process.env.GHL_ACCESS_TOKEN ? true : false,
-      accessTokenConfigured: process.env.GHL_ACCESS_TOKEN ? true : false,
-      refreshTokenConfigured: process.env.GHL_REFRESH_TOKEN ? true : false,
-      webhooksConfigured: process.env.GHL_WEBHOOK_SECRET ? true : false,
+      connected: hasApiKey || hasAccessToken,
+      connectionType,
+      apiKeyConfigured: hasApiKey,
+      accessTokenConfigured: hasAccessToken,
+      refreshTokenConfigured: hasRefreshToken,
+      webhooksConfigured: !!process.env.GHL_WEBHOOK_SECRET,
       locationId: process.env.GHL_LOCATION_ID,
       locationName: process.env.GHL_LOCATION_NAME,
       companyId: process.env.GHL_COMPANY_ID,
