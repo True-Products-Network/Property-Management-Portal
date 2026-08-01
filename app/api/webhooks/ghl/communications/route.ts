@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 }
 
 async function handleCommunicationSent(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   data: GhlCommunicationWebhookPayload["data"]
 ) {
   // Log the communication in our database
@@ -102,7 +102,7 @@ async function handleCommunicationSent(
 }
 
 async function handleCommunicationCreated(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   data: GhlCommunicationWebhookPayload["data"]
 ) {
   console.log(`Communication created: ${data.id}`);
@@ -112,7 +112,7 @@ async function handleCommunicationCreated(
 }
 
 async function handleCommunicationUpdated(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   data: GhlCommunicationWebhookPayload["data"]
 ) {
   console.log(`Communication updated: ${data.id}, status: ${data.status}`);
