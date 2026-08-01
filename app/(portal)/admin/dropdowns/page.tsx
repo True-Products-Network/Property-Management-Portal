@@ -27,6 +27,9 @@ import {
   FileText,
   Scale,
   Tag,
+  CreditCard,
+  MessageSquare,
+  CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -103,6 +106,30 @@ const RECORD_TYPES: RecordType[] = [
     icon: "scale",
     fields: ["Compliance Status"],
   },
+  {
+    id: "Approval Request",
+    label: "Approval Request",
+    icon: "check_circle",
+    fields: ["Approval Type", "Approval Status"],
+  },
+  {
+    id: "Payment Record",
+    label: "Payment Record",
+    icon: "credit_card",
+    fields: ["Payment Type", "Payment Status"],
+  },
+  {
+    id: "Communication",
+    label: "Communication",
+    icon: "message",
+    fields: ["Communication Type", "Communication Status"],
+  },
+  {
+    id: "Appointment",
+    label: "Appointment",
+    icon: "calendar",
+    fields: ["Appointment Type", "Appointment Status"],
+  },
 ];
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -114,6 +141,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   clipboard: ClipboardCheck,
   file: FileText,
   scale: Scale,
+  check_circle: CheckCircle2,
+  credit_card: CreditCard,
+  message: MessageSquare,
+  calendar: CalendarDays,
 };
 
 export default function AdminDropdownsPage() {

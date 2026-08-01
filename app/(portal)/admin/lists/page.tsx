@@ -30,6 +30,9 @@ import {
   CheckCircle2,
   XCircle,
   GripVertical,
+  CreditCard,
+  MessageSquare,
+  CalendarDays,
 } from "lucide-react";
 
 interface CategoryValue {
@@ -127,6 +130,34 @@ const CATEGORY_DEFINITIONS = [
     icon: "scale",
     apiName: "Compliance Matter",
   },
+  {
+    id: "approval_request",
+    name: "Approval Request",
+    description: "Approval types and statuses",
+    icon: "check_circle",
+    apiName: "Approval Request",
+  },
+  {
+    id: "payment_record",
+    name: "Payment Record",
+    description: "Payment types and statuses",
+    icon: "credit_card",
+    apiName: "Payment Record",
+  },
+  {
+    id: "communication",
+    name: "Communication",
+    description: "Communication types and statuses",
+    icon: "message",
+    apiName: "Communication",
+  },
+  {
+    id: "appointment",
+    name: "Appointment",
+    description: "Appointment types and statuses",
+    icon: "calendar",
+    apiName: "Appointment",
+  },
 ];
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -138,6 +169,10 @@ const ICON_MAP: Record<string, React.ElementType> = {
   clipboard: ClipboardCheck,
   file: FileText,
   scale: Scale,
+  check_circle: CheckCircle2,
+  credit_card: CreditCard,
+  message: MessageSquare,
+  calendar: CalendarDays,
 };
 
 export default function CategoryManagementPage() {
