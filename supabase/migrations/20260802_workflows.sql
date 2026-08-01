@@ -2,6 +2,21 @@
 -- Date: 2026-08-02
 
 -- ============================================
+-- Create helper function if not exists (for RLS policies)
+-- ============================================
+CREATE OR REPLACE FUNCTION is_admin_user()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_roles 
+        WHERE user_roles.user_id = auth.uid() 
+        AND user_roles.role = 'ADMIN_USER'
+        AND user_roles.revoked_at IS NULL
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
 -- Workflows Table
 -- ============================================
 CREATE TABLE IF NOT EXISTS workflows (
