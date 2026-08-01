@@ -115,9 +115,24 @@ export async function getDropdownSettingsGrouped(): Promise<
     }
 
     // Group by record type, then by field name
+    // Database returns snake_case, convert to camelCase for the interface
     const grouped: Record<string, Record<string, DropdownSetting[]>> = {};
 
-    (data || []).forEach((setting: DropdownSetting) => {
+    (data || []).forEach((row: any) => {
+      // Map snake_case database columns to camelCase interface
+      const setting: DropdownSetting = {
+        id: row.id,
+        recordType: row.record_type,
+        fieldName: row.field_name,
+        value: row.value,
+        label: row.label,
+        sortOrder: row.sort_order,
+        isActive: row.is_active,
+        isDefault: row.is_default,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+
       if (!grouped[setting.recordType]) {
         grouped[setting.recordType] = {};
       }
