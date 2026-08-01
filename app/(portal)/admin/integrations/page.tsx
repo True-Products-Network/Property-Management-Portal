@@ -74,6 +74,10 @@ interface PaymentProcessorSettings {
   webhook_last_verified: string;
   accounting_handoff_enabled: boolean;
   reconciliation_owner: string;
+  // GHL Invoice Webhook
+  ghl_invoice_webhook_url: string;
+  ghl_invoice_webhook_secret: string;
+  ghl_invoice_webhook_enabled: boolean;
 }
 
 export default function AdminIntegrationsPage() {
@@ -115,6 +119,9 @@ export default function AdminIntegrationsPage() {
     webhook_last_verified: "",
     accounting_handoff_enabled: false,
     reconciliation_owner: "",
+    ghl_invoice_webhook_url: "",
+    ghl_invoice_webhook_secret: "",
+    ghl_invoice_webhook_enabled: true,
   });
   const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
@@ -176,7 +183,7 @@ export default function AdminIntegrationsPage() {
               (settings as Record<string, string[]>)[setting.key] = value ? value.split(",") : [];
             } else if (setting.key === "enable_recurring" || setting.key === "fee_surcharge_enabled" || 
                        setting.key === "allow_refunds" || setting.key === "allow_voids" || 
-                       setting.key === "accounting_handoff_enabled") {
+                       setting.key === "accounting_handoff_enabled" || setting.key === "ghl_invoice_webhook_enabled") {
               (settings as Record<string, boolean>)[setting.key] = value === "true";
             } else {
               (settings as Record<string, string>)[setting.key] = value;
@@ -345,6 +352,9 @@ export default function AdminIntegrationsPage() {
         { key: "payment_webhook_secret", value: paymentSettings.webhook_secret },
         { key: "payment_accounting_handoff_enabled", value: paymentSettings.accounting_handoff_enabled.toString() },
         { key: "payment_reconciliation_owner", value: paymentSettings.reconciliation_owner },
+        { key: "ghl_invoice_webhook_url", value: paymentSettings.ghl_invoice_webhook_url },
+        { key: "ghl_invoice_webhook_secret", value: paymentSettings.ghl_invoice_webhook_secret },
+        { key: "ghl_invoice_webhook_enabled", value: paymentSettings.ghl_invoice_webhook_enabled.toString() },
       ];
 
       for (const setting of settingsToSave) {
@@ -1321,6 +1331,109 @@ export default function AdminIntegrationsPage() {
                       Person responsible for reconciling payments
                     </p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* GHL Invoice Webhook Configuration */}
+            <Card className="border-purple-200">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Webhook className="h-4 w-4 text-purple-600" />
+                  GHL Invoice Webhook
+                </CardTitle>
+                <CardDescription>
+                  Configure webhook for GHL invoice events (sent, viewed, paid, overdue)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Enable GHL Invoice Webhooks</p>
+                    <p className="text-sm text-gray-500">
+                      Receive real-time updates from GHL about invoice status changes
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPaymentSettings(prev => ({ ...prev, ghl_invoice_webhook_enabled: !prev.ghl_invoice_webhook_enabled }))}
+                    className="relative inline-flex items-center cursor-pointer"
+                  >
+                    {paymentSettings.ghl_invoice_webhook_enabled ? (
+                      <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                    ) : (
+                      <ToggleLeft className="h-8 w-8 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+
+                {paymentSettings.ghl_invoice_webhook_enabled && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Webhook Endpoint URL</label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="url"
+                          value={paymentSettings.ghl_invoice_webhook_url}
+                          onChange={(e) => setPaymentSettings(prev => ({ ...prev, ghl_invoice_webhook_url: e.target.value }))}
+                          placeholder="https://your-domain.com/api/webhooks/ghl/invoices"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const url = typeof window !== "undefined" 
+                              ? `${window.location.origin}/api/webhooks/ghl/invoices` 
+                              : "https://your-domain.com/api/webhooks/ghl/invoices";
+                            setPaymentSettings(prev => ({ ...prev, ghl_invoice_webhook_url: url }));
+                          }}
+                        >
+                          Use Default
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Configure this URL in your GHL workflow or integration settings
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Webhook Secret</label>
+                      <div className="relative">
+                        <Input
+                          type={showTokens ? "text" : "password"}
+                          value={paymentSettings.ghl_invoice_webhook_secret}
+                          onChange={(e) => setPaymentSettings(prev => ({ ...prev, ghl_invoice_webhook_secret: e.target.value }))}
+                          placeholder="Enter webhook secret for signature verification"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTokens(!showTokens)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Secret key for verifying webhook signatures from GHL
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="text-sm font-medium text-purple-800 mb-2">
+                        GHL Webhook Configuration
+                      </p>
+                      <p className="text-xs text-purple-700 mb-2">
+                        To receive invoice events from GHL, configure this webhook URL in your GHL account:
+                      </p>
+                      <code className="block p-2 bg-white rounded text-xs font-mono break-all">
+                        {paymentSettings.ghl_invoice_webhook_url || (typeof window !== "undefined" ? `${window.location.origin}/api/webhooks/ghl/invoices` : "https://your-domain.com/api/webhooks/ghl/invoices")}
+                      </code>
+                      <p className="text-xs text-purple-600 mt-2">
+                        GHL → Settings → Webhooks → Add Endpoint → Select Invoice Events
+                      </p>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

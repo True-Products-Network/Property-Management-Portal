@@ -17,6 +17,8 @@ import {
   Clock,
   ArrowRight,
   Loader2,
+  FileText,
+  Link2,
 } from "lucide-react";
 
 interface Payment {
@@ -162,12 +164,26 @@ export default function PaymentsPage() {
             Manage payments and billing
           </p>
         </div>
-        <Link href="/management/payments/new">
-          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
-            <Plus className="h-4 w-4 mr-2" />
-            Record Payment
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/management/payments/new">
+            <Button variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Record Payment
+            </Button>
+          </Link>
+          <Link href="/management/payments/invoice/new">
+            <Button variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          </Link>
+          <Link href="/management/payments/link/new">
+            <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
+              <Link2 className="h-4 w-4 mr-2" />
+              Payment Link
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
