@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         counts[role] = (counts[role] || 0) + 1;
       });
 
-      mappings?.forEach((m) => {
+      mappings?.forEach((m: { ghl_contact_role: string; user_count: number }) => {
         m.user_count = counts[m.ghl_contact_role] || 0;
       });
     }
