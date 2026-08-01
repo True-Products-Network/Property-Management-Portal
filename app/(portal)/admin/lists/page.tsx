@@ -48,6 +48,7 @@ interface Category {
   name: string;
   description: string;
   icon: string;
+  apiName: string;
   values: CategoryValue[];
   isSystem: boolean;
   fields: string[];
@@ -68,54 +69,63 @@ const CATEGORY_DEFINITIONS = [
     name: "Association Company",
     description: "Association types and statuses",
     icon: "building",
+    apiName: "Association Company",
   },
   {
     id: "people",
     name: "People",
     description: "Contact roles, board positions, and preferences",
     icon: "users",
+    apiName: "People",
   },
   {
     id: "vendor_company",
     name: "Vendor Company",
     description: "Vendor types and statuses",
     icon: "truck",
+    apiName: "Vendor Company",
   },
   {
     id: "property",
     name: "Property",
     description: "Property types and statuses",
     icon: "building",
+    apiName: "Property",
   },
   {
     id: "unit",
     name: "Unit",
     description: "Unit occupancy and rental statuses",
     icon: "home",
+    apiName: "Unit",
   },
   {
     id: "maintenance_request",
     name: "Maintenance Request",
     description: "Maintenance categories, urgency levels, and statuses",
     icon: "wrench",
+    apiName: "Maintenance Request",
   },
   {
     id: "inspection",
     name: "Inspection",
     description: "Inspection results and statuses",
     icon: "clipboard",
+    apiName: "Inspection",
   },
   {
     id: "document_record",
     name: "Document Record",
     description: "Document types and confidentiality levels",
     icon: "file",
+    apiName: "Document Record",
   },
   {
     id: "compliance_matter",
     name: "Compliance Matter",
     description: "Compliance statuses",
     icon: "scale",
+    apiName: "Compliance Matter",
   },
 ];
 
@@ -173,23 +183,27 @@ export default function CategoryManagementPage() {
           }
           
           for (const item of result.data || []) {
-            const catId = item.id?.toLowerCase().replace(/\s+/g, '_');
-            const category = categoriesMap.get(catId);
+            // Match by finding category with matching apiName
+            const category = Array.from(categoriesMap.values()).find(
+              (cat) => cat.apiName === item.id
+            );
             
-            if (category) {
-              category.values.push({
-                id: item.id,
-                value: item.value,
-                label: item.label,
-                description: item.description,
-                sortOrder: item.sortOrder || 0,
-                isActive: item.isActive !== false,
-                recordCount: 0,
-                field_name: item.field_name,
-              });
-              
-              if (item.field_name && !category.fields.includes(item.field_name)) {
-                category.fields.push(item.field_name);
+            if (category && item.values) {
+              for (const value of item.values) {
+                category.values.push({
+                  id: value.id,
+                  value: value.value,
+                  label: value.label,
+                  description: value.description,
+                  sortOrder: value.sortOrder || 0,
+                  isActive: value.isActive !== false,
+                  recordCount: 0,
+                  field_name: value.field_name,
+                });
+                
+                if (value.field_name && !category.fields.includes(value.field_name)) {
+                  category.fields.push(value.field_name);
+                }
               }
             }
           }
