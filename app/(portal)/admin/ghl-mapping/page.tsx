@@ -41,7 +41,7 @@ interface FormData {
   portalRole: string;
   portalVersion: string;
   requiresMFA: boolean;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "unknown";
   description: string;
 }
 
