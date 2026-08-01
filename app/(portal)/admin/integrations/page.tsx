@@ -22,6 +22,15 @@ import {
   Calendar,
   Save,
   ArrowLeft,
+  CreditCard,
+  DollarSign,
+  Building2,
+  ToggleLeft,
+  ToggleRight,
+  Webhook,
+  FileText,
+  CheckSquare,
+  XSquare,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,6 +57,24 @@ interface CalendarSettings {
   enable_calendar_integration: string;
 }
 
+interface PaymentProcessorSettings {
+  processor: string;
+  environment: "test" | "live";
+  merchant_id: string;
+  supported_methods: string[];
+  currencies: string[];
+  enable_recurring: boolean;
+  fee_surcharge_enabled: boolean;
+  fee_percentage: string;
+  allow_refunds: boolean;
+  allow_voids: boolean;
+  webhook_url: string;
+  webhook_secret: string;
+  webhook_last_verified: string;
+  accounting_handoff_enabled: boolean;
+  reconciliation_owner: string;
+}
+
 export default function AdminIntegrationsPage() {
   const [ghlStatus, setGhlStatus] = useState<GhlConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,10 +97,33 @@ export default function AdminIntegrationsPage() {
   });
   const [isSavingCalendar, setIsSavingCalendar] = useState(false);
 
+  // Payment processor settings
+  const [paymentSettings, setPaymentSettings] = useState<PaymentProcessorSettings>({
+    processor: "stripe",
+    environment: "test",
+    merchant_id: "",
+    supported_methods: ["card"],
+    currencies: ["USD"],
+    enable_recurring: false,
+    fee_surcharge_enabled: false,
+    fee_percentage: "2.9",
+    allow_refunds: true,
+    allow_voids: true,
+    webhook_url: "",
+    webhook_secret: "",
+    webhook_last_verified: "",
+    accounting_handoff_enabled: false,
+    reconciliation_owner: "",
+  });
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
+  const [activeTab, setActiveTab] = useState<"ghl" | "payment">("ghl");
+
   // Fetch GHL connection status and calendar settings
   useEffect(() => {
     fetchGhlStatus();
     fetchCalendarSettings();
+    fetchPaymentSettings();
   }, []);
 
   async function fetchGhlStatus() {
@@ -105,6 +155,33 @@ export default function AdminIntegrationsPage() {
       }
     } catch (error) {
       console.error("Error fetching calendar settings:", error);
+    }
+  }
+
+  async function fetchPaymentSettings() {
+    try {
+      const response = await fetch("/api/admin/settings?category=payment");
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const settings: Partial<PaymentProcessorSettings> = {};
+          result.data.forEach((setting: { key: keyof PaymentProcessorSettings; value: string }) => {
+            const value = setting.value;
+            if (setting.key === "supported_methods" || setting.key === "currencies") {
+              (settings as Record<string, string[]>)[setting.key] = value ? value.split(",") : [];
+            } else if (setting.key === "enable_recurring" || setting.key === "fee_surcharge_enabled" || 
+                       setting.key === "allow_refunds" || setting.key === "allow_voids" || 
+                       setting.key === "accounting_handoff_enabled") {
+              (settings as Record<string, boolean>)[setting.key] = value === "true";
+            } else {
+              (settings as Record<string, string>)[setting.key] = value;
+            }
+          });
+          setPaymentSettings(prev => ({ ...prev, ...settings }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching payment settings:", error);
     }
   }
 
@@ -245,6 +322,84 @@ export default function AdminIntegrationsPage() {
     }
   }
 
+  async function savePaymentSettings() {
+    setIsSavingPayment(true);
+    try {
+      const settingsToSave = [
+        { key: "payment_processor", value: paymentSettings.processor },
+        { key: "payment_environment", value: paymentSettings.environment },
+        { key: "payment_merchant_id", value: paymentSettings.merchant_id },
+        { key: "payment_supported_methods", value: paymentSettings.supported_methods.join(",") },
+        { key: "payment_currencies", value: paymentSettings.currencies.join(",") },
+        { key: "payment_enable_recurring", value: paymentSettings.enable_recurring.toString() },
+        { key: "payment_fee_surcharge_enabled", value: paymentSettings.fee_surcharge_enabled.toString() },
+        { key: "payment_fee_percentage", value: paymentSettings.fee_percentage },
+        { key: "payment_allow_refunds", value: paymentSettings.allow_refunds.toString() },
+        { key: "payment_allow_voids", value: paymentSettings.allow_voids.toString() },
+        { key: "payment_webhook_url", value: paymentSettings.webhook_url },
+        { key: "payment_webhook_secret", value: paymentSettings.webhook_secret },
+        { key: "payment_accounting_handoff_enabled", value: paymentSettings.accounting_handoff_enabled.toString() },
+        { key: "payment_reconciliation_owner", value: paymentSettings.reconciliation_owner },
+      ];
+
+      for (const setting of settingsToSave) {
+        await fetch("/api/admin/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...setting, category: "payment" }),
+        });
+      }
+
+      alert("Payment processor settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving payment settings:", error);
+      alert("Failed to save payment settings");
+    } finally {
+      setIsSavingPayment(false);
+    }
+  }
+
+  async function testPaymentWebhook() {
+    setIsTestingWebhook(true);
+    try {
+      const response = await fetch("/api/admin/payments/test-webhook", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        alert("Webhook test successful! Check your endpoint for the test event.");
+        setPaymentSettings(prev => ({
+          ...prev,
+          webhook_last_verified: new Date().toISOString(),
+        }));
+      } else {
+        alert("Webhook test failed. Please check your webhook URL and try again.");
+      }
+    } catch (error) {
+      alert("Webhook test failed. Please check your network connection.");
+    } finally {
+      setIsTestingWebhook(false);
+    }
+  }
+
+  function togglePaymentMethod(method: string) {
+    setPaymentSettings(prev => ({
+      ...prev,
+      supported_methods: prev.supported_methods.includes(method)
+        ? prev.supported_methods.filter(m => m !== method)
+        : [...prev.supported_methods, method],
+    }));
+  }
+
+  function toggleCurrency(currency: string) {
+    setPaymentSettings(prev => ({
+      ...prev,
+      currencies: prev.currencies.includes(currency)
+        ? prev.currencies.filter(c => c !== currency)
+        : [...prev.currencies, currency],
+    }));
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -275,7 +430,40 @@ export default function AdminIntegrationsPage() {
         </div>
       </div>
 
-      {/* GHL Integration Card */}
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-[var(--border-color)]">
+        <button
+          onClick={() => setActiveTab("ghl")}
+          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === "ghl"
+              ? "border-[var(--teal)] text-[var(--teal)]"
+              : "border-transparent text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            GHL & Calendar
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab("payment")}
+          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            activeTab === "payment"
+              ? "border-[var(--teal)] text-[var(--teal)]"
+              : "border-transparent text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Payment Processor
+          </div>
+        </button>
+      </div>
+
+      {/* GHL & Calendar Tab */}
+      {activeTab === "ghl" && (
+        <>
+          {/* GHL Integration Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -763,6 +951,418 @@ export default function AdminIntegrationsPage() {
               </li>
             </ol>
 
+          </CardContent>
+        </Card>
+      )}
+        </>
+      )}
+
+      {/* Payment Processor Tab */}
+      {activeTab === "payment" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[var(--teal)] rounded-lg flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle>Payment Processor</CardTitle>
+                  <CardDescription>
+                    Configure payment processing and webhook settings
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge
+                className={
+                  paymentSettings.environment === "live"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-amber-100 text-amber-700"
+                }
+              >
+                {paymentSettings.environment === "live" ? "Live Mode" : "Test Mode"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Environment Warning */}
+            {paymentSettings.environment === "live" && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-green-800">Live Mode Active</p>
+                    <p className="text-sm text-green-700">
+                      Real payments will be processed. Make sure your processor account is properly configured.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {paymentSettings.environment === "test" && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800">Test Mode</p>
+                    <p className="text-sm text-amber-700">
+                      No real payments will be processed. Use test card numbers for testing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Processor Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Payment Processor</label>
+                <select
+                  value={paymentSettings.processor}
+                  onChange={(e) => setPaymentSettings(prev => ({ ...prev, processor: e.target.value }))}
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white"
+                >
+                  <option value="stripe">Stripe</option>
+                  <option value="paypal">PayPal</option>
+                  <option value="square">Square</option>
+                  <option value="authorize_net">Authorize.net</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Environment</label>
+                <select
+                  value={paymentSettings.environment}
+                  onChange={(e) => setPaymentSettings(prev => ({ ...prev, environment: e.target.value as "test" | "live" }))}
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white"
+                >
+                  <option value="test">Test/Sandbox</option>
+                  <option value="live">Live/Production</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Merchant ID */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Merchant/Account ID</label>
+              <Input
+                type="text"
+                value={paymentSettings.merchant_id}
+                onChange={(e) => setPaymentSettings(prev => ({ ...prev, merchant_id: e.target.value }))}
+                placeholder="e.g., acct_1234567890 or merchant_12345"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Your processor account identifier (not secret keys)
+              </p>
+            </div>
+
+            {/* Supported Payment Methods */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Supported Payment Methods</label>
+              <div className="flex flex-wrap gap-2">
+                {["card", "ach", "paypal", "apple_pay", "google_pay"].map((method) => (
+                  <button
+                    key={method}
+                    onClick={() => togglePaymentMethod(method)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      paymentSettings.supported_methods.includes(method)
+                        ? "bg-[var(--teal)] text-white border-[var(--teal)]"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-[var(--teal)]"
+                    }`}
+                  >
+                    {method === "card" && "💳 Card"}
+                    {method === "ach" && "🏦 ACH/Bank"}
+                    {method === "paypal" && "🅿️ PayPal"}
+                    {method === "apple_pay" && "🍎 Apple Pay"}
+                    {method === "google_pay" && "🤖 Google Pay"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Currencies */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Accepted Currencies</label>
+              <div className="flex flex-wrap gap-2">
+                {["USD", "CAD", "EUR", "GBP"].map((currency) => (
+                  <button
+                    key={currency}
+                    onClick={() => toggleCurrency(currency)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                      paymentSettings.currencies.includes(currency)
+                        ? "bg-[var(--teal)] text-white border-[var(--teal)]"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-[var(--teal)]"
+                    }`}
+                  >
+                    {currency}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recurring Payments */}
+            <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+              <div>
+                <p className="font-medium">Enable Recurring Payments</p>
+                <p className="text-sm text-gray-500">
+                  Allow automatic recurring payments for assessments and fees
+                </p>
+              </div>
+              <button
+                onClick={() => setPaymentSettings(prev => ({ ...prev, enable_recurring: !prev.enable_recurring }))}
+                className="relative inline-flex items-center cursor-pointer"
+              >
+                {paymentSettings.enable_recurring ? (
+                  <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                ) : (
+                  <ToggleLeft className="h-8 w-8 text-gray-400" />
+                )}
+              </button>
+            </div>
+
+            {/* Fee Surcharge */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+                <div>
+                  <p className="font-medium">Enable Fee Surcharge</p>
+                  <p className="text-sm text-gray-500">
+                    Pass processing fees to payers
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPaymentSettings(prev => ({ ...prev, fee_surcharge_enabled: !prev.fee_surcharge_enabled }))}
+                  className="relative inline-flex items-center cursor-pointer"
+                >
+                  {paymentSettings.fee_surcharge_enabled ? (
+                    <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                  ) : (
+                    <ToggleLeft className="h-8 w-8 text-gray-400" />
+                  )}
+                </button>
+              </div>
+
+              {paymentSettings.fee_surcharge_enabled && (
+                <div className="pl-4 border-l-2 border-[var(--teal)]">
+                  <label className="block text-sm font-medium mb-2">Surcharge Percentage</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      value={paymentSettings.fee_percentage}
+                      onChange={(e) => setPaymentSettings(prev => ({ ...prev, fee_percentage: e.target.value }))}
+                      className="w-24"
+                    />
+                    <span className="text-gray-600">%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Typical processing fees are 2.9% + $0.30 per transaction
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Refund & Void Permissions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+                <div>
+                  <p className="font-medium">Allow Refunds</p>
+                  <p className="text-sm text-gray-500">
+                    Enable partial and full refunds
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPaymentSettings(prev => ({ ...prev, allow_refunds: !prev.allow_refunds }))}
+                  className="relative inline-flex items-center cursor-pointer"
+                >
+                  {paymentSettings.allow_refunds ? (
+                    <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                  ) : (
+                    <ToggleLeft className="h-8 w-8 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+                <div>
+                  <p className="font-medium">Allow Voids</p>
+                  <p className="text-sm text-gray-500">
+                    Enable transaction voids (same day)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPaymentSettings(prev => ({ ...prev, allow_voids: !prev.allow_voids }))}
+                  className="relative inline-flex items-center cursor-pointer"
+                >
+                  {paymentSettings.allow_voids ? (
+                    <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                  ) : (
+                    <ToggleLeft className="h-8 w-8 text-gray-400" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Webhook Configuration */}
+            <Card className="border-blue-200">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Webhook className="h-4 w-4 text-blue-600" />
+                  Webhook Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Webhook URL</label>
+                  <Input
+                    type="url"
+                    value={paymentSettings.webhook_url}
+                    onChange={(e) => setPaymentSettings(prev => ({ ...prev, webhook_url: e.target.value }))}
+                    placeholder="https://your-domain.com/api/webhooks/payments"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Your endpoint URL for receiving payment events
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Webhook Secret</label>
+                  <div className="relative">
+                    <Input
+                      type={showTokens ? "text" : "password"}
+                      value={paymentSettings.webhook_secret}
+                      onChange={(e) => setPaymentSettings(prev => ({ ...prev, webhook_secret: e.target.value }))}
+                      placeholder="whsec_..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowTokens(!showTokens)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Secret key for verifying webhook signatures
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Webhook Status</p>
+                    {paymentSettings.webhook_last_verified ? (
+                      <p className="text-xs text-green-600">
+                        Last verified: {new Date(paymentSettings.webhook_last_verified).toLocaleString()}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">Not yet verified</p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={testPaymentWebhook}
+                    disabled={isTestingWebhook || !paymentSettings.webhook_url}
+                  >
+                    {isTestingWebhook ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Test Webhook
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Accounting Handoff */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[var(--teal)]" />
+                  Accounting Handoff
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Enable Accounting Handoff</p>
+                    <p className="text-sm text-gray-500">
+                      Automatically sync payment data to accounting system
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPaymentSettings(prev => ({ ...prev, accounting_handoff_enabled: !prev.accounting_handoff_enabled }))}
+                    className="relative inline-flex items-center cursor-pointer"
+                  >
+                    {paymentSettings.accounting_handoff_enabled ? (
+                      <ToggleRight className="h-8 w-8 text-[var(--teal)]" />
+                    ) : (
+                      <ToggleLeft className="h-8 w-8 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+
+                {paymentSettings.accounting_handoff_enabled && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Reconciliation Owner</label>
+                    <Input
+                      type="text"
+                      value={paymentSettings.reconciliation_owner}
+                      onChange={(e) => setPaymentSettings(prev => ({ ...prev, reconciliation_owner: e.target.value }))}
+                      placeholder="e.g., Bookkeeper or Finance Manager"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Person responsible for reconciling payments
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Processor Dashboard Link */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <ExternalLink className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-800">Processor Dashboard</p>
+                  <p className="text-sm text-blue-700 mb-2">
+                    Access your payment processor dashboard for detailed transaction management.
+                  </p>
+                  <a
+                    href={paymentSettings.processor === "stripe" ? "https://dashboard.stripe.com" :
+                          paymentSettings.processor === "paypal" ? "https://www.paypal.com/business" :
+                          paymentSettings.processor === "square" ? "https://squareup.com/dashboard" :
+                          "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                  >
+                    Open {paymentSettings.processor === "stripe" ? "Stripe" :
+                          paymentSettings.processor === "paypal" ? "PayPal" :
+                          paymentSettings.processor === "square" ? "Square" :
+                          "Processor"} Dashboard
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                onClick={savePaymentSettings}
+                disabled={isSavingPayment}
+                className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+              >
+                {isSavingPayment ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Payment Settings
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
