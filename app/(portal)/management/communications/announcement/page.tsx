@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Megaphone, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Megaphone, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -39,6 +39,10 @@ const COMMUNICATION_TYPES = [
 
 export default function NewAnnouncementPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
+  const isEditMode = !!editId;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -56,7 +60,10 @@ export default function NewAnnouncementPage() {
 
   useEffect(() => {
     loadAssociations();
-  }, []);
+    if (isEditMode && editId) {
+      loadCommunication(editId);
+    }
+  }, [editId, isEditMode]);
 
   useEffect(() => {
     if (formData.associationId) {
@@ -93,6 +100,31 @@ export default function NewAnnouncementPage() {
     }
   }
 
+  async function loadCommunication(id: string) {
+    try {
+      const response = await fetch(`/api/communications/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const communication = result.data;
+          setFormData({
+            associationId: communication.associationId || "",
+            propertyId: communication.propertyId || "",
+            subject: communication.subject || "",
+            content: communication.content || "",
+            type: communication.type || "announcement",
+            sendToAll: communication.sendToAll ?? true,
+            scheduledAt: communication.scheduledAt 
+              ? new Date(communication.scheduledAt).toISOString().slice(0, 16) 
+              : "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading communication:", error);
+    }
+  }
+
   function validateForm(): boolean {
     const newErrors: Partial<FormData> = {};
 
@@ -111,8 +143,11 @@ export default function NewAnnouncementPage() {
 
     setIsSending(true);
     try {
-      const response = await fetch("/api/communications", {
-        method: "POST",
+      const url = isEditMode ? `/api/communications/${editId}` : "/api/communications";
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           associationId: formData.associationId,
@@ -130,14 +165,14 @@ export default function NewAnnouncementPage() {
         if (result.success) {
           router.push("/management/communications");
         } else {
-          alert(result.error || "Failed to send announcement");
+          alert(result.error || (isEditMode ? "Failed to update announcement" : "Failed to send announcement"));
         }
       } else {
-        alert("Failed to send announcement");
+        alert(isEditMode ? "Failed to update announcement" : "Failed to send announcement");
       }
     } catch (error) {
-      console.error("Error sending announcement:", error);
-      alert("An error occurred while sending the announcement");
+      console.error(isEditMode ? "Error updating announcement:" : "Error sending announcement:", error);
+      alert(isEditMode ? "An error occurred while updating the announcement" : "An error occurred while sending the announcement");
     } finally {
       setIsSending(false);
     }
@@ -168,11 +203,20 @@ export default function NewAnnouncementPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Send Announcement</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Send a message to residents or staff</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+            {isEditMode ? "Edit Announcement" : "Send Announcement"}
+          </h1>
+          {isEditMode && (
+            <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+              Edit Mode
+            </span>
+          )}
         </div>
       </div>
+      <p className="text-[var(--secondary-text)] ml-12">
+        {isEditMode ? "Update your announcement details" : "Send a message to residents or staff"}
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Recipients */}
@@ -316,7 +360,12 @@ export default function NewAnnouncementPage() {
             {isSending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending...
+                {isEditMode ? "Saving..." : "Sending..."}
+              </>
+            ) : isEditMode ? (
+              <>
+                <Pencil className="h-4 w-4 mr-2" />
+                Save Changes
               </>
             ) : (
               <>

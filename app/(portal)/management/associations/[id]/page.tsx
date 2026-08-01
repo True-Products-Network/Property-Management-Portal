@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,16 @@ import {
   Shield,
   CircleDollarSign,
   Megaphone,
+  Mail,
+  Phone,
+  MapPin,
 } from "lucide-react";
 
 interface Association {
   id: string;
   associationId: string;
   name: string;
+  shortName?: string;
   legalName?: string;
   type: string;
   status: string;
@@ -38,12 +42,21 @@ interface Association {
   addressCity?: string;
   addressState?: string;
   addressZip?: string;
+  mailingAddress?: string;
   phone?: string;
   email?: string;
+  taxId?: string;
   fiscalYear?: string;
+  fiscalYearEndMonth?: string;
+  fiscalYearEndDay?: number;
   annualMeetingMonth?: string;
   managementStartDate?: string;
   assignedManagerId?: string;
+  financialPlatform?: string;
+  financialPortalLink?: string;
+  documentStorageLink?: string;
+  emergencyInstructions?: string;
+  generalNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,6 +67,7 @@ interface Property {
   name: string;
   addressStreet: string;
   type: string;
+  status: string;
   totalUnits: number;
 }
 
@@ -64,6 +78,7 @@ interface Contact {
   lastName: string;
   email: string;
   phone?: string;
+  roles?: string[];
 }
 
 interface MaintenanceRequest {
@@ -74,14 +89,34 @@ interface MaintenanceRequest {
   urgency?: string;
 }
 
+interface Document {
+  id: string;
+  documentId: string;
+  title: string;
+  documentType: string;
+  status: string;
+}
+
+interface ComplianceItem {
+  id: string;
+  complianceId: string;
+  title: string;
+  status: string;
+  priority: string;
+  dueDate?: string;
+}
+
 export default function AssociationDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const associationId = params.id as string;
   
   const [association, setAssociation] = useState<Association | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -105,11 +140,32 @@ export default function AssociationDetailPage() {
           if (propsData.success) setProperties(propsData.data.data || []);
         }
         
+        // Fetch contacts for this association
+        const contactsRes = await fetch(`/api/contacts?associationId=${associationId}`);
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json();
+          if (contactsData.success) setContacts(contactsData.data.data || []);
+        }
+        
         // Fetch maintenance requests
         const maintRes = await fetch(`/api/maintenance?associationId=${associationId}`);
         if (maintRes.ok) {
           const maintData = await maintRes.json();
           if (maintData.success) setMaintenanceRequests(maintData.data.data || []);
+        }
+        
+        // Fetch documents
+        const docsRes = await fetch(`/api/documents?associationId=${associationId}`);
+        if (docsRes.ok) {
+          const docsData = await docsRes.json();
+          if (docsData.success) setDocuments(docsData.data.data || []);
+        }
+        
+        // Fetch compliance items
+        const complianceRes = await fetch(`/api/compliance?associationId=${associationId}`);
+        if (complianceRes.ok) {
+          const complianceData = await complianceRes.json();
+          if (complianceData.success) setComplianceItems(complianceData.data.data || []);
         }
         
       } catch (err) {
@@ -130,6 +186,12 @@ export default function AssociationDetailPage() {
         return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
       case "onboarding":
         return <Badge className="bg-blue-100 text-blue-700">Onboarding</Badge>;
+      case "prospect":
+        return <Badge className="bg-purple-100 text-purple-700">Prospect</Badge>;
+      case "on_hold":
+        return <Badge className="bg-amber-100 text-amber-700">On Hold</Badge>;
+      case "ending_management":
+        return <Badge className="bg-red-100 text-red-700">Ending</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -146,6 +208,18 @@ export default function AssociationDetailPage() {
       default:
         return <Badge variant="secondary">{urgency || "Normal"}</Badge>;
     }
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      condominium: "Condominium",
+      hoa: "HOA",
+      cooperative: "Cooperative",
+      commercial: "Commercial",
+      mixed_use: "Mixed Use",
+      other: "Other",
+    };
+    return labels[type] || type;
   };
 
   if (isLoading) {
@@ -172,6 +246,8 @@ export default function AssociationDetailPage() {
   ).length;
 
   const totalUnits = properties.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
+  const boardMembers = contacts.filter(c => c.roles?.includes("board_member"));
+  const openCompliance = complianceItems.filter(c => c.status !== "resolved").length;
 
   return (
     <div className="space-y-6">
@@ -191,13 +267,18 @@ export default function AssociationDetailPage() {
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">{association.name}</h1>
             {getStatusBadge(association.status)}
           </div>
-          <p className="text-[var(--secondary-text)]">{association.associationId} • {association.legalName}</p>
+          <p className="text-[var(--secondary-text)]">{association.associationId}</p>
+          {association.legalName && association.legalName !== association.name && (
+            <p className="text-sm text-[var(--secondary-text)]">{association.legalName}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link href={`/management/associations/${association.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -246,11 +327,11 @@ export default function AssociationDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                <Scale className="h-5 w-5 text-purple-600" />
+                <Users className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Pending Approvals</p>
-                <p className="text-2xl font-semibold">0</p>
+                <p className="text-sm text-[var(--secondary-text)]">Board Members</p>
+                <p className="text-2xl font-semibold">{boardMembers.length}</p>
               </div>
             </div>
           </CardContent>
@@ -259,10 +340,13 @@ export default function AssociationDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)]">
+        <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)] flex-wrap gap-1">
           <TabsTrigger value="overview" className="px-3 py-1.5 text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="properties" className="px-3 py-1.5 text-sm">Properties</TabsTrigger>
-          <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance</TabsTrigger>
+          <TabsTrigger value="properties" className="px-3 py-1.5 text-sm">Properties ({properties.length})</TabsTrigger>
+          <TabsTrigger value="contacts" className="px-3 py-1.5 text-sm">Contacts ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance ({maintenanceRequests.length})</TabsTrigger>
+          <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents ({documents.length})</TabsTrigger>
+          <TabsTrigger value="compliance" className="px-3 py-1.5 text-sm">Compliance ({complianceItems.length})</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -277,11 +361,19 @@ export default function AssociationDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Association Type</p>
-                    <p className="font-medium">{association.type}</p>
+                    <p className="font-medium">{getTypeLabel(association.type)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Fiscal Year</p>
-                    <p className="font-medium">{association.fiscalYear || "N/A"}</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Tax ID</p>
+                    <p className="font-medium">{association.taxId || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Fiscal Year End</p>
+                    <p className="font-medium">
+                      {association.fiscalYearEndMonth 
+                        ? `${association.fiscalYearEndMonth} ${association.fiscalYearEndDay || ""}`
+                        : "N/A"}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Annual Meeting</p>
@@ -289,32 +381,77 @@ export default function AssociationDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Management Start</p>
-                    <p className="font-medium">{association.managementStartDate || "N/A"}</p>
+                    <p className="font-medium">
+                      {association.managementStartDate 
+                        ? new Date(association.managementStartDate).toLocaleDateString()
+                        : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Financial Platform</p>
+                    <p className="font-medium capitalize">{association.financialPlatform || "N/A"}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Address</p>
-                  <p className="font-medium">
-                    {association.addressStreet && (
-                      <>
-                        {association.addressStreet}
-                        {association.addressCity && `, ${association.addressCity}`}
-                        {association.addressState && `, ${association.addressState}`}
-                        {association.addressZip && ` ${association.addressZip}`}
-                      </>
-                    )}
+                
+                <div className="pt-4 border-t border-[var(--border-color)]">
+                  <p className="text-sm text-[var(--secondary-text)] mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
                   </p>
+                  <p className="font-medium">
+                    {association.addressStreet || "No address on file"}
+                  </p>
+                  {(association.addressCity || association.addressState || association.addressZip) && (
+                    <p className="text-[var(--main-text)]">
+                      {association.addressCity && `${association.addressCity}, `}
+                      {association.addressState} {association.addressZip}
+                    </p>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Phone</p>
-                    <p className="font-medium">{association.phone || "N/A"}</p>
+                
+                {association.mailingAddress && (
+                  <div className="pt-2">
+                    <p className="text-sm text-[var(--secondary-text)]">Mailing Address</p>
+                    <p className="font-medium whitespace-pre-line">{association.mailingAddress}</p>
                   </div>
-                  <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Email</p>
-                    <p className="font-medium">{association.email || "N/A"}</p>
-                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-color)]">
+                  {association.phone && (
+                    <div>
+                      <p className="text-sm text-[var(--secondary-text)] flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        Phone
+                      </p>
+                      <p className="font-medium">{association.phone}</p>
+                    </div>
+                  )}
+                  {association.email && (
+                    <div>
+                      <p className="text-sm text-[var(--secondary-text)] flex items-center gap-2">
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </p>
+                      <a href={`mailto:${association.email}`} className="font-medium text-[var(--teal)] hover:underline">
+                        {association.email}
+                      </a>
+                    </div>
+                  )}
                 </div>
+                
+                {association.emergencyInstructions && (
+                  <div className="pt-4 border-t border-[var(--border-color)]">
+                    <p className="text-sm text-[var(--secondary-text)]">Emergency Instructions</p>
+                    <p className="font-medium whitespace-pre-line">{association.emergencyInstructions}</p>
+                  </div>
+                )}
+                
+                {association.generalNotes && (
+                  <div className="pt-2">
+                    <p className="text-sm text-[var(--secondary-text)]">General Notes</p>
+                    <p className="font-medium whitespace-pre-line">{association.generalNotes}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -406,6 +543,7 @@ export default function AssociationDetailPage() {
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="secondary">{property.type}</Badge>
                         <span className="text-sm text-[var(--secondary-text)]">{property.totalUnits} units</span>
+                        {getStatusBadge(property.status)}
                       </div>
                     </div>
                   </div>
@@ -414,6 +552,52 @@ export default function AssociationDetailPage() {
             ))}
             {properties.length === 0 && (
               <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No properties found</p>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Contacts Tab */}
+        <TabsContent value="contacts" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Contacts ({contacts.length})</h3>
+            <Link href={`/management/people/new?associationId=${association.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Contact
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {contacts.map((contact) => (
+              <Card key={contact.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <Users className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div className="flex-1">
+                      <Link href={`/management/people/${contact.id}`}>
+                        <p className="font-medium hover:text-[var(--teal)] transition-colors">
+                          {contact.firstName} {contact.lastName}
+                        </p>
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{contact.email}</p>
+                      {contact.roles && contact.roles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {contact.roles.map((role) => (
+                            <Badge key={role} variant="secondary" className="text-xs">
+                              {role.replace(/_/g, " ")}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {contacts.length === 0 && (
+              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No contacts found</p>
             )}
           </div>
         </TabsContent>
@@ -455,6 +639,93 @@ export default function AssociationDetailPage() {
             ))}
             {maintenanceRequests.length === 0 && (
               <p className="text-[var(--secondary-text)] text-center py-8">No maintenance requests found</p>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Documents ({documents.length})</h3>
+            <Link href={`/management/documents/new?associationId=${association.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {documents.map((doc) => (
+              <Card key={doc.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                      <FileText className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div className="flex-1">
+                      <Link href={`/management/documents/${doc.id}`}>
+                        <p className="font-medium hover:text-[var(--teal)] transition-colors">{doc.title}</p>
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">{doc.documentType}</p>
+                    </div>
+                    <Badge variant="outline">{doc.status}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {documents.length === 0 && (
+              <p className="text-[var(--secondary-text)] text-center py-8">No documents found</p>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Compliance Tab */}
+        <TabsContent value="compliance" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Compliance Matters ({complianceItems.length})</h3>
+            <Link href={`/management/compliance/new?associationId=${association.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Compliance
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {complianceItems.map((item) => (
+              <Card key={item.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-[var(--teal)]" />
+                      </div>
+                      <div>
+                        <Link href={`/management/compliance/${item.id}`}>
+                          <p className="font-medium hover:text-[var(--teal)] transition-colors">{item.title}</p>
+                        </Link>
+                        {item.dueDate && (
+                          <p className="text-sm text-[var(--secondary-text)]">
+                            Due: {new Date(item.dueDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline">{item.status}</Badge>
+                      <Badge className={
+                        item.priority === "high" ? "bg-red-100 text-red-700" :
+                        item.priority === "medium" ? "bg-amber-100 text-amber-700" :
+                        "bg-blue-100 text-blue-700"
+                      }>
+                        {item.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {complianceItems.length === 0 && (
+              <p className="text-[var(--secondary-text)] text-center py-8">No compliance items found</p>
             )}
           </div>
         </TabsContent>

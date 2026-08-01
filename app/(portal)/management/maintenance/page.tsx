@@ -10,7 +10,6 @@ import {
   Wrench,
   Plus,
   Search,
-  Filter,
   Home,
   Building2,
   Truck,
@@ -25,118 +24,148 @@ interface MaintenanceRequest {
   id: string;
   requestNumber: string;
   title: string;
-  description: string;
-  status: "new" | "in_progress" | "waiting" | "completed" | "closed";
-  priority: "low" | "medium" | "high" | "emergency";
-  category: string;
+  description?: string;
+  status: string;
+  urgency?: string;
+  category?: string;
   propertyId: string;
-  propertyName: string;
   unitId?: string;
-  unitNumber?: string;
-  reportedBy: string;
-  assignedVendor?: string;
-  reportedDate: string;
+  reportedByContactId: string;
+  assignedVendorId?: string;
+  requestedDate?: string;
   scheduledDate?: string;
-  completionDate?: string;
+  completedDate?: string;
+  createdAt: string;
+}
+
+interface Property {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  unitNumber: string;
+  propertyId: string;
+}
+
+interface Vendor {
+  id: string;
+  companyName: string;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 export default function MaintenancePage() {
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+  const [properties, setProperties] = useState<Record<string, Property>>({});
+  const [units, setUnits] = useState<Record<string, Unit>>({});
+  const [vendors, setVendors] = useState<Record<string, Vendor>>({});
+  const [contacts, setContacts] = useState<Record<string, Contact>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
   useEffect(() => {
     loadRequests();
+    loadProperties();
+    loadUnits();
+    loadVendors();
+    loadContacts();
   }, []);
 
   async function loadRequests() {
     try {
-      const mockRequests: MaintenanceRequest[] = [
-        {
-          id: "MNT-001",
-          requestNumber: "MNT-2026-0047",
-          title: "HVAC Repair - Building B",
-          description: "Air conditioning unit not cooling properly",
-          status: "in_progress",
-          priority: "high",
-          category: "HVAC",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          unitId: "UNIT-1",
-          unitNumber: "1N",
-          reportedBy: "Sarah Johnson",
-          assignedVendor: "ABC Heating & Cooling",
-          reportedDate: "2026-07-28T10:00:00Z",
-          scheduledDate: "2026-08-01T14:00:00Z",
-        },
-        {
-          id: "MNT-002",
-          requestNumber: "MNT-2026-0048",
-          title: "Water leak under kitchen sink",
-          description: "There is a water leak under the kitchen sink that needs immediate attention.",
-          status: "new",
-          priority: "emergency",
-          category: "Plumbing",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          unitId: "UNIT-3",
-          unitNumber: "2N",
-          reportedBy: "Mary Jones",
-          reportedDate: "2026-07-30T09:30:00Z",
-        },
-        {
-          id: "MNT-003",
-          requestNumber: "MNT-2026-0049",
-          title: "Light fixture replacement",
-          description: "Hallway light fixture needs to be replaced",
-          status: "waiting",
-          priority: "low",
-          category: "Electrical",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          reportedBy: "John Smith",
-          assignedVendor: "XYZ Electric",
-          reportedDate: "2026-07-29T15:00:00Z",
-        },
-        {
-          id: "MNT-004",
-          requestNumber: "MNT-2026-0050",
-          title: "Window repair",
-          description: "Broken window in living room",
-          status: "completed",
-          priority: "medium",
-          category: "General",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          unitId: "UNIT-2",
-          unitNumber: "1S",
-          reportedBy: "Bob Wilson",
-          assignedVendor: "Quick Fix Glass",
-          reportedDate: "2026-07-25T11:00:00Z",
-          completionDate: "2026-07-27T16:00:00Z",
-        },
-        {
-          id: "MNT-005",
-          requestNumber: "MNT-2026-0051",
-          title: "Carpet cleaning",
-          description: "Common area carpet needs deep cleaning",
-          status: "new",
-          priority: "low",
-          category: "Cleaning",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          reportedBy: "Karen Lee",
-          reportedDate: "2026-07-31T08:00:00Z",
-        },
-      ];
+      setIsLoading(true);
+      setError(null);
       
-      setRequests(mockRequests);
+      const response = await fetch("/api/maintenance");
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load maintenance requests");
+      }
+      
+      setRequests(result.data.data || []);
     } catch (error) {
       console.error("Error loading maintenance requests:", error);
+      setError(error instanceof Error ? error.message : "Failed to load maintenance requests");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadProperties() {
+    try {
+      const response = await fetch("/api/properties");
+      const result = await response.json();
+      
+      if (result.success) {
+        const propMap: Record<string, Property> = {};
+        result.data.data.forEach((prop: Property) => {
+          propMap[prop.id] = prop;
+        });
+        setProperties(propMap);
+      }
+    } catch (error) {
+      console.error("Error loading properties:", error);
+    }
+  }
+
+  async function loadUnits() {
+    try {
+      const response = await fetch("/api/units");
+      const result = await response.json();
+      
+      if (result.success) {
+        const unitMap: Record<string, Unit> = {};
+        result.data.data.forEach((unit: Unit) => {
+          unitMap[unit.id] = unit;
+        });
+        setUnits(unitMap);
+      }
+    } catch (error) {
+      console.error("Error loading units:", error);
+    }
+  }
+
+  async function loadVendors() {
+    try {
+      const response = await fetch("/api/vendors");
+      const result = await response.json();
+      
+      if (result.success) {
+        const vendorMap: Record<string, Vendor> = {};
+        result.data.data.forEach((vendor: Vendor) => {
+          vendorMap[vendor.id] = vendor;
+        });
+        setVendors(vendorMap);
+      }
+    } catch (error) {
+      console.error("Error loading vendors:", error);
+    }
+  }
+
+  async function loadContacts() {
+    try {
+      const response = await fetch("/api/contacts");
+      const result = await response.json();
+      
+      if (result.success) {
+        const contactMap: Record<string, Contact> = {};
+        result.data.data.forEach((contact: Contact) => {
+          contactMap[contact.id] = contact;
+        });
+        setContacts(contactMap);
+      }
+    } catch (error) {
+      console.error("Error loading contacts:", error);
     }
   }
 
@@ -144,11 +173,11 @@ export default function MaintenancePage() {
     const matchesSearch = 
       request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.requestNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.assignedVendor?.toLowerCase().includes(searchQuery.toLowerCase());
+      (properties[request.propertyId]?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (vendors[request.assignedVendorId || ""]?.companyName || "").toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || request.priority === priorityFilter;
+    const matchesPriority = priorityFilter === "all" || request.urgency === priorityFilter;
     
     return matchesSearch && matchesStatus && matchesPriority;
   });
@@ -170,18 +199,18 @@ export default function MaintenancePage() {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority?: string) => {
     switch (priority) {
       case "low":
         return <Badge className="bg-gray-100 text-gray-700">Low</Badge>;
-      case "medium":
-        return <Badge className="bg-blue-100 text-blue-700">Medium</Badge>;
-      case "high":
-        return <Badge className="bg-amber-100 text-amber-700">High</Badge>;
+      case "normal":
+        return <Badge className="bg-blue-100 text-blue-700">Normal</Badge>;
+      case "urgent":
+        return <Badge className="bg-amber-100 text-amber-700">Urgent</Badge>;
       case "emergency":
         return <Badge className="bg-red-100 text-red-700">Emergency</Badge>;
       default:
-        return <Badge>{priority}</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700">-</Badge>;
     }
   };
 
@@ -189,6 +218,17 @@ export default function MaintenancePage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={loadRequests} variant="outline">
+          Retry
+        </Button>
       </div>
     );
   }
@@ -265,7 +305,7 @@ export default function MaintenancePage() {
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Emergency</p>
                 <p className="text-2xl font-semibold">
-                  {requests.filter((r) => r.priority === "emergency" && r.status !== "completed" && r.status !== "closed").length}
+                  {requests.filter((r) => r.urgency === "emergency" && r.status !== "completed" && r.status !== "closed").length}
                 </p>
               </div>
             </div>
@@ -321,8 +361,8 @@ export default function MaintenancePage() {
               >
                 <option value="all">All Priorities</option>
                 <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="urgent">Urgent</option>
                 <option value="emergency">Emergency</option>
               </select>
             </div>
@@ -364,83 +404,94 @@ export default function MaintenancePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRequests.map((request) => (
-                  <tr
-                    key={request.id}
-                    className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]"
-                  >
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/management/maintenance/${request.id}`}
-                        className="font-medium text-[var(--main-text)] hover:text-[var(--teal)]"
-                      >
-                        {request.title}
-                      </Link>
-                      <p className="text-xs text-[var(--secondary-text)]">{request.requestNumber}</p>
-                      <p className="text-xs text-[var(--secondary-text)]">{request.category}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
-                          <Link
-                            href={`/management/properties/${request.propertyId}`}
-                            className="text-[var(--teal)] hover:underline"
-                          >
-                            {request.propertyName}
-                          </Link>
-                        </div>
-                        {request.unitNumber && (
-                          <div className="flex items-center gap-2 mt-1">
-                            <Home className="h-3 w-3 text-[var(--secondary-text)]" />
+                {filteredRequests.map((request) => {
+                  const property = properties[request.propertyId];
+                  const unit = request.unitId ? units[request.unitId] : null;
+                  const vendor = request.assignedVendorId ? vendors[request.assignedVendorId] : null;
+                  const reporter = contacts[request.reportedByContactId];
+
+                  return (
+                    <tr
+                      key={request.id}
+                      className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]"
+                    >
+                      <td className="py-3 px-4">
+                        <Link
+                          href={`/management/maintenance/${request.id}`}
+                          className="font-medium text-[var(--main-text)] hover:text-[var(--teal)]"
+                        >
+                          {request.title}
+                        </Link>
+                        <p className="text-xs text-[var(--secondary-text)]">{request.requestNumber}</p>
+                        {request.category && (
+                          <p className="text-xs text-[var(--secondary-text)]">{request.category}</p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
                             <Link
-                              href={`/management/units/${request.unitId}`}
-                              className="text-xs text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+                              href={`/management/properties/${request.propertyId}`}
+                              className="text-[var(--teal)] hover:underline"
                             >
-                              Unit {request.unitNumber}
+                              {property?.name || "Unknown Property"}
                             </Link>
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">{getStatusBadge(request.status)}</td>
-                    <td className="py-3 px-4">{getPriorityBadge(request.priority)}</td>
-                    <td className="py-3 px-4">
-                      {request.assignedVendor ? (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Truck className="h-4 w-4 text-[var(--secondary-text)]" />
-                          <span>{request.assignedVendor}</span>
+                          {unit && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Home className="h-3 w-3 text-[var(--secondary-text)]" />
+                              <Link
+                                href={`/management/units/${unit.id}`}
+                                className="text-xs text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+                              >
+                                Unit {unit.unitNumber}
+                              </Link>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-sm text-[var(--secondary-text)]">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm text-[var(--secondary-text)]">
-                        <p>Reported:</p>
-                        <p>{new Date(request.reportedDate).toLocaleDateString()}</p>
-                        {request.scheduledDate && (
-                          <p className="mt-1">
-                            Scheduled: {new Date(request.scheduledDate).toLocaleDateString()}
-                          </p>
+                      </td>
+                      <td className="py-3 px-4">{getStatusBadge(request.status)}</td>
+                      <td className="py-3 px-4">{getPriorityBadge(request.urgency)}</td>
+                      <td className="py-3 px-4">
+                        {vendor ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Truck className="h-4 w-4 text-[var(--secondary-text)]" />
+                            <span>{vendor.companyName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-[var(--secondary-text)]">Unassigned</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <Link href={`/management/maintenance/${request.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-[var(--secondary-text)]">
+                          <p>Reported:</p>
+                          <p>{new Date(request.createdAt).toLocaleDateString()}</p>
+                          {request.scheduledDate && (
+                            <p className="mt-1">
+                              Scheduled: {new Date(request.scheduledDate).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link href={`/management/maintenance/${request.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {filteredRequests.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
-              No maintenance requests found matching your criteria.
+              {searchQuery || statusFilter !== "all" || priorityFilter !== "all"
+                ? "No maintenance requests found matching your criteria."
+                : "No maintenance requests yet. Click 'New Request' to create one."}
             </div>
           )}
         </CardContent>

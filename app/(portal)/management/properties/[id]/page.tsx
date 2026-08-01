@@ -22,77 +22,164 @@ import {
   Plus,
   Loader2,
   ImageIcon,
+  MapPin,
+  Phone,
+  Mail,
 } from "lucide-react";
 
-// Mock data - replace with actual API calls
-const mockProperty = {
-  id: "PROP-001",
-  name: "Ridgeland Condominiums",
-  address: "6722 S Ridgeland Ave, Chicago, IL 60649",
-  type: "Condominium",
-  status: "active",
-  yearBuilt: 1985,
-  unitCount: 12,
-  occupiedUnits: 10,
-  vacantUnits: 2,
-  openMaintenance: 3,
-  managementStartDate: "2024-01-01",
-  accessInstructions: "Key fob required for entry. Main entrance on south side.",
-  emergencyNotes: "Emergency contact: 555-0123. Fire panel located in lobby.",
-  assignedStaff: "Sarah Johnson",
-  image: "/images/property-placeholder.jpg",
-  association: {
-    id: "ASSOC-001",
-    name: "Ridgeland Condominium Association",
-  },
-};
+interface Property {
+  id: string;
+  propertyId: string;
+  associationId: string;
+  name: string;
+  addressStreet: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
+  type: string;
+  status: string;
+  yearBuilt?: number;
+  totalUnits: number;
+  managementStartDate?: string;
+  accessInstructions?: string;
+  emergencyNotes?: string;
+  assignedStaffId?: string;
+  photoUrl?: string;
+}
 
-const mockUnits = [
-  { id: "UNIT-001", unitNumber: "1N", type: "2BR/2BA", status: "occupied", owner: "John Smith" },
-  { id: "UNIT-002", unitNumber: "2N", type: "2BR/2BA", status: "occupied", owner: "Jane Doe" },
-  { id: "UNIT-003", unitNumber: "3S", type: "3BR/2BA", status: "vacant", owner: "Mike Johnson" },
-];
+interface Association {
+  id: string;
+  name: string;
+}
 
-const mockPeople = [
-  { id: "CONT-001", firstName: "John", lastName: "Smith", role: "Owner", unit: "1N", email: "john@example.com" },
-  { id: "CONT-002", firstName: "Jane", lastName: "Doe", role: "Owner", unit: "2N", email: "jane@example.com" },
-];
+interface Unit {
+  id: string;
+  unitId: string;
+  unitNumber: string;
+  displayName?: string;
+  type?: string;
+  status: string;
+  occupancyStatus?: string;
+  squareFeet?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+}
 
-const mockMaintenance = [
-  { id: "MNT-001", requestNumber: "MNT-2026-0047", title: "HVAC Repair", status: "in_progress", priority: "high", date: "2026-07-30" },
-  { id: "MNT-002", requestNumber: "MNT-2026-0048", title: "Plumbing Issue", status: "scheduled", priority: "medium", date: "2026-08-01" },
-];
+interface MaintenanceRequest {
+  id: string;
+  requestNumber: string;
+  title: string;
+  status: string;
+  urgency?: string;
+  reportedDate?: string;
+}
 
-const mockVendors = [
-  { id: "VEND-001", name: "ABC Heating & Cooling", category: "HVAC", rating: 4.8 },
-  { id: "VEND-002", name: "Quick Fix Plumbing", category: "Plumbing", rating: 4.5 },
-];
+interface Contact {
+  id: string;
+  contactId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  roles?: string[];
+}
 
-const mockInspections = [
-  { id: "INSP-001", type: "Annual", date: "2026-08-15", status: "scheduled" },
-  { id: "INSP-002", type: "Fire Safety", date: "2026-07-01", status: "completed" },
-];
+interface Vendor {
+  id: string;
+  vendorId: string;
+  companyName: string;
+  category?: string;
+  status: string;
+}
 
-const mockDocuments = [
-  { id: "DOC-001", name: "Insurance Certificate 2026.pdf", type: "Insurance", date: "2026-01-15" },
-  { id: "DOC-002", name: "Annual Budget.xlsx", type: "Financial", date: "2026-01-10" },
-];
-
-const mockCompliance = [
-  { id: "COMP-001", title: "Annual Fire Inspection", dueDate: "2026-08-15", status: "compliant" },
-  { id: "COMP-002", title: "Elevator Certification", dueDate: "2026-09-01", status: "pending" },
-];
+interface Document {
+  id: string;
+  documentId: string;
+  title: string;
+  documentType: string;
+  status: string;
+}
 
 export default function PropertyDetailPage() {
   const params = useParams();
-  const [property, setProperty] = useState(mockProperty);
+  const propertyId = params.id as string;
+  
+  const [property, setProperty] = useState<Property | null>(null);
+  const [association, setAssociation] = useState<Association | null>(null);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => setIsLoading(false), 500);
-  }, []);
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        
+        // Fetch property details
+        const propRes = await fetch(`/api/properties/${propertyId}`);
+        if (!propRes.ok) throw new Error("Failed to fetch property");
+        const propData = await propRes.json();
+        if (!propData.success) throw new Error(propData.error);
+        setProperty(propData.data);
+        
+        // Fetch association details
+        if (propData.data.associationId) {
+          const assocRes = await fetch(`/api/associations/${propData.data.associationId}`);
+          if (assocRes.ok) {
+            const assocData = await assocRes.json();
+            if (assocData.success) setAssociation(assocData.data);
+          }
+        }
+        
+        // Fetch units for this property
+        const unitsRes = await fetch(`/api/units?propertyId=${propertyId}`);
+        if (unitsRes.ok) {
+          const unitsData = await unitsRes.json();
+          if (unitsData.success) setUnits(unitsData.data.data || []);
+        }
+        
+        // Fetch maintenance requests for this property
+        const maintRes = await fetch(`/api/maintenance?propertyId=${propertyId}`);
+        if (maintRes.ok) {
+          const maintData = await maintRes.json();
+          if (maintData.success) setMaintenanceRequests(maintData.data.data || []);
+        }
+        
+        // Fetch contacts for this property
+        const contactsRes = await fetch(`/api/contacts?propertyId=${propertyId}`);
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json();
+          if (contactsData.success) setContacts(contactsData.data.data || []);
+        }
+        
+        // Fetch vendors
+        const vendorsRes = await fetch(`/api/vendors`);
+        if (vendorsRes.ok) {
+          const vendorsData = await vendorsRes.json();
+          if (vendorsData.success) setVendors(vendorsData.data.data || []);
+        }
+        
+        // Fetch documents for this property
+        const docsRes = await fetch(`/api/documents?propertyId=${propertyId}`);
+        if (docsRes.ok) {
+          const docsData = await docsRes.json();
+          if (docsData.success) setDocuments(docsData.data.data || []);
+        }
+        
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchData();
+  }, [propertyId]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -100,6 +187,36 @@ export default function PropertyDetailPage() {
         return <Badge className="bg-green-100 text-green-700">Active</Badge>;
       case "inactive":
         return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
+      case "maintenance":
+        return <Badge className="bg-amber-100 text-amber-700">Maintenance</Badge>;
+      case "under_construction":
+        return <Badge className="bg-blue-100 text-blue-700">Construction</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const getUrgencyBadge = (urgency?: string) => {
+    switch (urgency) {
+      case "emergency":
+        return <Badge className="bg-red-100 text-red-700">Emergency</Badge>;
+      case "urgent":
+        return <Badge className="bg-orange-100 text-orange-700">Urgent</Badge>;
+      case "high":
+        return <Badge className="bg-amber-100 text-amber-700">High</Badge>;
+      default:
+        return <Badge variant="secondary">{urgency || "Normal"}</Badge>;
+    }
+  };
+
+  const getUnitStatusBadge = (status: string) => {
+    switch (status) {
+      case "occupied":
+        return <Badge className="bg-green-100 text-green-700">Occupied</Badge>;
+      case "vacant":
+        return <Badge className="bg-blue-100 text-blue-700">Vacant</Badge>;
+      case "maintenance":
+        return <Badge className="bg-amber-100 text-amber-700">Maintenance</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -112,6 +229,23 @@ export default function PropertyDetailPage() {
       </div>
     );
   }
+
+  if (error || !property) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-600">{error || "Property not found"}</p>
+        <Link href="/management/properties">
+          <Button variant="outline">Back to Properties</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const occupiedUnits = units.filter(u => u.occupancyStatus === "occupied" || u.status === "occupied").length;
+  const vacantUnits = units.filter(u => u.occupancyStatus === "vacant" || u.status === "vacant").length;
+  const openMaintenanceCount = maintenanceRequests.filter(
+    m => !["completed", "closed", "cancelled"].includes(m.status)
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -131,13 +265,15 @@ export default function PropertyDetailPage() {
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">{property.name}</h1>
             {getStatusBadge(property.status)}
           </div>
-          <p className="text-[var(--secondary-text)]">{property.id} • {property.address}</p>
+          <p className="text-[var(--secondary-text)]">{property.propertyId}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link href={`/management/properties/${property.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -151,7 +287,7 @@ export default function PropertyDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                <p className="text-2xl font-semibold">{property.unitCount}</p>
+                <p className="text-2xl font-semibold">{units.length || property.totalUnits || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -164,7 +300,7 @@ export default function PropertyDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Occupied</p>
-                <p className="text-2xl font-semibold">{property.occupiedUnits}</p>
+                <p className="text-2xl font-semibold">{occupiedUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -177,7 +313,7 @@ export default function PropertyDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Vacant</p>
-                <p className="text-2xl font-semibold">{property.vacantUnits}</p>
+                <p className="text-2xl font-semibold">{vacantUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -189,8 +325,8 @@ export default function PropertyDetailPage() {
                 <Wrench className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Maintenance</p>
-                <p className="text-2xl font-semibold">{property.openMaintenance}</p>
+                <p className="text-sm text-[var(--secondary-text)]">Open Maintenance</p>
+                <p className="text-2xl font-semibold">{openMaintenanceCount}</p>
               </div>
             </div>
           </CardContent>
@@ -199,16 +335,13 @@ export default function PropertyDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)]">
+        <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)] flex-wrap gap-1">
           <TabsTrigger value="overview" className="px-3 py-1.5 text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="units" className="px-3 py-1.5 text-sm">Units</TabsTrigger>
-          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People</TabsTrigger>
-          <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance</TabsTrigger>
-          <TabsTrigger value="vendors" className="px-3 py-1.5 text-sm">Vendors</TabsTrigger>
-          <TabsTrigger value="inspections" className="px-3 py-1.5 text-sm">Inspections</TabsTrigger>
-          <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents</TabsTrigger>
-          <TabsTrigger value="compliance" className="px-3 py-1.5 text-sm">Compliance</TabsTrigger>
-          <TabsTrigger value="activity" className="px-3 py-1.5 text-sm">Activity</TabsTrigger>
+          <TabsTrigger value="units" className="px-3 py-1.5 text-sm">Units ({units.length})</TabsTrigger>
+          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance ({maintenanceRequests.length})</TabsTrigger>
+          <TabsTrigger value="vendors" className="px-3 py-1.5 text-sm">Vendors ({vendors.length})</TabsTrigger>
+          <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents ({documents.length})</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -217,11 +350,23 @@ export default function PropertyDetailPage() {
             {/* Property Image */}
             <Card className="lg:col-span-1">
               <CardContent className="p-0">
-                <div className="aspect-video bg-gray-100 flex items-center justify-center rounded-t-lg">
-                  <ImageIcon className="h-16 w-16 text-gray-300" />
-                </div>
+                {property.photoUrl ? (
+                  <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
+                    <img 
+                      src={property.photoUrl} 
+                      alt={property.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-gray-100 flex items-center justify-center rounded-t-lg">
+                    <ImageIcon className="h-16 w-16 text-gray-300" />
+                  </div>
+                )}
                 <div className="p-4">
-                  <p className="text-sm text-[var(--secondary-text)] text-center">Property Photo</p>
+                  <p className="text-sm text-[var(--secondary-text)] text-center">
+                    {property.photoUrl ? "Property Photo" : "No photo uploaded"}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -235,29 +380,51 @@ export default function PropertyDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Property Type</p>
-                    <p className="font-medium">{property.type}</p>
+                    <p className="font-medium">{property.type || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Year Built</p>
-                    <p className="font-medium">{property.yearBuilt}</p>
+                    <p className="font-medium">{property.yearBuilt || "-"}</p>
                   </div>
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Management Start</p>
-                    <p className="font-medium">{property.managementStartDate}</p>
+                    <p className="font-medium">
+                      {property.managementStartDate 
+                        ? new Date(property.managementStartDate).toLocaleDateString()
+                        : "-"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Assigned Staff</p>
-                    <p className="font-medium">{property.assignedStaff}</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
+                    <p className="font-medium">{property.totalUnits || units.length || 0}</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Access Instructions</p>
-                  <p className="font-medium">{property.accessInstructions}</p>
+                
+                <div className="pt-4 border-t border-[var(--border-color)]">
+                  <p className="text-sm text-[var(--secondary-text)] mb-2 flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Address
+                  </p>
+                  <p className="font-medium">{property.addressStreet}</p>
+                  <p className="text-[var(--main-text)]">
+                    {property.addressCity && `${property.addressCity}, `}
+                    {property.addressState} {property.addressZip}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Emergency Notes</p>
-                  <p className="font-medium">{property.emergencyNotes}</p>
-                </div>
+                
+                {property.accessInstructions && (
+                  <div className="pt-4 border-t border-[var(--border-color)]">
+                    <p className="text-sm text-[var(--secondary-text)]">Access Instructions</p>
+                    <p className="font-medium">{property.accessInstructions}</p>
+                  </div>
+                )}
+                
+                {property.emergencyNotes && (
+                  <div className="pt-2">
+                    <p className="text-sm text-[var(--secondary-text)]">Emergency Notes</p>
+                    <p className="font-medium">{property.emergencyNotes}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -268,20 +435,23 @@ export default function PropertyDetailPage() {
               <CardTitle>Association</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-[var(--teal)]" />
+              {association ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-[var(--teal)]" />
+                  </div>
+                  <div>
+                    <Link
+                      href={`/management/associations/${association.id}`}
+                      className="font-medium text-[var(--teal)] hover:underline"
+                    >
+                      {association.name}
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <Link
-                    href={`/management/associations/${property.association.id}`}
-                    className="font-medium text-[var(--teal)] hover:underline"
-                  >
-                    {property.association.name}
-                  </Link>
-                  <p className="text-sm text-[var(--secondary-text)]">{property.association.id}</p>
-                </div>
-              </div>
+              ) : (
+                <p className="text-[var(--secondary-text)]">No association assigned</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -289,14 +459,16 @@ export default function PropertyDetailPage() {
         {/* Units Tab */}
         <TabsContent value="units" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Units ({mockUnits.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Unit
-            </Button>
+            <h3 className="text-lg font-medium">Units ({units.length})</h3>
+            <Link href={`/management/units/new?propertyId=${property.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Unit
+              </Button>
+            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {mockUnits.map((unit) => (
+            {units.map((unit) => (
               <Card key={unit.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -307,255 +479,206 @@ export default function PropertyDetailPage() {
                       >
                         Unit {unit.unitNumber}
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{unit.type}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">Owner: {unit.owner}</p>
+                      {unit.displayName && unit.displayName !== unit.unitNumber && (
+                        <p className="text-sm text-[var(--secondary-text)]">{unit.displayName}</p>
+                      )}
+                      <p className="text-sm text-[var(--secondary-text)]">{unit.type || "-"}</p>
+                      {unit.bedrooms !== undefined && unit.bathrooms !== undefined && (
+                        <p className="text-sm text-[var(--secondary-text)]">
+                          {unit.bedrooms} bed, {unit.bathrooms} bath
+                          {unit.squareFeet && ` • ${unit.squareFeet} sq ft`}
+                        </p>
+                      )}
                     </div>
-                    <Badge className={unit.status === "occupied" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
-                      {unit.status}
-                    </Badge>
+                    {getUnitStatusBadge(unit.status)}
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {units.length === 0 && (
+              <p className="text-[var(--secondary-text)] col-span-3 text-center py-8">No units found</p>
+            )}
           </div>
         </TabsContent>
 
         {/* People Tab */}
         <TabsContent value="people" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">People ({mockPeople.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Person
-            </Button>
+            <h3 className="text-lg font-medium">People ({contacts.length})</h3>
+            <Link href={`/management/people/new?propertyId=${property.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Person
+              </Button>
+            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockPeople.map((person) => (
-              <Card key={person.id}>
+            {contacts.map((contact) => (
+              <Card key={contact.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <Users className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <Link
-                        href={`/management/people/${person.id}`}
+                        href={`/management/people/${contact.id}`}
                         className="font-medium text-[var(--teal)] hover:underline"
                       >
-                        {person.firstName} {person.lastName}
+                        {contact.firstName} {contact.lastName}
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{person.role} • Unit {person.unit}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{person.email}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{contact.email}</p>
+                      {contact.phone && (
+                        <p className="text-sm text-[var(--secondary-text)] flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {contact.phone}
+                        </p>
+                      )}
+                      {contact.roles && contact.roles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {contact.roles.map((role) => (
+                            <Badge key={role} variant="secondary" className="text-xs">
+                              {role.replace(/_/g, " ")}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {contacts.length === 0 && (
+              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No people found</p>
+            )}
           </div>
         </TabsContent>
 
         {/* Maintenance Tab */}
         <TabsContent value="maintenance" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Maintenance Requests ({mockMaintenance.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Request
-            </Button>
+            <h3 className="text-lg font-medium">Maintenance Requests ({maintenanceRequests.length})</h3>
+            <Link href={`/management/maintenance/new?propertyId=${property.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Request
+              </Button>
+            </Link>
           </div>
           <div className="space-y-4">
-            {mockMaintenance.map((request) => (
+            {maintenanceRequests.map((request) => (
               <Card key={request.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/maintenance/${request.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {request.title}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
-                      <p className="text-sm text-[var(--secondary-text)]">{request.date}</p>
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
+                        <Wrench className="h-5 w-5 text-[var(--teal)]" />
+                      </div>
+                      <div>
+                        <Link
+                          href={`/management/maintenance/${request.id}`}
+                          className="font-medium text-[var(--teal)] hover:underline"
+                        >
+                          {request.title}
+                        </Link>
+                        <p className="text-sm text-[var(--secondary-text)]">{request.requestNumber}</p>
+                        {request.reportedDate && (
+                          <p className="text-sm text-[var(--secondary-text)]">
+                            Reported: {new Date(request.reportedDate).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Badge className="bg-teal-100 text-teal-700">{request.status}</Badge>
-                      <Badge className={request.priority === "high" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
-                        {request.priority}
-                      </Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline">{request.status}</Badge>
+                      {getUrgencyBadge(request.urgency)}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {maintenanceRequests.length === 0 && (
+              <p className="text-[var(--secondary-text)] text-center py-8">No maintenance requests found</p>
+            )}
           </div>
         </TabsContent>
 
         {/* Vendors Tab */}
         <TabsContent value="vendors" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Vendors ({mockVendors.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vendor
-            </Button>
+            <h3 className="text-lg font-medium">Vendors ({vendors.length})</h3>
+            <Link href="/management/vendors/new">
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vendor
+              </Button>
+            </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mockVendors.map((vendor) => (
+            {vendors.map((vendor) => (
               <Card key={vendor.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <Truck className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <Link
                         href={`/management/vendors/${vendor.id}`}
                         className="font-medium text-[var(--teal)] hover:underline"
                       >
-                        {vendor.name}
+                        {vendor.companyName}
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{vendor.category}</p>
-                      <Badge className="mt-1">★ {vendor.rating}</Badge>
+                      <p className="text-sm text-[var(--secondary-text)]">{vendor.category || "-"}</p>
                     </div>
+                    <Badge variant="outline">{vendor.status}</Badge>
                   </div>
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </TabsContent>
-
-        {/* Inspections Tab */}
-        <TabsContent value="inspections" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Inspections ({mockInspections.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Schedule Inspection
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockInspections.map((inspection) => (
-              <Card key={inspection.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/inspections/${inspection.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {inspection.type} Inspection
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{inspection.date}</p>
-                    </div>
-                    <Badge className={inspection.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
-                      {inspection.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {vendors.length === 0 && (
+              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No vendors found</p>
+            )}
           </div>
         </TabsContent>
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Documents ({mockDocuments.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Upload Document
-            </Button>
+            <h3 className="text-lg font-medium">Documents ({documents.length})</h3>
+            <Link href={`/management/documents/new?propertyId=${property.id}`}>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Upload Document
+              </Button>
+            </Link>
           </div>
           <div className="space-y-4">
-            {mockDocuments.map((doc) => (
+            {documents.map((doc) => (
               <Card key={doc.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <FileText className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <Link
                         href={`/management/documents/${doc.id}`}
                         className="font-medium text-[var(--teal)] hover:underline"
                       >
-                        {doc.name}
+                        {doc.title}
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{doc.type} • {doc.date}</p>
+                      <p className="text-sm text-[var(--secondary-text)]">{doc.documentType}</p>
                     </div>
+                    <Badge variant="outline">{doc.status}</Badge>
                   </div>
                 </CardContent>
               </Card>
             ))}
+            {documents.length === 0 && (
+              <p className="text-[var(--secondary-text)] text-center py-8">No documents found</p>
+            )}
           </div>
-        </TabsContent>
-
-        {/* Compliance Tab */}
-        <TabsContent value="compliance" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Compliance Matters ({mockCompliance.length})</h3>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Compliance Matter
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {mockCompliance.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <Link
-                        href={`/management/compliance/${item.id}`}
-                        className="font-medium text-[var(--teal)] hover:underline"
-                      >
-                        {item.title}
-                      </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">Due: {item.dueDate}</p>
-                    </div>
-                    <Badge className={item.status === "compliant" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
-                      {item.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Activity Tab */}
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 pb-4 border-b border-[var(--border-color)]">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Property record created</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: System • 2024-01-01 10:30 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 pb-4 border-b border-[var(--border-color)]">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Management agreement signed</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: Sarah Johnson • 2024-01-01 11:00 AM</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Activity className="h-5 w-5 text-[var(--teal)] mt-0.5" />
-                  <div>
-                    <p className="font-medium">Unit 1N added</p>
-                    <p className="text-sm text-[var(--secondary-text)]">By: Admin • 2024-01-02 09:15 AM</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Shield, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Shield, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -29,6 +29,23 @@ interface Contact {
   id: string;
   firstName: string;
   lastName: string;
+}
+
+interface ComplianceData {
+  id: string;
+  title: string;
+  description?: string;
+  category: string;
+  priority: string;
+  status: string;
+  identifiedDate?: string;
+  dueDate?: string;
+  assignedTo?: string;
+  associationId?: string;
+  propertyId?: string;
+  unitId?: string;
+  resolutionNotes?: string;
+  fineAmount?: number;
 }
 
 interface FormData {
@@ -63,8 +80,12 @@ const PRIORITIES = [
   { value: "critical", label: "Critical" },
 ];
 
-export default function NewCompliancePage() {
+function ComplianceFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const complianceId = searchParams.get("id");
+  const isEditMode = !!complianceId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -125,10 +146,57 @@ export default function NewCompliancePage() {
         const contactsData = await contactsRes.json();
         if (contactsData.success) setContacts(contactsData.data.data || []);
       }
+
+      // If in edit mode, load compliance data
+      if (isEditMode && complianceId) {
+        await loadComplianceData(complianceId);
+      }
     } catch (error) {
       console.error("Error loading initial data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadComplianceData(id: string) {
+    try {
+      const response = await fetch(`/api/compliance/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const data: ComplianceData = result.data;
+          
+          // Populate form data
+          setFormData({
+            title: data.title || "",
+            description: data.description || "",
+            category: data.category || "",
+            priority: data.priority || "medium",
+            status: data.status || "open",
+            identifiedDate: data.identifiedDate ? data.identifiedDate.split('T')[0] : "",
+            dueDate: data.dueDate ? data.dueDate.split('T')[0] : "",
+            assignedTo: data.assignedTo || "",
+            associationId: data.associationId || "",
+            propertyId: data.propertyId || "",
+            unitId: data.unitId || "",
+            resolutionNotes: data.resolutionNotes || "",
+            fineAmount: data.fineAmount ? data.fineAmount.toString() : "",
+          });
+
+          // Load related data for cascading dropdowns
+          if (data.associationId) {
+            await loadProperties(data.associationId);
+          }
+          if (data.propertyId) {
+            await loadUnits(data.propertyId);
+          }
+        }
+      } else {
+        alert("Failed to load compliance matter data");
+      }
+    } catch (error) {
+      console.error("Error loading compliance data:", error);
+      alert("An error occurred while loading the compliance matter");
     }
   }
 
@@ -173,39 +241,53 @@ export default function NewCompliancePage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/compliance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description || undefined,
-          category: formData.category,
-          priority: formData.priority,
-          status: formData.status,
-          identifiedDate: formData.identifiedDate || undefined,
-          dueDate: formData.dueDate || undefined,
-          assignedTo: formData.assignedTo || undefined,
-          associationId: formData.associationId || undefined,
-          propertyId: formData.propertyId || undefined,
-          unitId: formData.unitId || undefined,
-          resolutionNotes: formData.resolutionNotes || undefined,
-          fineAmount: formData.fineAmount ? parseFloat(formData.fineAmount) : undefined,
-        }),
-      });
+      const payload = {
+        title: formData.title,
+        description: formData.description || undefined,
+        category: formData.category,
+        priority: formData.priority,
+        status: formData.status,
+        identifiedDate: formData.identifiedDate || undefined,
+        dueDate: formData.dueDate || undefined,
+        assignedTo: formData.assignedTo || undefined,
+        associationId: formData.associationId || undefined,
+        propertyId: formData.propertyId || undefined,
+        unitId: formData.unitId || undefined,
+        resolutionNotes: formData.resolutionNotes || undefined,
+        fineAmount: formData.fineAmount ? parseFloat(formData.fineAmount) : undefined,
+      };
+
+      let response;
+      if (isEditMode && complianceId) {
+        // Update existing compliance matter
+        response = await fetch(`/api/compliance/${complianceId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // Create new compliance matter
+        response = await fetch("/api/compliance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/compliance/${result.data.id}`);
+          const redirectId = isEditMode ? complianceId : result.data.id;
+          router.push(`/management/compliance/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create compliance matter");
+          alert(result.error || `Failed to ${isEditMode ? 'update' : 'create'} compliance matter`);
         }
       } else {
-        alert("Failed to create compliance matter");
+        alert(`Failed to ${isEditMode ? 'update' : 'create'} compliance matter`);
       }
     } catch (error) {
-      console.error("Error creating compliance matter:", error);
-      alert("An error occurred while creating the compliance matter");
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} compliance matter:`, error);
+      alert(`An error occurred while ${isEditMode ? 'updating' : 'creating'} the compliance matter`);
     } finally {
       setIsSaving(false);
     }
@@ -236,9 +318,21 @@ export default function NewCompliancePage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">New Compliance Matter</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Record a compliance issue or violation</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Compliance Matter" : "New Compliance Matter"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <Edit3 className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update compliance matter details" : "Record a compliance issue or violation"}
+          </p>
         </div>
       </div>
 
@@ -502,12 +596,24 @@ export default function NewCompliancePage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Compliance Matter
+                {isEditMode ? "Save Changes" : "Create Compliance Matter"}
               </>
             )}
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewCompliancePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    }>
+      <ComplianceFormContent />
+    </Suspense>
   );
 }

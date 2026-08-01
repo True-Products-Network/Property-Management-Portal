@@ -43,7 +43,7 @@ export interface CreateMaintenanceInput {
 }
 
 export async function getMaintenanceRequests(
-  params: QueryParams & { propertyId?: string; status?: string } = {}
+  params: QueryParams & { propertyId?: string; unitId?: string; status?: string; vendorId?: string; reportedBy?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<MaintenanceRequest>>> {
   try {
     const supabase = await createClient();
@@ -61,8 +61,20 @@ export async function getMaintenanceRequests(
       query = query.eq("property_id", params.propertyId);
     }
     
+    if (params.unitId) {
+      query = query.eq("unit_id", params.unitId);
+    }
+    
     if (params.status) {
       query = query.eq("status", params.status);
+    }
+    
+    if (params.vendorId) {
+      query = query.eq("assigned_vendor_id", params.vendorId);
+    }
+    
+    if (params.reportedBy) {
+      query = query.eq("reported_by_contact_id", params.reportedBy);
     }
     
     if (params.search) {

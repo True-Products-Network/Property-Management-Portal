@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Home, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Home, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface Property {
@@ -37,6 +37,10 @@ interface FormData {
 
 export default function NewUnitPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const unitId = searchParams.get("id");
+  const isEditMode = !!unitId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -65,6 +69,12 @@ export default function NewUnitPage() {
     loadProperties();
   }, []);
 
+  useEffect(() => {
+    if (isEditMode && unitId) {
+      loadUnitData(unitId);
+    }
+  }, [isEditMode, unitId]);
+
   async function loadProperties() {
     try {
       const response = await fetch("/api/properties");
@@ -76,6 +86,39 @@ export default function NewUnitPage() {
       }
     } catch (error) {
       console.error("Error loading properties:", error);
+    }
+  }
+
+  async function loadUnitData(id: string) {
+    try {
+      const response = await fetch(`/api/units/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const unit = result.data;
+          setFormData({
+            propertyId: unit.propertyId || "",
+            unitNumber: unit.unitNumber || "",
+            displayName: unit.displayName || "",
+            type: unit.type || "",
+            status: unit.status || "active",
+            squareFeet: unit.squareFeet?.toString() || "",
+            bedrooms: unit.bedrooms?.toString() || "",
+            bathrooms: unit.bathrooms?.toString() || "",
+            floor: unit.floor || "",
+            occupancyStatus: unit.occupancyStatus || "",
+            rentalStatus: unit.rentalStatus || "",
+            parkingSpot: unit.parkingSpot || "",
+            storageUnit: unit.storageUnit || "",
+            moveInDate: unit.moveInDate || "",
+            moveOutDate: unit.moveOutDate || "",
+            mailingAddress: unit.mailingAddress || "",
+            accessNotes: unit.accessNotes || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading unit data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -98,43 +141,48 @@ export default function NewUnitPage() {
     
     setIsSaving(true);
     try {
-      const response = await fetch("/api/units", {
-        method: "POST",
+      const payload = {
+        propertyId: formData.propertyId,
+        unitNumber: formData.unitNumber,
+        displayName: formData.displayName || undefined,
+        type: formData.type || undefined,
+        status: formData.status,
+        squareFeet: formData.squareFeet ? parseInt(formData.squareFeet) : undefined,
+        bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
+        bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : undefined,
+        floor: formData.floor || undefined,
+        occupancyStatus: formData.occupancyStatus || undefined,
+        rentalStatus: formData.rentalStatus || undefined,
+        parkingSpot: formData.parkingSpot || undefined,
+        storageUnit: formData.storageUnit || undefined,
+        moveInDate: formData.moveInDate || undefined,
+        moveOutDate: formData.moveOutDate || undefined,
+        mailingAddress: formData.mailingAddress || undefined,
+        accessNotes: formData.accessNotes || undefined,
+      };
+
+      const url = isEditMode ? `/api/units/${unitId}` : "/api/units";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          propertyId: formData.propertyId,
-          unitNumber: formData.unitNumber,
-          displayName: formData.displayName || undefined,
-          type: formData.type || undefined,
-          status: formData.status,
-          squareFeet: formData.squareFeet ? parseInt(formData.squareFeet) : undefined,
-          bedrooms: formData.bedrooms ? parseInt(formData.bedrooms) : undefined,
-          bathrooms: formData.bathrooms ? parseFloat(formData.bathrooms) : undefined,
-          floor: formData.floor || undefined,
-          occupancyStatus: formData.occupancyStatus || undefined,
-          rentalStatus: formData.rentalStatus || undefined,
-          parkingSpot: formData.parkingSpot || undefined,
-          storageUnit: formData.storageUnit || undefined,
-          moveInDate: formData.moveInDate || undefined,
-          moveOutDate: formData.moveOutDate || undefined,
-          mailingAddress: formData.mailingAddress || undefined,
-          accessNotes: formData.accessNotes || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/units/${result.data.id}`);
+          router.push(`/management/units/${isEditMode ? unitId : result.data.id}`);
         } else {
-          alert(result.error || "Failed to create unit");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} unit`);
         }
       } else {
-        alert("Failed to create unit");
+        alert(`Failed to ${isEditMode ? "update" : "create"} unit`);
       }
     } catch (error) {
-      console.error("Error creating unit:", error);
-      alert("An error occurred while creating the unit");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} unit:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the unit`);
     } finally {
       setIsSaving(false);
     }
@@ -168,8 +216,20 @@ export default function NewUnitPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add New Unit</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new unit record</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Unit" : "Add New Unit"}
+            </h1>
+            {isEditMode && (
+              <span className="px-2 py-1 text-xs font-medium bg-[var(--teal)]/10 text-[var(--teal)] rounded-full flex items-center gap-1">
+                <Pencil className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update unit details" : "Create a new unit record"}
+          </p>
         </div>
       </div>
 
@@ -473,7 +533,7 @@ export default function NewUnitPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Unit
+                {isEditMode ? "Save Changes" : "Create Unit"}
               </>
             )}
           </Button>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, CheckSquare, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -45,6 +46,10 @@ const APPROVAL_TYPES = [
 
 export default function NewApprovalPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const approvalId = searchParams.get("id");
+  const isEditMode = !!approvalId;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -85,10 +90,40 @@ export default function NewApprovalPage() {
         const vendorData = await vendorRes.json();
         if (vendorData.success) setVendors(vendorData.data.data || []);
       }
+
+      // If in edit mode, fetch the approval data
+      if (isEditMode && approvalId) {
+        await loadApprovalData(approvalId);
+      }
     } catch (error) {
       console.error("Error loading initial data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadApprovalData(id: string) {
+    try {
+      const response = await fetch(`/api/approvals/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const approval = result.data;
+          setFormData({
+            title: approval.title || "",
+            description: approval.description || "",
+            approvalType: approval.approvalType || "",
+            requestedAmount: approval.requestedAmount?.toString() || "",
+            associationId: approval.associationId || "",
+            maintenanceRequestId: approval.maintenanceRequestId || "",
+            vendorId: approval.vendorId || "",
+          });
+        }
+      } else {
+        console.error("Failed to load approval data");
+      }
+    } catch (error) {
+      console.error("Error loading approval data:", error);
     }
   }
 
@@ -110,8 +145,11 @@ export default function NewApprovalPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/approvals", {
-        method: "POST",
+      const url = isEditMode ? `/api/approvals/${approvalId}` : "/api/approvals";
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title,
@@ -127,16 +165,17 @@ export default function NewApprovalPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/approvals/${result.data.id}`);
+          const redirectId = isEditMode ? approvalId : result.data.id;
+          router.push(`/management/approvals/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create approval request");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} approval request`);
         }
       } else {
-        alert("Failed to create approval request");
+        alert(`Failed to ${isEditMode ? "update" : "create"} approval request`);
       }
     } catch (error) {
-      console.error("Error creating approval request:", error);
-      alert("An error occurred while creating the approval request");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} approval request:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the approval request`);
     } finally {
       setIsSaving(false);
     }
@@ -168,8 +207,19 @@ export default function NewApprovalPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Request Board Approval</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Submit a request for board approval</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Approval Request" : "Request Board Approval"}
+            </h1>
+            {isEditMode && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                Edit Mode
+              </Badge>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update the approval request details" : "Submit a request for board approval"}
+          </p>
         </div>
       </div>
 
@@ -322,12 +372,12 @@ export default function NewApprovalPage() {
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Submitting...
+                {isEditMode ? "Saving..." : "Submitting..."}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Submit for Approval
+                {isEditMode ? "Save Changes" : "Submit for Approval"}
               </>
             )}
           </Button>

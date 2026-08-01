@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, FileText, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -23,6 +23,22 @@ interface Unit {
   id: string;
   unitNumber: string;
   propertyId: string;
+}
+
+interface DocumentData {
+  id: string;
+  title: string;
+  documentType: string;
+  category: string;
+  status: string;
+  issueDate: string;
+  expiryDate: string;
+  associationId: string;
+  propertyId: string;
+  unitId: string;
+  isConfidential: boolean;
+  requiresAcknowledgment: boolean;
+  filePath: string;
 }
 
 interface FormData {
@@ -67,6 +83,10 @@ const CATEGORIES = [
 
 export default function NewDocumentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const documentId = searchParams.get("id");
+  const isEditMode = !!documentId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -110,6 +130,12 @@ export default function NewDocumentPage() {
     }
   }, [formData.propertyId]);
 
+  useEffect(() => {
+    if (isEditMode && associations.length > 0) {
+      loadDocument();
+    }
+  }, [isEditMode, associations]);
+
   async function loadAssociations() {
     try {
       const response = await fetch("/api/associations");
@@ -119,6 +145,46 @@ export default function NewDocumentPage() {
       }
     } catch (error) {
       console.error("Error loading associations:", error);
+    } finally {
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  async function loadDocument() {
+    try {
+      const response = await fetch(`/api/documents/${documentId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const doc: DocumentData = result.data;
+          setFormData({
+            title: doc.title || "",
+            documentType: doc.documentType || "",
+            category: doc.category || "",
+            status: doc.status || "active",
+            issueDate: doc.issueDate ? doc.issueDate.split("T")[0] : "",
+            expiryDate: doc.expiryDate ? doc.expiryDate.split("T")[0] : "",
+            associationId: doc.associationId || "",
+            propertyId: doc.propertyId || "",
+            unitId: doc.unitId || "",
+            isConfidential: doc.isConfidential || false,
+            requiresAcknowledgment: doc.requiresAcknowledgment || false,
+            filePath: doc.filePath || "",
+          });
+        } else {
+          alert("Document not found");
+          router.push("/management/documents");
+        }
+      } else {
+        alert("Failed to load document");
+        router.push("/management/documents");
+      }
+    } catch (error) {
+      console.error("Error loading document:", error);
+      alert("An error occurred while loading the document");
+      router.push("/management/documents");
     } finally {
       setIsLoading(false);
     }
@@ -166,38 +232,49 @@ export default function NewDocumentPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/documents", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          documentType: formData.documentType,
-          category: formData.category || undefined,
-          status: formData.status,
-          issueDate: formData.issueDate || undefined,
-          expiryDate: formData.expiryDate || undefined,
-          associationId: formData.associationId || undefined,
-          propertyId: formData.propertyId || undefined,
-          unitId: formData.unitId || undefined,
-          isConfidential: formData.isConfidential,
-          requiresAcknowledgment: formData.requiresAcknowledgment,
-          filePath: formData.filePath,
-        }),
-      });
+      const payload = {
+        title: formData.title,
+        documentType: formData.documentType,
+        category: formData.category || undefined,
+        status: formData.status,
+        issueDate: formData.issueDate || undefined,
+        expiryDate: formData.expiryDate || undefined,
+        associationId: formData.associationId || undefined,
+        propertyId: formData.propertyId || undefined,
+        unitId: formData.unitId || undefined,
+        isConfidential: formData.isConfidential,
+        requiresAcknowledgment: formData.requiresAcknowledgment,
+        filePath: formData.filePath,
+      };
+
+      let response;
+      if (isEditMode) {
+        response = await fetch(`/api/documents/${documentId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        response = await fetch("/api/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/documents/${result.data.id}`);
+          router.push(`/management/documents/${isEditMode ? documentId : result.data.id}`);
         } else {
-          alert(result.error || "Failed to create document");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} document`);
         }
       } else {
-        alert("Failed to create document");
+        alert(`Failed to ${isEditMode ? "update" : "create"} document`);
       }
     } catch (error) {
-      console.error("Error creating document:", error);
-      alert("An error occurred while creating the document");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} document:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the document`);
     } finally {
       setIsSaving(false);
     }
@@ -228,9 +305,21 @@ export default function NewDocumentPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Upload Document</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Add a new document to the system</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Document" : "Upload Document"}
+            </h1>
+            <p className="text-[var(--secondary-text)] mt-1">
+              {isEditMode ? "Update document details" : "Add a new document to the system"}
+            </p>
+          </div>
+          {isEditMode && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200">
+              <Edit className="h-3.5 w-3.5" />
+              Edit Mode
+            </span>
+          )}
         </div>
       </div>
 
@@ -477,7 +566,7 @@ export default function NewDocumentPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Upload Document
+                {isEditMode ? "Save Changes" : "Upload Document"}
               </>
             )}
           </Button>

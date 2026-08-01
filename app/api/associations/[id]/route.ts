@@ -7,18 +7,29 @@ import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
+  shortName: z.string().optional(),
   legalName: z.string().optional(),
-  type: z.enum(["Condominium", "HOA", "Cooperative", "Commercial", "Other"]).optional(),
+  type: z.string().optional(),
+  status: z.string().optional(),
   addressStreet: z.string().optional(),
   addressCity: z.string().optional(),
   addressState: z.string().optional(),
   addressZip: z.string().optional(),
+  mailingAddress: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  taxId: z.string().optional(),
   fiscalYear: z.string().optional(),
+  fiscalYearEndMonth: z.string().optional(),
+  fiscalYearEndDay: z.number().optional(),
   annualMeetingMonth: z.string().optional(),
   managementStartDate: z.string().optional(),
   assignedManagerId: z.string().uuid().optional(),
+  financialPlatform: z.string().optional(),
+  financialPortalLink: z.string().optional(),
+  documentStorageLink: z.string().optional(),
+  emergencyInstructions: z.string().optional(),
+  generalNotes: z.string().optional(),
 });
 
 export async function GET(

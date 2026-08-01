@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, UserPlus, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, UserPlus, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -79,8 +79,12 @@ const BOARD_POSITIONS = [
   { value: "committee_chair", label: "Committee Chair" },
 ];
 
-export default function NewContactPage() {
+function ContactForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const contactId = searchParams.get("id");
+  const isEditMode = !!contactId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -136,6 +140,12 @@ export default function NewContactPage() {
     }
   }, [formData.propertyId]);
 
+  useEffect(() => {
+    if (isEditMode && contactId) {
+      loadContactData(contactId);
+    }
+  }, [isEditMode, contactId]);
+
   async function loadAssociations() {
     try {
       const response = await fetch("/api/associations");
@@ -148,7 +158,9 @@ export default function NewContactPage() {
     } catch (error) {
       console.error("Error loading associations:", error);
     } finally {
-      setIsLoading(false);
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -180,6 +192,56 @@ export default function NewContactPage() {
     }
   }
 
+  async function loadContactData(id: string) {
+    try {
+      const response = await fetch(`/api/contacts/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const contact = result.data;
+          setFormData({
+            firstName: contact.firstName || "",
+            lastName: contact.lastName || "",
+            email: contact.email || "",
+            phone: contact.phone || "",
+            mobilePhone: contact.mobilePhone || "",
+            workPhone: contact.workPhone || "",
+            roles: contact.roles || [],
+            boardPosition: contact.boardPosition || "",
+            status: contact.status || "active",
+            preferredContactMethod: contact.preferredContactMethod || "email",
+            mailingPreference: contact.mailingPreference || "email",
+            emailPermission: contact.emailPermission || false,
+            smsPermission: contact.smsPermission || false,
+            mailingAddressStreet: contact.mailingAddressStreet || "",
+            mailingAddressCity: contact.mailingAddressCity || "",
+            mailingAddressState: contact.mailingAddressState || "",
+            mailingAddressZip: contact.mailingAddressZip || "",
+            emergencyContactName: contact.emergencyContactName || "",
+            emergencyContactPhone: contact.emergencyContactPhone || "",
+            emergencyContactRelationship: contact.emergencyContactRelationship || "",
+            associationId: contact.associationId || "",
+            propertyId: contact.propertyId || "",
+            unitId: contact.unitId || "",
+            isPrimaryContact: contact.isPrimaryContact || false,
+          });
+        } else {
+          alert("Contact not found");
+          router.push("/management/people");
+        }
+      } else {
+        alert("Failed to load contact data");
+        router.push("/management/people");
+      }
+    } catch (error) {
+      console.error("Error loading contact:", error);
+      alert("An error occurred while loading the contact");
+      router.push("/management/people");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function validateForm(): boolean {
     const newErrors: Partial<FormData> = {};
     
@@ -203,50 +265,56 @@ export default function NewContactPage() {
     
     setIsSaving(true);
     try {
-      const response = await fetch("/api/contacts", {
-        method: "POST",
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        mobilePhone: formData.mobilePhone || undefined,
+        workPhone: formData.workPhone || undefined,
+        roles: formData.roles,
+        boardPosition: formData.boardPosition || undefined,
+        status: formData.status,
+        preferredContactMethod: formData.preferredContactMethod,
+        mailingPreference: formData.mailingPreference,
+        emailPermission: formData.emailPermission,
+        smsPermission: formData.smsPermission,
+        mailingAddressStreet: formData.mailingAddressStreet || undefined,
+        mailingAddressCity: formData.mailingAddressCity || undefined,
+        mailingAddressState: formData.mailingAddressState || undefined,
+        mailingAddressZip: formData.mailingAddressZip || undefined,
+        emergencyContactName: formData.emergencyContactName || undefined,
+        emergencyContactPhone: formData.emergencyContactPhone || undefined,
+        emergencyContactRelationship: formData.emergencyContactRelationship || undefined,
+        associationId: formData.associationId || undefined,
+        propertyId: formData.propertyId || undefined,
+        unitId: formData.unitId || undefined,
+        isPrimaryContact: formData.isPrimaryContact,
+      };
+
+      const url = isEditMode ? `/api/contacts/${contactId}` : "/api/contacts";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          mobilePhone: formData.mobilePhone || undefined,
-          workPhone: formData.workPhone || undefined,
-          roles: formData.roles,
-          boardPosition: formData.boardPosition || undefined,
-          status: formData.status,
-          preferredContactMethod: formData.preferredContactMethod,
-          mailingPreference: formData.mailingPreference,
-          emailPermission: formData.emailPermission,
-          smsPermission: formData.smsPermission,
-          mailingAddressStreet: formData.mailingAddressStreet || undefined,
-          mailingAddressCity: formData.mailingAddressCity || undefined,
-          mailingAddressState: formData.mailingAddressState || undefined,
-          mailingAddressZip: formData.mailingAddressZip || undefined,
-          emergencyContactName: formData.emergencyContactName || undefined,
-          emergencyContactPhone: formData.emergencyContactPhone || undefined,
-          emergencyContactRelationship: formData.emergencyContactRelationship || undefined,
-          associationId: formData.associationId || undefined,
-          propertyId: formData.propertyId || undefined,
-          unitId: formData.unitId || undefined,
-          isPrimaryContact: formData.isPrimaryContact,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/people/${result.data.id}`);
+          const redirectId = isEditMode ? contactId : result.data.id;
+          router.push(`/management/people/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create contact");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} contact`);
         }
       } else {
-        alert("Failed to create contact");
+        alert(`Failed to ${isEditMode ? "update" : "create"} contact`);
       }
     } catch (error) {
-      console.error("Error creating contact:", error);
-      alert("An error occurred while creating the contact");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} contact:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the contact`);
     } finally {
       setIsSaving(false);
     }
@@ -284,9 +352,23 @@ export default function NewContactPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add New Contact</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new owner, tenant, or staff contact</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Contact" : "Add New Contact"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                <Edit3 className="h-3 w-3 mr-1" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode 
+              ? "Update contact information and preferences" 
+              : "Create a new owner, tenant, or staff contact"}
+          </p>
         </div>
       </div>
 
@@ -705,12 +787,24 @@ export default function NewContactPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Contact
+                {isEditMode ? "Save Changes" : "Create Contact"}
               </>
             )}
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewContactPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    }>
+      <ContactForm />
+    </Suspense>
   );
 }

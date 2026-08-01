@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Truck, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Truck, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface FormData {
@@ -45,7 +45,12 @@ const VENDOR_CATEGORIES = [
 
 export default function NewVendorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const vendorId = searchParams.get("id");
+  const isEditMode = !!vendorId;
+
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(isEditMode);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [formData, setFormData] = useState<FormData>({
     companyName: "",
@@ -64,6 +69,53 @@ export default function NewVendorPage() {
     insuranceExpiry: "",
     workersCompExpiry: "",
   });
+
+  // Fetch vendor data when in edit mode
+  useEffect(() => {
+    if (isEditMode && vendorId) {
+      async function fetchVendor() {
+        try {
+          const response = await fetch(`/api/vendors/${vendorId}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              const vendor = result.data;
+              setFormData({
+                companyName: vendor.companyName || "",
+                doingBusinessAs: vendor.doingBusinessAs || "",
+                category: vendor.category || "",
+                status: vendor.status || "active",
+                primaryContactName: vendor.primaryContactName || "",
+                email: vendor.email || "",
+                phone: vendor.phone || "",
+                emergencyPhone: vendor.emergencyPhone || "",
+                addressStreet: vendor.addressStreet || "",
+                addressCity: vendor.addressCity || "",
+                addressState: vendor.addressState || "",
+                addressZip: vendor.addressZip || "",
+                licenseNumber: vendor.licenseNumber || "",
+                insuranceExpiry: vendor.insuranceExpiry || "",
+                workersCompExpiry: vendor.workersCompExpiry || "",
+              });
+            } else {
+              alert("Failed to load vendor data");
+              router.push("/management/vendors");
+            }
+          } else {
+            alert("Failed to load vendor data");
+            router.push("/management/vendors");
+          }
+        } catch (error) {
+          console.error("Error fetching vendor:", error);
+          alert("An error occurred while loading the vendor");
+          router.push("/management/vendors");
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      fetchVendor();
+    }
+  }, [isEditMode, vendorId, router]);
 
   function validateForm(): boolean {
     const newErrors: Partial<FormData> = {};
@@ -88,8 +140,11 @@ export default function NewVendorPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/vendors", {
-        method: "POST",
+      const url = isEditMode ? `/api/vendors/${vendorId}` : "/api/vendors";
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName: formData.companyName,
@@ -113,16 +168,17 @@ export default function NewVendorPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/vendors/${result.data.id}`);
+          const redirectId = isEditMode ? vendorId : result.data.id;
+          router.push(`/management/vendors/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create vendor");
+          alert(result.error || isEditMode ? "Failed to update vendor" : "Failed to create vendor");
         }
       } else {
-        alert("Failed to create vendor");
+        alert(isEditMode ? "Failed to update vendor" : "Failed to create vendor");
       }
     } catch (error) {
-      console.error("Error creating vendor:", error);
-      alert("An error occurred while creating the vendor");
+      console.error(isEditMode ? "Error updating vendor:" : "Error creating vendor:", error);
+      alert(isEditMode ? "An error occurred while updating the vendor" : "An error occurred while creating the vendor");
     } finally {
       setIsSaving(false);
     }
@@ -145,11 +201,25 @@ export default function NewVendorPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add New Vendor</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new vendor record</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+            {isEditMode ? "Edit Vendor" : "Add New Vendor"}
+          </h1>
+          {isEditMode && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              <Pencil className="h-3 w-3 mr-1" />
+              Edit Mode
+            </span>
+          )}
         </div>
       </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+          <span className="ml-2 text-[var(--secondary-text)]">Loading vendor data...</span>
+        </div>
+      ) : (
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Company Information */}
@@ -395,12 +465,13 @@ export default function NewVendorPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Vendor
+                {isEditMode ? "Save Changes" : "Create Vendor"}
               </>
             )}
           </Button>
         </div>
       </form>
+      )}
     </div>
   );
 }

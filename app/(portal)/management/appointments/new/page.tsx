@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Calendar, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Calendar, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -58,6 +58,10 @@ const APPOINTMENT_TYPES = [
 
 export default function NewAppointmentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const appointmentId = searchParams.get("id");
+  const isEditMode = !!appointmentId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -118,10 +122,54 @@ export default function NewAppointmentPage() {
         const contactsData = await contactsRes.json();
         if (contactsData.success) setContacts(contactsData.data.data || []);
       }
+
+      // If in edit mode, fetch appointment data
+      if (isEditMode && appointmentId) {
+        await loadAppointmentData(appointmentId);
+      }
     } catch (error) {
       console.error("Error loading initial data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadAppointmentData(id: string) {
+    try {
+      const response = await fetch(`/api/appointments/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const appointment = result.data;
+          // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
+          const formatDateTime = (dateString: string | null) => {
+            if (!dateString) return "";
+            const date = new Date(dateString);
+            return date.toISOString().slice(0, 16);
+          };
+
+          setFormData({
+            associationId: appointment.associationId || "",
+            propertyId: appointment.propertyId || "",
+            unitId: appointment.unitId || "",
+            title: appointment.title || "",
+            description: appointment.description || "",
+            appointmentType: appointment.appointmentType || "",
+            startTime: formatDateTime(appointment.startTime),
+            endTime: formatDateTime(appointment.endTime),
+            location: appointment.location || "",
+            isVirtual: appointment.isVirtual || false,
+            virtualLink: appointment.virtualLink || "",
+            organizerId: appointment.organizerId || "",
+            status: appointment.status || "scheduled",
+          });
+        }
+      } else {
+        alert("Failed to load appointment data");
+      }
+    } catch (error) {
+      console.error("Error loading appointment data:", error);
+      alert("An error occurred while loading the appointment");
     }
   }
 
@@ -168,8 +216,11 @@ export default function NewAppointmentPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/appointments", {
-        method: "POST",
+      const url = isEditMode ? `/api/appointments/${appointmentId}` : "/api/appointments";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           associationId: formData.associationId,
@@ -191,16 +242,17 @@ export default function NewAppointmentPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/appointments/${result.data.id}`);
+          const redirectId = isEditMode ? appointmentId : result.data.id;
+          router.push(`/management/appointments/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create appointment");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} appointment`);
         }
       } else {
-        alert("Failed to create appointment");
+        alert(`Failed to ${isEditMode ? "update" : "create"} appointment`);
       }
     } catch (error) {
-      console.error("Error creating appointment:", error);
-      alert("An error occurred while creating the appointment");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} appointment:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the appointment`);
     } finally {
       setIsSaving(false);
     }
@@ -231,9 +283,21 @@ export default function NewAppointmentPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Schedule Appointment</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new appointment or meeting</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Appointment" : "Schedule Appointment"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                <Edit3 className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update appointment details" : "Create a new appointment or meeting"}
+          </p>
         </div>
       </div>
 
@@ -486,7 +550,7 @@ export default function NewAppointmentPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Schedule Appointment
+                {isEditMode ? "Save Changes" : "Schedule Appointment"}
               </>
             )}
           </Button>

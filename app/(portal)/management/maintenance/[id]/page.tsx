@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -21,6 +22,11 @@ import {
   Edit,
   Trash2,
   Printer,
+  Loader2,
+  Phone,
+  Mail,
+  MapPin,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
@@ -28,145 +34,107 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-// Mock data for maintenance request detail
-const mockRequest = {
-  id: "MNT-2026-0047",
-  title: "HVAC Repair - Building B",
-  status: "in_progress",
-  priority: "high",
-  urgency: "urgent",
-  createdAt: "2026-07-28T09:30:00Z",
-  updatedAt: "2026-07-30T14:22:00Z",
-  description:
-    "Air conditioning unit in Building B common area is not cooling properly. Temperature readings show 78°F when thermostat is set to 72°F. Unit makes unusual noise when starting.",
-  category: "HVAC",
-  reporter: {
-    name: "Sarah Johnson",
-    role: "Property Manager",
-    email: "sarah.j@example.com",
-    phone: "(555) 123-4567",
-  },
-  property: {
-    name: "Oakwood Heights",
-    address: "1234 Oakwood Drive, Chicago, IL 60601",
-    association: "Oakwood Heights HOA",
-  },
-  unit: {
-    number: "Common Area - Building B",
-    type: "Common Area",
-  },
-  vendor: {
-    name: "ABC Heating & Cooling",
-    contact: "Mike Rodriguez",
-    phone: "(555) 987-6543",
-    email: "dispatch@abc-hvac.com",
-    status: "assigned",
-  },
-  schedule: {
-    requestedDate: "2026-07-29",
-    scheduledDate: "2026-08-01",
-    timeWindow: "9:00 AM - 12:00 PM",
-    actualStart: null,
-    actualEnd: null,
-  },
-  cost: {
-    estimate: 850.0,
-    actual: null,
-    currency: "USD",
-  },
-  timeline: [
-    {
-      id: 1,
-      type: "created",
-      title: "Request Created",
-      description: "Maintenance request submitted by Sarah Johnson",
-      timestamp: "2026-07-28T09:30:00Z",
-      user: "Sarah Johnson",
-    },
-    {
-      id: 2,
-      type: "status_change",
-      title: "Status Updated",
-      description: "Request reviewed and prioritized as High",
-      timestamp: "2026-07-28T11:15:00Z",
-      user: "System",
-    },
-    {
-      id: 3,
-      type: "vendor_assigned",
-      title: "Vendor Assigned",
-      description: "ABC Heating & Cooling assigned to job",
-      timestamp: "2026-07-29T08:45:00Z",
-      user: "Mike Chen",
-    },
-    {
-      id: 4,
-      type: "scheduled",
-      title: "Work Scheduled",
-      description: "Appointment scheduled for August 1st, 9:00 AM - 12:00 PM",
-      timestamp: "2026-07-29T14:30:00Z",
-      user: "ABC Heating & Cooling",
-    },
-  ],
-  messages: [
-    {
-      id: 1,
-      sender: "Sarah Johnson",
-      role: "Property Manager",
-      message:
-        "Please prioritize this - residents are complaining about the heat in the common area.",
-      timestamp: "2026-07-28T10:15:00Z",
-    },
-    {
-      id: 2,
-      sender: "Mike Rodriguez",
-      role: "Vendor",
-      message:
-        "We can schedule this for Thursday morning. Our technician will arrive between 9-12.",
-      timestamp: "2026-07-29T08:45:00Z",
-    },
-  ],
-  files: [
-    {
-      id: 1,
-      name: "HVAC_Issue_Photo_1.jpg",
-      size: "2.4 MB",
-      type: "image",
-      uploadedBy: "Sarah Johnson",
-      uploadedAt: "2026-07-28T09:32:00Z",
-    },
-    {
-      id: 2,
-      name: "Temperature_Reading.pdf",
-      size: "156 KB",
-      type: "pdf",
-      uploadedBy: "Sarah Johnson",
-      uploadedAt: "2026-07-28T09:35:00Z",
-    },
-  ],
-};
+// Types
+interface MaintenanceRequest {
+  id: string;
+  requestNumber: string;
+  title: string;
+  description?: string;
+  status: string;
+  urgency?: string;
+  category?: string;
+  propertyId: string;
+  unitId?: string;
+  reportedByContactId: string;
+  assignedVendorId?: string;
+  assignedStaffId?: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  approvedAmount?: number;
+  requestedDate?: string;
+  scheduledDate?: string;
+  completedDate?: string;
+  vendorNotes?: string;
+  resolutionNotes?: string;
+  internalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Property {
+  id: string;
+  name: string;
+  streetAddress?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  associationId?: string;
+}
+
+interface Association {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  unitNumber: string;
+  unitType?: string;
+  propertyId: string;
+}
+
+interface Vendor {
+  id: string;
+  companyName: string;
+  primaryContactName?: string;
+  primaryContactEmail?: string;
+  primaryContactPhone?: string;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  primaryPhone?: string;
+}
+
+interface TimelineEvent {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  user: string;
+}
 
 // Status configuration
 const statusConfig: Record<string, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-700" },
+  triaged: { label: "Triaged", color: "bg-purple-100 text-purple-700" },
+  pending_approval: { label: "Pending Approval", color: "bg-amber-100 text-amber-700" },
+  approved: { label: "Approved", color: "bg-emerald-100 text-emerald-700" },
+  vendor_assigned: { label: "Vendor Assigned", color: "bg-indigo-100 text-indigo-700" },
+  scheduled: { label: "Scheduled", color: "bg-cyan-100 text-cyan-700" },
   in_progress: { label: "In Progress", color: "bg-teal-100 text-teal-700" },
-  waiting: { label: "Waiting", color: "bg-amber-100 text-amber-700" },
+  on_hold: { label: "On Hold", color: "bg-orange-100 text-orange-700" },
   completed: { label: "Completed", color: "bg-green-100 text-green-700" },
   closed: { label: "Closed", color: "bg-gray-100 text-gray-700" },
+  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-700" },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
   low: { label: "Low", color: "bg-gray-100 text-gray-700" },
-  medium: { label: "Medium", color: "bg-blue-100 text-blue-700" },
-  high: { label: "High", color: "bg-amber-100 text-amber-700" },
+  normal: { label: "Normal", color: "bg-blue-100 text-blue-700" },
+  urgent: { label: "Urgent", color: "bg-amber-100 text-amber-700" },
   emergency: { label: "Emergency", color: "bg-red-100 text-red-700" },
 };
 
 // Process tracker steps
 const processSteps = [
-  { id: "created", label: "Created", icon: CheckCircle2 },
-  { id: "reviewed", label: "Reviewed", icon: CheckCircle2 },
-  { id: "assigned", label: "Vendor Assigned", icon: CheckCircle2 },
+  { id: "new", label: "Created", icon: CheckCircle2 },
+  { id: "triaged", label: "Triaged", icon: CheckCircle2 },
+  { id: "vendor_assigned", label: "Vendor Assigned", icon: CheckCircle2 },
   { id: "scheduled", label: "Scheduled", icon: CheckCircle2 },
   { id: "in_progress", label: "In Progress", icon: Clock },
   { id: "completed", label: "Completed", icon: CheckCircle2 },
@@ -177,17 +145,17 @@ function ProcessTracker({ currentStep }: { currentStep: string }) {
 
   return (
     <div className="w-full py-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative">
         {processSteps.map((step, index) => {
           const Icon = step.icon;
           const isCompleted = index <= currentIndex;
           const isCurrent = index === currentIndex;
 
           return (
-            <div key={step.id} className="flex flex-col items-center flex-1">
+            <div key={step.id} className="flex flex-col items-center flex-1 relative">
               <div
                 className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
+                  "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors z-10",
                   isCompleted
                     ? "bg-[var(--teal)] border-[var(--teal)] text-white"
                     : "bg-white border-[var(--border-color)] text-[var(--secondary-text)]",
@@ -198,7 +166,7 @@ function ProcessTracker({ currentStep }: { currentStep: string }) {
               </div>
               <span
                 className={cn(
-                  "text-xs mt-2 font-medium",
+                  "text-xs mt-2 font-medium text-center",
                   isCompleted
                     ? "text-[var(--main-text)]"
                     : "text-[var(--secondary-text)]"
@@ -209,12 +177,11 @@ function ProcessTracker({ currentStep }: { currentStep: string }) {
               {index < processSteps.length - 1 && (
                 <div
                   className={cn(
-                    "absolute h-0.5 w-full top-5 left-1/2 -z-10",
+                    "absolute h-0.5 top-5 left-1/2 w-full",
                     index < currentIndex
                       ? "bg-[var(--teal)]"
                       : "bg-[var(--border-color)]"
                   )}
-                  style={{ width: "calc(100% - 2.5rem)", marginLeft: "1.25rem" }}
                 />
               )}
             </div>
@@ -259,15 +226,268 @@ function InfoCard({
   );
 }
 
-export default function MaintenanceRequestDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function MaintenanceRequestDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+
+  const [request, setRequest] = useState<MaintenanceRequest | null>(null);
+  const [property, setProperty] = useState<Property | null>(null);
+  const [association, setAssociation] = useState<Association | null>(null);
+  const [unit, setUnit] = useState<Unit | null>(null);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [reporter, setReporter] = useState<Contact | null>(null);
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingRelated, setIsLoadingRelated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("activity");
-  const request = mockRequest;
-  const status = statusConfig[request.status];
-  const priority = priorityConfig[request.priority];
+
+  // Fetch maintenance request
+  useEffect(() => {
+    if (id) {
+      loadRequest();
+    }
+  }, [id]);
+
+  async function loadRequest() {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/maintenance/${id}`);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load maintenance request");
+      }
+
+      setRequest(result.data);
+      
+      // Load related data
+      await loadRelatedData(result.data);
+      
+      // Generate timeline from request data
+      generateTimeline(result.data);
+    } catch (error) {
+      console.error("Error loading maintenance request:", error);
+      setError(error instanceof Error ? error.message : "Failed to load maintenance request");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadRelatedData(requestData: MaintenanceRequest) {
+    setIsLoadingRelated(true);
+    
+    try {
+      // Load property
+      if (requestData.propertyId) {
+        try {
+          const propResponse = await fetch(`/api/properties/${requestData.propertyId}`);
+          const propResult = await propResponse.json();
+          if (propResult.success) {
+            setProperty(propResult.data);
+            
+            // Load association if property has one
+            if (propResult.data.associationId) {
+              try {
+                const assocResponse = await fetch(`/api/associations/${propResult.data.associationId}`);
+                const assocResult = await assocResponse.json();
+                if (assocResult.success) {
+                  setAssociation(assocResult.data);
+                }
+              } catch (e) {
+                console.error("Error loading association:", e);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error loading property:", e);
+        }
+      }
+
+      // Load unit
+      if (requestData.unitId) {
+        try {
+          const unitResponse = await fetch(`/api/units/${requestData.unitId}`);
+          const unitResult = await unitResponse.json();
+          if (unitResult.success) {
+            setUnit(unitResult.data);
+          }
+        } catch (e) {
+          console.error("Error loading unit:", e);
+        }
+      }
+
+      // Load vendor
+      if (requestData.assignedVendorId) {
+        try {
+          const vendorResponse = await fetch(`/api/vendors/${requestData.assignedVendorId}`);
+          const vendorResult = await vendorResponse.json();
+          if (vendorResult.success) {
+            setVendor(vendorResult.data);
+          }
+        } catch (e) {
+          console.error("Error loading vendor:", e);
+        }
+      }
+
+      // Load reporter
+      if (requestData.reportedByContactId) {
+        try {
+          const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
+          const contactResult = await contactResponse.json();
+          if (contactResult.success) {
+            setReporter(contactResult.data);
+          }
+        } catch (e) {
+          console.error("Error loading reporter:", e);
+        }
+      }
+    } finally {
+      setIsLoadingRelated(false);
+    }
+  }
+
+  function generateTimeline(requestData: MaintenanceRequest) {
+    const events: TimelineEvent[] = [
+      {
+        id: "1",
+        type: "created",
+        title: "Request Created",
+        description: `Maintenance request ${requestData.requestNumber} submitted`,
+        timestamp: requestData.createdAt,
+        user: "System",
+      },
+    ];
+
+    if (requestData.status !== "new") {
+      events.push({
+        id: "2",
+        type: "status_change",
+        title: "Status Updated",
+        description: `Status changed to ${statusConfig[requestData.status]?.label || requestData.status}`,
+        timestamp: requestData.updatedAt,
+        user: "System",
+      });
+    }
+
+    if (requestData.assignedVendorId) {
+      events.push({
+        id: "3",
+        type: "vendor_assigned",
+        title: "Vendor Assigned",
+        description: "Vendor assigned to job",
+        timestamp: requestData.updatedAt,
+        user: "System",
+      });
+    }
+
+    if (requestData.scheduledDate) {
+      events.push({
+        id: "4",
+        type: "scheduled",
+        title: "Work Scheduled",
+        description: `Appointment scheduled for ${new Date(requestData.scheduledDate).toLocaleDateString()}`,
+        timestamp: requestData.scheduledDate,
+        user: "System",
+      });
+    }
+
+    if (requestData.completedDate) {
+      events.push({
+        id: "5",
+        type: "completed",
+        title: "Work Completed",
+        description: "Maintenance work has been completed",
+        timestamp: requestData.completedDate,
+        user: "System",
+      });
+    }
+
+    setTimeline(events);
+  }
+
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this maintenance request?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/maintenance/${id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete maintenance request");
+      }
+
+      router.push("/management/maintenance");
+    } catch (error) {
+      console.error("Error deleting maintenance request:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete maintenance request");
+    }
+  }
+
+  async function handleStatusUpdate(newStatus: string) {
+    try {
+      const response = await fetch(`/api/maintenance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update status");
+      }
+
+      // Reload request data
+      await loadRequest();
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert(error instanceof Error ? error.message : "Failed to update status");
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    );
+  }
+
+  if (error || !request) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="flex items-center gap-2 text-red-500">
+          <AlertCircle className="h-5 w-5" />
+          <p>{error || "Maintenance request not found"}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={loadRequest} variant="outline">
+            Retry
+          </Button>
+          <Link href="/management/maintenance">
+            <Button variant="outline">Back to List</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const status = statusConfig[request.status] || { label: request.status, color: "bg-gray-100 text-gray-700" };
+  const priority = priorityConfig[request.urgency || "normal"] || { label: request.urgency || "Normal", color: "bg-gray-100 text-gray-700" };
+
+  const fullAddress = property
+    ? `${property.streetAddress || ""}, ${property.city || ""}, ${property.state || ""} ${property.zipCode || ""}`.replace(/,\s*,/g, ",").replace(/,\s*$/g, "").trim()
+    : null;
 
   return (
     <div className="space-y-6">
@@ -283,25 +503,27 @@ export default function MaintenanceRequestDetailPage({
               Back to Maintenance
             </Link>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
               {request.title}
             </h1>
             <Badge className={status.color}>{status.label}</Badge>
             <Badge className={priority.color}>{priority.label}</Badge>
           </div>
-          <p className="text-lg text-[var(--secondary-text)]">{request.id}</p>
+          <p className="text-lg text-[var(--secondary-text)]">{request.requestNumber}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             <Printer className="w-4 h-4 mr-2" />
             Print
           </Button>
-          <Button variant="outline" size="sm">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button variant="outline" size="sm" className="text-red-600">
+          <Link href={`/management/maintenance/${id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" className="text-red-600" onClick={handleDelete}>
             <Trash2 className="w-4 h-4 mr-2" />
             Delete
           </Button>
@@ -317,11 +539,13 @@ export default function MaintenanceRequestDetailPage({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Request Info */}
         <InfoCard title="Request Details" icon={Wrench}>
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">Category</p>
-              <p className="text-sm font-medium">{request.category}</p>
-            </div>
+          <div className="space-y-3">
+            {request.category && (
+              <div>
+                <p className="text-xs text-[var(--secondary-text)]">Category</p>
+                <p className="text-sm font-medium">{request.category}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
               <p className="text-sm font-medium">
@@ -334,6 +558,14 @@ export default function MaintenanceRequestDetailPage({
                 {new Date(request.updatedAt).toLocaleDateString()}
               </p>
             </div>
+            {request.requestedDate && (
+              <div>
+                <p className="text-xs text-[var(--secondary-text)]">Requested Date</p>
+                <p className="text-sm font-medium">
+                  {new Date(request.requestedDate).toLocaleDateString()}
+                </p>
+              </div>
+            )}
           </div>
         </InfoCard>
 
@@ -341,49 +573,83 @@ export default function MaintenanceRequestDetailPage({
         <InfoCard
           title="Property"
           icon={Building2}
-          action={{ label: "View", href: `/management/properties/${request.property.name}` }}
+          action={property ? { label: "View", href: `/management/properties/${property.id}` } : undefined}
         >
           <div className="space-y-2">
-            <div>
-              <p className="text-sm font-medium">{request.property.name}</p>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.property.address}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">Association</p>
-              <p className="text-sm">{request.property.association}</p>
-            </div>
+            {property ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">{property.name}</p>
+                  {fullAddress && (
+                    <p className="text-xs text-[var(--secondary-text)] flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      {fullAddress}
+                    </p>
+                  )}
+                </div>
+                {association && (
+                  <div>
+                    <p className="text-xs text-[var(--secondary-text)]">Association</p>
+                    <p className="text-sm">{association.name}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-[var(--secondary-text)]">Loading...</p>
+            )}
           </div>
         </InfoCard>
 
         {/* Unit Info */}
-        <InfoCard title="Unit" icon={Home}>
+        <InfoCard 
+          title="Unit" 
+          icon={Home}
+          action={unit ? { label: "View", href: `/management/units/${unit.id}` } : undefined}
+        >
           <div className="space-y-2">
-            <div>
-              <p className="text-sm font-medium">{request.unit.number}</p>
-              <p className="text-xs text-[var(--secondary-text)]">{request.unit.type}</p>
-            </div>
+            {unit ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">Unit {unit.unitNumber}</p>
+                  {unit.unitType && (
+                    <p className="text-xs text-[var(--secondary-text)]">{unit.unitType}</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--secondary-text)]">Common Area / No specific unit</p>
+            )}
           </div>
         </InfoCard>
 
         {/* Reporter Info */}
-        <InfoCard title="Reported By" icon={User}>
+        <InfoCard 
+          title="Reported By" 
+          icon={User}
+          action={reporter ? { label: "View", href: `/management/people/${reporter.id}` } : undefined}
+        >
           <div className="space-y-2">
-            <div>
-              <p className="text-sm font-medium">{request.reporter.name}</p>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.reporter.role}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.reporter.email}
-              </p>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.reporter.phone}
-              </p>
-            </div>
+            {reporter ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">{reporter.firstName} {reporter.lastName}</p>
+                </div>
+                {reporter.email && (
+                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                    <Mail className="w-3 h-3" />
+                    {reporter.email}
+                  </div>
+                )}
+                {reporter.primaryPhone && (
+                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                    <Phone className="w-3 h-3" />
+                    {reporter.primaryPhone}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-[var(--secondary-text)]">Loading...</p>
+            )}
           </div>
         </InfoCard>
 
@@ -391,191 +657,246 @@ export default function MaintenanceRequestDetailPage({
         <InfoCard
           title="Vendor"
           icon={Truck}
-          action={{ label: "Change", href: "#" }}
+          action={vendor ? { label: "View", href: `/management/vendors/${vendor.id}` } : undefined}
         >
           <div className="space-y-2">
-            <div>
-              <p className="text-sm font-medium">{request.vendor.name}</p>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.vendor.contact}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.vendor.phone}
-              </p>
-              <p className="text-xs text-[var(--secondary-text)]">
-                {request.vendor.email}
-              </p>
-            </div>
+            {vendor ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">{vendor.companyName}</p>
+                  {vendor.primaryContactName && (
+                    <p className="text-xs text-[var(--secondary-text)]">{vendor.primaryContactName}</p>
+                  )}
+                </div>
+                {vendor.primaryContactPhone && (
+                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                    <Phone className="w-3 h-3" />
+                    {vendor.primaryContactPhone}
+                  </div>
+                )}
+                {vendor.primaryContactEmail && (
+                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                    <Mail className="w-3 h-3" />
+                    {vendor.primaryContactEmail}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-[var(--secondary-text)]">Not assigned</p>
+            )}
           </div>
         </InfoCard>
 
         {/* Schedule Info */}
         <InfoCard title="Schedule" icon={Calendar}>
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">Scheduled Date</p>
-              <p className="text-sm font-medium">
-                {new Date(request.schedule.scheduledDate).toLocaleDateString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-[var(--secondary-text)]">Time Window</p>
-              <p className="text-sm font-medium">{request.schedule.timeWindow}</p>
-            </div>
+          <div className="space-y-3">
+            {request.scheduledDate ? (
+              <div>
+                <p className="text-xs text-[var(--secondary-text)]">Scheduled Date</p>
+                <p className="text-sm font-medium">
+                  {new Date(request.scheduledDate).toLocaleDateString()}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-[var(--secondary-text)]">Scheduled Date</p>
+                <p className="text-sm text-[var(--secondary-text)]">Not scheduled</p>
+              </div>
+            )}
+            {request.completedDate && (
+              <div>
+                <p className="text-xs text-[var(--secondary-text)]">Completed Date</p>
+                <p className="text-sm font-medium text-green-600">
+                  {new Date(request.completedDate).toLocaleDateString()}
+                </p>
+              </div>
+            )}
           </div>
         </InfoCard>
       </div>
 
+      {/* Cost Info */}
+      {(request.estimatedCost !== undefined || request.actualCost !== undefined || request.approvedAmount !== undefined) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-[var(--secondary-text)] flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Cost Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {request.estimatedCost !== undefined && (
+                <div>
+                  <p className="text-xs text-[var(--secondary-text)]">Estimated Cost</p>
+                  <p className="text-lg font-semibold">
+                    ${request.estimatedCost.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {request.approvedAmount !== undefined && (
+                <div>
+                  <p className="text-xs text-[var(--secondary-text)]">Approved Amount</p>
+                  <p className="text-lg font-semibold text-emerald-600">
+                    ${request.approvedAmount.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {request.actualCost !== undefined && (
+                <div>
+                  <p className="text-xs text-[var(--secondary-text)]">Actual Cost</p>
+                  <p className="text-lg font-semibold">
+                    ${request.actualCost.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Description */}
+      {request.description && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-[var(--secondary-text)]">
+              Description
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[var(--main-text)] whitespace-pre-wrap">{request.description}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Vendor Notes */}
+      {request.vendorNotes && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-[var(--secondary-text)]">
+              Vendor Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[var(--main-text)] whitespace-pre-wrap">{request.vendorNotes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resolution Notes */}
+      {request.resolutionNotes && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-[var(--secondary-text)]">
+              Resolution Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[var(--main-text)] whitespace-pre-wrap">{request.resolutionNotes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Internal Notes */}
+      {request.internalNotes && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-[var(--secondary-text)] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              Internal Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[var(--main-text)] whitespace-pre-wrap">{request.internalNotes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Activity Timeline */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-[var(--secondary-text)]">
-            Description
+          <CardTitle className="text-sm font-medium text-[var(--secondary-text)] flex items-center gap-2">
+            <History className="w-4 h-4" />
+            Activity Timeline
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-[var(--main-text)]">{request.description}</p>
-        </CardContent>
-      </Card>
-
-      {/* Tabs */}
-      <Card>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <CardHeader className="pb-0">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Activity
-              </TabsTrigger>
-              <TabsTrigger value="messages" className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                Messages
-              </TabsTrigger>
-              <TabsTrigger value="files" className="flex items-center gap-2">
-                <Paperclip className="w-4 h-4" />
-                Files
-              </TabsTrigger>
-            </TabsList>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <TabsContent value="activity" className="space-y-4">
-              {request.timeline.map((event) => (
-                <div key={event.id} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[var(--page-background)] flex items-center justify-center flex-shrink-0">
-                    <History className="w-4 h-4 text-[var(--teal)]" />
-                  </div>
-                  <div className="flex-1 pb-4 border-b border-[var(--border-color)] last:border-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-[var(--main-text)]">
-                        {event.title}
-                      </p>
-                      <span className="text-xs text-[var(--secondary-text)]">
-                        {new Date(event.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[var(--secondary-text)] mt-1">
-                      {event.description}
-                    </p>
-                    <p className="text-xs text-[var(--secondary-text)] mt-1">
-                      by {event.user}
-                    </p>
-                  </div>
+          <div className="space-y-4">
+            {timeline.map((event) => (
+              <div key={event.id} className="flex gap-4">
+                <div className="w-8 h-8 rounded-full bg-[var(--page-background)] flex items-center justify-center flex-shrink-0">
+                  <History className="w-4 h-4 text-[var(--teal)]" />
                 </div>
-              ))}
-            </TabsContent>
-
-            <TabsContent value="messages" className="space-y-4">
-              {request.messages.map((message) => (
-                <div key={message.id} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[var(--teal)] flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-medium">
-                      {message.sender.charAt(0)}
+                <div className="flex-1 pb-4 border-b border-[var(--border-color)] last:border-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-[var(--main-text)]">
+                      {event.title}
+                    </p>
+                    <span className="text-xs text-[var(--secondary-text)]">
+                      {new Date(event.timestamp).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex-1 pb-4 border-b border-[var(--border-color)] last:border-0">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-[var(--main-text)]">
-                          {message.sender}
-                        </p>
-                        <p className="text-xs text-[var(--secondary-text)]">
-                          {message.role}
-                        </p>
-                      </div>
-                      <span className="text-xs text-[var(--secondary-text)]">
-                        {new Date(message.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[var(--main-text)] mt-2">
-                      {message.message}
-                    </p>
-                  </div>
+                  <p className="text-sm text-[var(--secondary-text)] mt-1">
+                    {event.description}
+                  </p>
+                  <p className="text-xs text-[var(--secondary-text)] mt-1">
+                    by {event.user}
+                  </p>
                 </div>
-              ))}
-              <div className="flex gap-2 pt-4">
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  className="input flex-1"
-                />
-                <Button>Send</Button>
               </div>
-            </TabsContent>
-
-            <TabsContent value="files" className="space-y-4">
-              {request.files.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                      <Paperclip className="w-5 h-5 text-[var(--teal)]" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-[var(--main-text)]">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-[var(--secondary-text)]">
-                        {file.size} • Uploaded by {file.uploadedBy} on{" "}
-                        {new Date(file.uploadedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Download
-                  </Button>
-                </div>
-              ))}
-            </TabsContent>
-          </CardContent>
-        </Tabs>
+            ))}
+          </div>
+        </CardContent>
       </Card>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 pt-4">
-        <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
-          <CheckCircle2 className="w-4 h-4 mr-2" />
-          Mark Complete
-        </Button>
-        <Button variant="outline">
-          <Clock className="w-4 h-4 mr-2" />
-          Update Status
-        </Button>
-        <Button variant="outline">
-          <Truck className="w-4 h-4 mr-2" />
-          Reassign Vendor
-        </Button>
-        <Button variant="outline">
-          <DollarSign className="w-4 h-4 mr-2" />
-          Add Cost
-        </Button>
-        <Button variant="outline">
-          <AlertCircle className="w-4 h-4 mr-2" />
-          Escalate
-        </Button>
+        {request.status !== "completed" && request.status !== "closed" && (
+          <Button 
+            className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+            onClick={() => handleStatusUpdate("completed")}
+          >
+            <CheckCircle2 className="w-4 h-4 mr-2" />
+            Mark Complete
+          </Button>
+        )}
+        {request.status === "new" && (
+          <Button 
+            variant="outline"
+            onClick={() => handleStatusUpdate("in_progress")}
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            Start Work
+          </Button>
+        )}
+        {!request.assignedVendorId && (
+          <Button variant="outline">
+            <Truck className="w-4 h-4 mr-2" />
+            Assign Vendor
+          </Button>
+        )}
+        {request.status !== "completed" && request.status !== "closed" && (
+          <Button variant="outline">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Update Cost
+          </Button>
+        )}
+        {request.urgency !== "emergency" && request.status !== "completed" && request.status !== "closed" && (
+          <Button variant="outline">
+            <AlertCircle className="w-4 h-4 mr-2" />
+            Escalate
+          </Button>
+        )}
+        {request.status !== "closed" && request.status !== "cancelled" && (
+          <Button 
+            variant="outline" 
+            className="text-red-600"
+            onClick={() => handleStatusUpdate("cancelled")}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+        )}
       </div>
     </div>
   );

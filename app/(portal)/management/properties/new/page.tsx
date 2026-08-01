@@ -1,16 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Building2, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Building2, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
   id: string;
   name: string;
+}
+
+interface PropertyData {
+  id: string;
+  associationId: string;
+  name: string;
+  addressStreet: string;
+  addressCity: string;
+  addressState: string;
+  addressZip: string;
+  type: string;
+  status: string;
+  yearBuilt: number | null;
+  totalUnits: number | null;
+  managementStartDate: string | null;
+  accessInstructions: string | null;
+  emergencyNotes: string | null;
+  assignedStaffId: string | null;
+  photoUrl: string | null;
 }
 
 interface FormData {
@@ -33,7 +52,11 @@ interface FormData {
 
 export default function NewPropertyPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const propertyId = searchParams.get("id");
+  const isEditMode = !!propertyId;
+
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
@@ -59,6 +82,12 @@ export default function NewPropertyPage() {
     loadAssociations();
   }, []);
 
+  useEffect(() => {
+    if (isEditMode && associations.length > 0) {
+      loadPropertyData();
+    }
+  }, [isEditMode, associations]);
+
   async function loadAssociations() {
     try {
       const response = await fetch("/api/associations");
@@ -70,6 +99,38 @@ export default function NewPropertyPage() {
       }
     } catch (error) {
       console.error("Error loading associations:", error);
+    }
+  }
+
+  async function loadPropertyData() {
+    try {
+      const response = await fetch(`/api/properties/${propertyId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const property: PropertyData = result.data;
+          setFormData({
+            associationId: property.associationId || "",
+            name: property.name || "",
+            addressStreet: property.addressStreet || "",
+            addressCity: property.addressCity || "",
+            addressState: property.addressState || "",
+            addressZip: property.addressZip || "",
+            type: property.type || "",
+            status: property.status || "active",
+            yearBuilt: property.yearBuilt?.toString() || "",
+            totalUnits: property.totalUnits?.toString() || "",
+            managementStartDate: property.managementStartDate || "",
+            accessInstructions: property.accessInstructions || "",
+            emergencyNotes: property.emergencyNotes || "",
+            assignedStaffId: property.assignedStaffId || "",
+            photoUrl: property.photoUrl || "",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading property:", error);
+      alert("Failed to load property data");
     } finally {
       setIsLoading(false);
     }
@@ -97,8 +158,11 @@ export default function NewPropertyPage() {
     
     setIsSaving(true);
     try {
-      const response = await fetch("/api/properties", {
-        method: "POST",
+      const url = isEditMode ? `/api/properties/${propertyId}` : "/api/properties";
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           associationId: formData.associationId,
@@ -122,16 +186,17 @@ export default function NewPropertyPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/properties/${result.data.id}`);
+          const redirectId = isEditMode ? propertyId : result.data.id;
+          router.push(`/management/properties/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create property");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} property`);
         }
       } else {
-        alert("Failed to create property");
+        alert(`Failed to ${isEditMode ? "update" : "create"} property`);
       }
     } catch (error) {
-      console.error("Error creating property:", error);
-      alert("An error occurred while creating the property");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} property:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the property`);
     } finally {
       setIsSaving(false);
     }
@@ -162,9 +227,21 @@ export default function NewPropertyPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add New Property</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new property record</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Property" : "Add New Property"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--teal)] text-white">
+                <Edit className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update property details" : "Create a new property record"}
+          </p>
         </div>
       </div>
 
@@ -438,7 +515,7 @@ export default function NewPropertyPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Property
+                {isEditMode ? "Save Changes" : "Create Property"}
               </>
             )}
           </Button>

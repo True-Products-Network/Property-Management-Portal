@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, ClipboardCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, ClipboardCheck, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 interface Property {
@@ -58,6 +58,9 @@ const OVERALL_RATINGS = [
 
 export default function NewInspectionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inspectionId = searchParams.get("id");
+  const isEditMode = !!inspectionId;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -82,6 +85,12 @@ export default function NewInspectionPage() {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  useEffect(() => {
+    if (isEditMode && inspectionId) {
+      loadInspectionData(inspectionId);
+    }
+  }, [isEditMode, inspectionId]);
 
   useEffect(() => {
     if (formData.propertyId) {
@@ -109,6 +118,37 @@ export default function NewInspectionPage() {
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
+    }
+  }
+
+  async function loadInspectionData(id: string) {
+    try {
+      const response = await fetch(`/api/inspections/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const inspection = result.data;
+          setFormData({
+            propertyId: inspection.propertyId || "",
+            unitId: inspection.unitId || "",
+            inspectionType: inspection.inspectionType || "",
+            status: inspection.status || "scheduled",
+            scheduledDate: inspection.scheduledDate || "",
+            scheduledTime: inspection.scheduledTime || "",
+            inspectorId: inspection.inspectorId || "",
+            inspectorVendorId: inspection.inspectorVendorId || "",
+            findings: inspection.findings || "",
+            recommendations: inspection.recommendations || "",
+            overallRating: inspection.overallRating || "",
+            followUpRequired: inspection.followUpRequired || false,
+          });
+        }
+      } else {
+        alert("Failed to load inspection data");
+      }
+    } catch (error) {
+      console.error("Error loading inspection data:", error);
+      alert("An error occurred while loading the inspection");
     } finally {
       setIsLoading(false);
     }
@@ -144,8 +184,11 @@ export default function NewInspectionPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/inspections", {
-        method: "POST",
+      const url = isEditMode ? `/api/inspections/${inspectionId}` : "/api/inspections";
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           propertyId: formData.propertyId,
@@ -165,16 +208,17 @@ export default function NewInspectionPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/inspections/${result.data.id}`);
+          const redirectId = isEditMode ? inspectionId : result.data.id;
+          router.push(`/management/inspections/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create inspection");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} inspection`);
         }
       } else {
-        alert("Failed to create inspection");
+        alert(`Failed to ${isEditMode ? "update" : "create"} inspection`);
       }
     } catch (error) {
-      console.error("Error creating inspection:", error);
-      alert("An error occurred while creating the inspection");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} inspection:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the inspection`);
     } finally {
       setIsSaving(false);
     }
@@ -205,9 +249,20 @@ export default function NewInspectionPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Schedule Inspection</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new property inspection</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Inspection" : "Schedule Inspection"}
+            </h1>
+            {isEditMode && (
+              <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update inspection details" : "Create a new property inspection"}
+          </p>
         </div>
       </div>
 
@@ -430,6 +485,11 @@ export default function NewInspectionPage() {
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Saving...
+              </>
+            ) : isEditMode ? (
+              <>
+                <Pencil className="h-4 w-4 mr-2" />
+                Save Changes
               </>
             ) : (
               <>

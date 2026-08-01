@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { signInSchema } from "@/schemas/portal/auth";
-import { mockGhlAdapter } from "@/lib/ghl/mock-adapter";
 import { getDefaultRouteForRole } from "@/lib/permissions/roles";
 import { auditLogger } from "@/lib/audit/logger";
 

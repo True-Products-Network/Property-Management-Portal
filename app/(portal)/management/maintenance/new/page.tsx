@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Wrench, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Wrench, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 
 interface Property {
@@ -71,8 +71,12 @@ const URGENCY_LEVELS = [
   { value: "emergency", label: "Emergency - Immediate" },
 ];
 
-export default function NewMaintenanceRequestPage() {
+function MaintenanceRequestForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
+  const isEditMode = !!editId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -101,6 +105,13 @@ export default function NewMaintenanceRequestPage() {
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // Load maintenance request data when in edit mode
+  useEffect(() => {
+    if (isEditMode && editId && properties.length > 0 && contacts.length > 0 && vendors.length > 0) {
+      loadMaintenanceRequest(editId);
+    }
+  }, [isEditMode, editId, properties.length, contacts.length, vendors.length]);
 
   useEffect(() => {
     if (formData.propertyId) {
@@ -133,6 +144,52 @@ export default function NewMaintenanceRequestPage() {
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
+    } finally {
+      // Don't set isLoading to false yet if in edit mode - wait for maintenance request data
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
+    }
+  }
+
+  async function loadMaintenanceRequest(id: string) {
+    try {
+      const response = await fetch(`/api/maintenance/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const data = result.data;
+          // Load units for the property first
+          if (data.propertyId) {
+            await loadUnits(data.propertyId);
+          }
+          // Populate form data
+          setFormData({
+            reporterId: data.reportedByContactId || "",
+            propertyId: data.propertyId || "",
+            unitId: data.unitId || "",
+            title: data.title || "",
+            description: data.description || "",
+            category: data.category || "",
+            urgency: data.urgency || "medium",
+            status: data.status || "new",
+            assignedVendorId: data.assignedVendorId || "",
+            assignedStaffId: data.assignedStaffId || "",
+            estimatedCost: data.estimatedCost?.toString() || "",
+            requestedDate: data.requestedDate ? data.requestedDate.split("T")[0] : "",
+            scheduledDate: data.scheduledDate ? data.scheduledDate.split("T")[0] : "",
+            vendorNotes: data.vendorNotes || "",
+            internalNotes: data.resolutionNotes || "",
+          });
+        }
+      } else {
+        alert("Failed to load maintenance request");
+        router.push("/management/maintenance");
+      }
+    } catch (error) {
+      console.error("Error loading maintenance request:", error);
+      alert("An error occurred while loading the maintenance request");
+      router.push("/management/maintenance");
     } finally {
       setIsLoading(false);
     }
@@ -171,8 +228,11 @@ export default function NewMaintenanceRequestPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/maintenance", {
-        method: "POST",
+      const url = isEditMode ? `/api/maintenance/${editId}` : "/api/maintenance";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reportedByContactId: formData.reporterId,
@@ -196,16 +256,17 @@ export default function NewMaintenanceRequestPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/maintenance/${result.data.id}`);
+          const redirectId = isEditMode ? editId : result.data.id;
+          router.push(`/management/maintenance/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create maintenance request");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} maintenance request`);
         }
       } else {
-        alert("Failed to create maintenance request");
+        alert(`Failed to ${isEditMode ? "update" : "create"} maintenance request`);
       }
     } catch (error) {
-      console.error("Error creating maintenance request:", error);
-      alert("An error occurred while creating the maintenance request");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} maintenance request:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the maintenance request`);
     } finally {
       setIsSaving(false);
     }
@@ -238,9 +299,21 @@ export default function NewMaintenanceRequestPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">New Maintenance Request</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Create a new maintenance or repair request</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Maintenance Request" : "New Maintenance Request"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                <Edit3 className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update the maintenance request details" : "Create a new maintenance or repair request"}
+          </p>
         </div>
       </div>
 
@@ -513,17 +586,30 @@ export default function NewMaintenanceRequestPage() {
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
+                {isEditMode ? "Saving..." : "Creating..."}
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Create Request
+                {isEditMode ? "Save Changes" : "Create Request"}
               </>
             )}
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap the component with Suspense for useSearchParams
+export default function NewMaintenanceRequestPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    }>
+      <MaintenanceRequestForm />
+    </Suspense>
   );
 }

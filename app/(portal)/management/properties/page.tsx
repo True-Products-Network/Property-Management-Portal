@@ -10,108 +10,109 @@ import {
   Home,
   Plus,
   Search,
-  Filter,
-  MoreHorizontal,
   Building2,
   Wrench,
-  ClipboardCheck,
   ArrowRight,
   Loader2,
+  Filter,
 } from "lucide-react";
-import { mockGhlAdapter } from "@/lib/ghl/mock-adapter";
 
 interface Property {
   id: string;
+  propertyId: string;
   name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
+  addressStreet: string;
+  addressCity?: string;
+  addressState?: string;
+  addressZip?: string;
   associationId: string;
-  associationName: string;
-  unitCount: number;
-  status: "active" | "inactive" | "maintenance";
-  openRequests: number;
-  upcomingInspections: number;
+  type: string;
+  status: string;
+  yearBuilt?: number;
+  totalUnits: number;
+}
+
+interface Association {
+  id: string;
+  name: string;
 }
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [associations, setAssociations] = useState<Record<string, Association>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [associationFilter, setAssociationFilter] = useState<string>("all");
 
   useEffect(() => {
     loadProperties();
+    loadAssociations();
   }, []);
 
   async function loadProperties() {
     try {
-      // In production, this would fetch from GHL
-      // For now, using mock data
-      const mockProperties: Property[] = [
-        {
-          id: "TEST-PROP-RIDGELAND",
-          name: "6722 S Ridgeland",
-          address: "6722 S Ridgeland Ave",
-          city: "Chicago",
-          state: "IL",
-          zip: "60649",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          unitCount: 12,
-          status: "active",
-          openRequests: 2,
-          upcomingInspections: 1,
-        },
-        {
-          id: "TEST-PROP-OAKWOOD",
-          name: "Oakwood Heights",
-          address: "1234 Oakwood Drive",
-          city: "Chicago",
-          state: "IL",
-          zip: "60601",
-          associationId: "TEST-ASSOC-OAKWOOD",
-          associationName: "Oakwood Heights HOA",
-          unitCount: 48,
-          status: "active",
-          openRequests: 5,
-          upcomingInspections: 2,
-        },
-        {
-          id: "TEST-PROP-MAIN",
-          name: "Main Street Plaza",
-          address: "5678 Main Street",
-          city: "Chicago",
-          state: "IL",
-          zip: "60602",
-          associationId: "TEST-ASSOC-MAIN",
-          associationName: "Main Street Association",
-          unitCount: 24,
-          status: "maintenance",
-          openRequests: 8,
-          upcomingInspections: 0,
-        },
-      ];
+      setIsLoading(true);
+      setError(null);
       
-      setProperties(mockProperties);
+      const response = await fetch("/api/properties");
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load properties");
+      }
+      
+      setProperties(result.data.data || []);
     } catch (error) {
       console.error("Error loading properties:", error);
+      setError(error instanceof Error ? error.message : "Failed to load properties");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadAssociations() {
+    try {
+      const response = await fetch("/api/associations");
+      const result = await response.json();
+      
+      if (result.success) {
+        const assocMap: Record<string, Association> = {};
+        result.data.data.forEach((assoc: Association) => {
+          assocMap[assoc.id] = assoc;
+        });
+        setAssociations(assocMap);
+      }
+    } catch (error) {
+      console.error("Error loading associations:", error);
     }
   }
 
   const filteredProperties = properties.filter((property) => {
     const matchesSearch = 
       property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.associationName.toLowerCase().includes(searchQuery.toLowerCase());
+      property.addressStreet.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (associations[property.associationId]?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || property.status === statusFilter;
+    const matchesType = typeFilter === "all" || property.type === typeFilter;
+    const matchesAssociation = associationFilter === "all" || property.associationId === associationFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType && matchesAssociation;
   });
+
+  // Get unique types and associations for filters
+  const uniqueTypes = Array.from(new Set(properties.map((p) => p.type))).filter(Boolean);
+  const uniqueAssociations = Array.from(new Set(properties.map((p) => p.associationId)))
+    .map((id) => ({ id, name: associations[id]?.name || "Unknown" }));
+
+  // Calculate stats
+  const totalProperties = properties.length;
+  const activeProperties = properties.filter((p) => p.status === "active").length;
+  const maintenanceProperties = properties.filter((p) => p.status === "maintenance").length;
+  const totalUnits = properties.reduce((sum, p) => sum + (p.totalUnits || 0), 0);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -121,6 +122,8 @@ export default function PropertiesPage() {
         return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
       case "maintenance":
         return <Badge className="bg-amber-100 text-amber-700">Maintenance</Badge>;
+      case "under_construction":
+        return <Badge className="bg-blue-100 text-blue-700">Construction</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -130,6 +133,17 @@ export default function PropertiesPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={loadProperties} variant="outline">
+          Retry
+        </Button>
       </div>
     );
   }
@@ -162,7 +176,7 @@ export default function PropertiesPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Properties</p>
-                <p className="text-2xl font-semibold">{properties.length}</p>
+                <p className="text-2xl font-semibold">{totalProperties}</p>
               </div>
             </div>
           </CardContent>
@@ -175,24 +189,7 @@ export default function PropertiesPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Active</p>
-                <p className="text-2xl font-semibold">
-                  {properties.filter((p) => p.status === "active").length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <Wrench className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[var(--secondary-text)]">Open Requests</p>
-                <p className="text-2xl font-semibold">
-                  {properties.reduce((sum, p) => sum + p.openRequests, 0)}
-                </p>
+                <p className="text-2xl font-semibold">{activeProperties}</p>
               </div>
             </div>
           </CardContent>
@@ -201,13 +198,24 @@ export default function PropertiesPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <ClipboardCheck className="h-5 w-5 text-blue-600" />
+                <Building2 className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Inspections Due</p>
-                <p className="text-2xl font-semibold">
-                  {properties.reduce((sum, p) => sum + p.upcomingInspections, 0)}
-                </p>
+                <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
+                <p className="text-2xl font-semibold">{totalUnits}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+                <Wrench className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-[var(--secondary-text)]">In Maintenance</p>
+                <p className="text-2xl font-semibold">{maintenanceProperties}</p>
               </div>
             </div>
           </CardContent>
@@ -227,16 +235,37 @@ export default function PropertiesPage() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <select
+                value={associationFilter}
+                onChange={(e) => setAssociationFilter(e.target.value)}
+                className="input min-w-[150px]"
+              >
+                <option value="all">All Associations</option>
+                {uniqueAssociations.map((assoc) => (
+                  <option key={assoc.id} value={assoc.id}>{assoc.name}</option>
+                ))}
+              </select>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="input min-w-[120px]"
+              >
+                <option value="all">All Types</option>
+                {uniqueTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="input"
+                className="input min-w-[120px]"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="maintenance">Maintenance</option>
+                <option value="under_construction">Construction</option>
               </select>
             </div>
           </div>
@@ -246,7 +275,7 @@ export default function PropertiesPage() {
       {/* Properties Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Property List</CardTitle>
+          <CardTitle>Property List ({filteredProperties.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -263,13 +292,13 @@ export default function PropertiesPage() {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
+                    Type
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Units
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Open Requests
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Inspections
+                    Year Built
                   </th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Actions
@@ -290,36 +319,32 @@ export default function PropertiesPage() {
                         {property.name}
                       </Link>
                       <p className="text-sm text-[var(--secondary-text)]">
-                        {property.address}, {property.city}, {property.state} {property.zip}
+                        {property.addressStreet}
+                        {property.addressCity && `, ${property.addressCity}`}
+                        {property.addressState && `, ${property.addressState}`}
+                        {property.addressZip && ` ${property.addressZip}`}
                       </p>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
-                        <span className="text-sm">{property.associationName}</span>
+                        <Link
+                          href={`/management/associations/${property.associationId}`}
+                          className="text-sm text-[var(--teal)] hover:underline"
+                        >
+                          {associations[property.associationId]?.name || "Unknown Association"}
+                        </Link>
                       </div>
                     </td>
                     <td className="py-3 px-4">{getStatusBadge(property.status)}</td>
                     <td className="py-3 px-4">
-                      <span className="text-sm">{property.unitCount}</span>
+                      <span className="text-sm">{property.type || "-"}</span>
                     </td>
                     <td className="py-3 px-4">
-                      {property.openRequests > 0 ? (
-                        <Badge className="bg-red-100 text-red-700">
-                          {property.openRequests}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-[var(--secondary-text)]">0</span>
-                      )}
+                      <span className="text-sm">{property.totalUnits || 0}</span>
                     </td>
                     <td className="py-3 px-4">
-                      {property.upcomingInspections > 0 ? (
-                        <Badge className="bg-blue-100 text-blue-700">
-                          {property.upcomingInspections}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-[var(--secondary-text)]">0</span>
-                      )}
+                      <span className="text-sm">{property.yearBuilt || "-"}</span>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -337,7 +362,9 @@ export default function PropertiesPage() {
           </div>
           {filteredProperties.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
-              No properties found matching your criteria.
+              {searchQuery || statusFilter !== "all" || typeFilter !== "all" || associationFilter !== "all"
+                ? "No properties found matching your criteria."
+                : "No properties yet. Click 'Add Property' to create one."}
             </div>
           )}
         </CardContent>

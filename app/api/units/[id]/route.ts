@@ -5,15 +5,21 @@ import { getUnit, updateUnit, deleteUnit } from "@/lib/api/units";
 import { z } from "zod";
 
 const updateSchema = z.object({
+  propertyId: z.string().uuid().optional(),
   unitNumber: z.string().min(1).optional(),
   displayName: z.string().optional(),
-  type: z.enum(["Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Penthouse", "Loft", "Townhouse"]).optional(),
+  type: z.string().optional(),
+  status: z.string().optional(),
   squareFeet: z.number().optional(),
   bedrooms: z.number().optional(),
   bathrooms: z.number().optional(),
   floor: z.string().optional(),
+  occupancyStatus: z.string().optional(),
+  rentalStatus: z.string().optional(),
   parkingSpot: z.string().optional(),
   storageUnit: z.string().optional(),
+  moveInDate: z.string().optional(),
+  moveOutDate: z.string().optional(),
   mailingAddress: z.string().optional(),
   accessNotes: z.string().optional(),
 });

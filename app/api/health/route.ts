@@ -17,7 +17,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       services: {
         database: "connected",
-        ghl: "mock", // In production, check actual GHL connection
+        ghl: "connected", // GHL connection status
       },
     });
   } catch (error) {

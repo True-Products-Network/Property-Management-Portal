@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,20 +23,33 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 
-interface Person {
+interface Contact {
   id: string;
+  contactId: string;
   firstName: string;
   lastName: string;
   email: string;
   phone?: string;
-  type: "owner" | "tenant" | "both";
-  status: "active" | "inactive" | "pending";
-  portalAccess: boolean;
-  portalStatus?: "active" | "invited" | "suspended";
-  portalLastLogin?: string;
-  notes?: string;
+  mobilePhone?: string;
+  workPhone?: string;
+  preferredContactMethod?: string;
+  mailingPreference?: string;
+  emailPermission: boolean;
+  smsPermission: boolean;
+  mailingAddressStreet?: string;
+  mailingAddressCity?: string;
+  mailingAddressState?: string;
+  mailingAddressZip?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  portalInvitationStatus: string;
+  portalInvitedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Unit {
@@ -46,7 +59,7 @@ interface Unit {
   propertyName: string;
   associationId: string;
   associationName: string;
-  role: "owner" | "tenant";
+  role: string;
 }
 
 interface MaintenanceRequest {
@@ -54,93 +67,87 @@ interface MaintenanceRequest {
   requestNumber: string;
   title: string;
   status: string;
-  priority: string;
-  reportedDate: string;
+  urgency?: string;
+  createdAt: string;
   unitNumber?: string;
+  propertyName?: string;
 }
 
-export default function PersonDetailPage() {
+export default function ContactDetailPage() {
   const params = useParams();
-  const personId = params.id as string;
+  const router = useRouter();
+  const contactId = params.id as string;
 
-  const [person, setPerson] = useState<Person | null>(null);
+  const [contact, setContact] = useState<Contact | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    loadPerson();
-  }, [personId]);
+    if (contactId) {
+      loadContact();
+      loadContactUnits();
+      loadContactMaintenance();
+    }
+  }, [contactId]);
 
-  async function loadPerson() {
+  async function loadContact() {
     try {
-      const mockPerson: Person = {
-        id: personId,
-        firstName: "John",
-        lastName: "Smith",
-        email: "john.smith@example.com",
-        phone: "(555) 123-4567",
-        type: "owner",
-        status: "active",
-        portalAccess: true,
-        portalStatus: "active",
-        portalLastLogin: "2026-07-30T14:30:00Z",
-        notes: "Long-time resident. Prefers email communication.",
-      };
-
-      const mockUnits: Unit[] = [
-        {
-          id: "UNIT-1",
-          unitNumber: "1N",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          role: "owner",
-        },
-      ];
-
-      const mockMaintenance: MaintenanceRequest[] = [
-        {
-          id: "MNT-001",
-          requestNumber: "MNT-2026-0047",
-          title: "HVAC Repair",
-          status: "in_progress",
-          priority: "high",
-          reportedDate: "2026-07-28T10:00:00Z",
-          unitNumber: "1N",
-        },
-      ];
-
-      setPerson(mockPerson);
-      setUnits(mockUnits);
-      setMaintenanceRequests(mockMaintenance);
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/contacts/${contactId}`);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load contact");
+      }
+      
+      setContact(result.data);
     } catch (error) {
-      console.error("Error loading person:", error);
+      console.error("Error loading contact:", error);
+      setError(error instanceof Error ? error.message : "Failed to load contact");
     } finally {
       setIsLoading(false);
     }
   }
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "owner":
-        return <Badge className="bg-blue-100 text-blue-700">Owner</Badge>;
-      case "tenant":
-        return <Badge className="bg-green-100 text-green-700">Tenant</Badge>;
-      case "both":
-        return <Badge className="bg-purple-100 text-purple-700">Owner & Tenant</Badge>;
-      default:
-        return <Badge>{type}</Badge>;
+  async function loadContactUnits() {
+    try {
+      // Fetch contact units from a joined query
+      const response = await fetch(`/api/contacts/${contactId}/units`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setUnits(result.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading contact units:", error);
+      // Non-critical error, don't show to user
     }
-  };
+  }
 
-  const getPortalBadge = (person: Person) => {
-    if (!person.portalAccess) {
-      return <Badge className="bg-gray-100 text-gray-700">No Portal Access</Badge>;
+  async function loadContactMaintenance() {
+    try {
+      // Fetch maintenance requests reported by this contact
+      const response = await fetch(`/api/maintenance?reportedBy=${contactId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setMaintenanceRequests(result.data.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading maintenance requests:", error);
+      // Non-critical error, don't show to user
     }
-    switch (person.portalStatus) {
+  }
+
+  const getPortalBadge = (status: string) => {
+    switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-700">Portal Active</Badge>;
       case "invited":
@@ -148,7 +155,54 @@ export default function PersonDetailPage() {
       case "suspended":
         return <Badge className="bg-red-100 text-red-700">Suspended</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-700">No Access</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700">No Portal Access</Badge>;
+    }
+  };
+
+  const getPreferredContactBadge = (method?: string) => {
+    switch (method) {
+      case "email":
+        return <Badge className="bg-blue-100 text-blue-700">Email</Badge>;
+      case "phone":
+        return <Badge className="bg-green-100 text-green-700">Phone</Badge>;
+      case "sms":
+        return <Badge className="bg-purple-100 text-purple-700">SMS</Badge>;
+      case "mail":
+        return <Badge className="bg-amber-100 text-amber-700">Mail</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "new":
+        return <Badge className="bg-blue-100 text-blue-700">New</Badge>;
+      case "in_progress":
+        return <Badge className="bg-teal-100 text-teal-700">In Progress</Badge>;
+      case "waiting":
+        return <Badge className="bg-amber-100 text-amber-700">Waiting</Badge>;
+      case "completed":
+        return <Badge className="bg-green-100 text-green-700">Completed</Badge>;
+      case "closed":
+        return <Badge className="bg-gray-100 text-gray-700">Closed</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const getPriorityBadge = (priority?: string) => {
+    switch (priority) {
+      case "emergency":
+        return <Badge className="bg-red-100 text-red-700">Emergency</Badge>;
+      case "urgent":
+        return <Badge className="bg-amber-100 text-amber-700">Urgent</Badge>;
+      case "normal":
+        return <Badge className="bg-blue-100 text-blue-700">Normal</Badge>;
+      case "low":
+        return <Badge className="bg-gray-100 text-gray-700">Low</Badge>;
+      default:
+        return null;
     }
   };
 
@@ -160,10 +214,27 @@ export default function PersonDetailPage() {
     );
   }
 
-  if (!person) {
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-red-500">{error}</p>
+        <div className="flex gap-2">
+          <Button onClick={loadContact} variant="outline">
+            Retry
+          </Button>
+          <Link href="/management/people">
+            <Button variant="outline">Back to People</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!contact) {
     return (
       <div className="text-center py-12">
-        <p className="text-[var(--secondary-text)]">Person not found</p>
+        <p className="text-[var(--secondary-text)]">Contact not found</p>
         <Link href="/management/people">
           <Button variant="outline" className="mt-4">
             Back to People
@@ -187,17 +258,20 @@ export default function PersonDetailPage() {
               Back to People
             </Link>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
-              {person.firstName} {person.lastName}
+              {contact.firstName} {contact.lastName}
             </h1>
-            {getTypeBadge(person.type)}
-            {getPortalBadge(person)}
+            {getPortalBadge(contact.portalInvitationStatus)}
+            {getPreferredContactBadge(contact.preferredContactMethod)}
           </div>
-          <p className="text-[var(--secondary-text)]">{person.email}</p>
+          <p className="text-[var(--secondary-text)]">{contact.email}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={() => router.push(`/management/people/${contactId}/edit`)}
+          >
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -236,11 +310,13 @@ export default function PersonDetailPage() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                <CreditCard className="h-5 w-5 text-[var(--teal)]" />
+                <Mail className="h-5 w-5 text-[var(--teal)]" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Payments</p>
-                <p className="text-2xl font-semibold">0</p>
+                <p className="text-sm text-[var(--secondary-text)]">Email Opt-in</p>
+                <p className="text-2xl font-semibold">
+                  {contact.emailPermission ? "Yes" : "No"}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -252,11 +328,9 @@ export default function PersonDetailPage() {
                 <Clock className="h-5 w-5 text-[var(--teal)]" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Last Login</p>
+                <p className="text-sm text-[var(--secondary-text)]">Added</p>
                 <p className="text-lg font-semibold">
-                  {person.portalLastLogin
-                    ? new Date(person.portalLastLogin).toLocaleDateString()
-                    : "Never"}
+                  {new Date(contact.createdAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -266,11 +340,10 @@ export default function PersonDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="units">Units</TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-          <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="communications">Messages</TabsTrigger>
         </TabsList>
 
@@ -287,54 +360,124 @@ export default function PersonDetailPage() {
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-[var(--secondary-text)]" />
                     <a
-                      href={`mailto:${person.email}`}
+                      href={`mailto:${contact.email}`}
                       className="text-[var(--teal)] hover:underline"
                     >
-                      {person.email}
+                      {contact.email}
                     </a>
                   </div>
                 </div>
-                {person.phone && (
+                {contact.phone && (
                   <div>
                     <p className="text-sm text-[var(--secondary-text)]">Phone</p>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-[var(--secondary-text)]" />
                       <a
-                        href={`tel:${person.phone}`}
+                        href={`tel:${contact.phone}`}
                         className="text-[var(--teal)] hover:underline"
                       >
-                        {person.phone}
+                        {contact.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {contact.mobilePhone && (
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Mobile</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-[var(--secondary-text)]" />
+                      <a
+                        href={`tel:${contact.mobilePhone}`}
+                        className="text-[var(--teal)] hover:underline"
+                      >
+                        {contact.mobilePhone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                {contact.workPhone && (
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Work Phone</p>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-[var(--secondary-text)]" />
+                      <a
+                        href={`tel:${contact.workPhone}`}
+                        className="text-[var(--teal)] hover:underline"
+                      >
+                        {contact.workPhone}
                       </a>
                     </div>
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-[var(--secondary-text)]">Portal Access</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {person.portalAccess ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-gray-400" />
-                    )}
-                    <span>
-                      {person.portalAccess
-                        ? `Portal ${person.portalStatus}`
-                        : "No portal access"}
-                    </span>
-                  </div>
+                  <p className="text-sm text-[var(--secondary-text)]">Preferred Contact</p>
+                  <p className="capitalize">{contact.preferredContactMethod || "Not set"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--secondary-text)]">Mailing Preference</p>
+                  <p className="capitalize">{contact.mailingPreference || "Not set"}</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Notes */}
+            {/* Permissions & Address */}
             <Card>
               <CardHeader>
-                <CardTitle>Notes</CardTitle>
+                <CardTitle>Permissions & Address</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-[var(--main-text)]">
-                  {person.notes || "No notes available."}
-                </p>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-[var(--secondary-text)]">Communication Permissions</p>
+                  <div className="flex gap-2 mt-1">
+                    {contact.emailPermission ? (
+                      <Badge className="bg-blue-100 text-blue-700">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Email OK
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-gray-100 text-gray-700">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        No Email
+                      </Badge>
+                    )}
+                    {contact.smsPermission ? (
+                      <Badge className="bg-purple-100 text-purple-700">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        SMS OK
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-gray-100 text-gray-700">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        No SMS
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {(contact.mailingAddressStreet || contact.mailingAddressCity) && (
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Mailing Address</p>
+                    <p>{contact.mailingAddressStreet}</p>
+                    <p>
+                      {contact.mailingAddressCity}
+                      {contact.mailingAddressState && `, ${contact.mailingAddressState}`}
+                      {contact.mailingAddressZip && ` ${contact.mailingAddressZip}`}
+                    </p>
+                  </div>
+                )}
+                {(contact.emergencyContactName || contact.emergencyContactPhone) && (
+                  <div>
+                    <p className="text-sm text-[var(--secondary-text)]">Emergency Contact</p>
+                    <p className="font-medium">{contact.emergencyContactName}</p>
+                    {contact.emergencyContactPhone && (
+                      <p className="text-sm">{contact.emergencyContactPhone}</p>
+                    )}
+                    {contact.emergencyContactRelationship && (
+                      <p className="text-sm text-[var(--secondary-text)]">
+                        {contact.emergencyContactRelationship}
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -365,8 +508,8 @@ export default function PersonDetailPage() {
                             {unit.propertyName}
                           </p>
                         </div>
-                        <Badge className="bg-blue-100 text-blue-700">
-                          {unit.role === "owner" ? "Owner" : "Tenant"}
+                        <Badge className="bg-blue-100 text-blue-700 capitalize">
+                          {unit.role}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 mt-2">
@@ -416,20 +559,22 @@ export default function PersonDetailPage() {
                         >
                           {request.title}
                         </Link>
-                        <Badge className="bg-teal-100 text-teal-700">
-                          {request.status}
-                        </Badge>
+                        <div className="flex gap-2">
+                          {getPriorityBadge(request.urgency)}
+                          {getStatusBadge(request.status)}
+                        </div>
                       </div>
                       <p className="text-xs text-[var(--secondary-text)] mt-1">
                         {request.requestNumber}
                       </p>
-                      {request.unitNumber && (
+                      {request.propertyName && (
                         <p className="text-sm text-[var(--secondary-text)] mt-1">
-                          Unit: {request.unitNumber}
+                          {request.propertyName}
+                          {request.unitNumber && ` - Unit ${request.unitNumber}`}
                         </p>
                       )}
                       <p className="text-sm text-[var(--secondary-text)] mt-1">
-                        Reported: {new Date(request.reportedDate).toLocaleDateString()}
+                        Reported: {new Date(request.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
@@ -440,20 +585,6 @@ export default function PersonDetailPage() {
                   <p>No maintenance requests</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="payments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-[var(--secondary-text)]">
-                <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No payment history available</p>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

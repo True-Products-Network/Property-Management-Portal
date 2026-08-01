@@ -19,141 +19,125 @@ import {
 
 interface Unit {
   id: string;
-  unitNumber: string;
+  unitId: string;
   propertyId: string;
-  propertyName: string;
-  associationId: string;
-  associationName: string;
-  status: "occupied" | "vacant" | "maintenance";
-  ownerName?: string;
-  tenantName?: string;
-  ownerEmail?: string;
-  tenantEmail?: string;
+  unitNumber: string;
+  displayName?: string;
+  type?: string;
+  status: string;
+  occupancyStatus?: string;
   squareFeet?: number;
   bedrooms?: number;
   bathrooms?: number;
+  floor?: string;
+}
+
+interface Property {
+  id: string;
+  name: string;
+  associationId: string;
+}
+
+interface Association {
+  id: string;
+  name: string;
 }
 
 export default function UnitsPage() {
   const [units, setUnits] = useState<Unit[]>([]);
+  const [properties, setProperties] = useState<Record<string, Property>>({});
+  const [associations, setAssociations] = useState<Record<string, Association>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [occupancyFilter, setOccupancyFilter] = useState<string>("all");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
 
   useEffect(() => {
     loadUnits();
+    loadProperties();
+    loadAssociations();
   }, []);
 
   async function loadUnits() {
     try {
-      const mockUnits: Unit[] = [
-        {
-          id: "UNIT-1",
-          unitNumber: "1N",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "occupied",
-          ownerName: "John Smith",
-          tenantName: "John Smith",
-          ownerEmail: "john.smith@example.com",
-          squareFeet: 1200,
-          bedrooms: 2,
-          bathrooms: 2,
-        },
-        {
-          id: "UNIT-2",
-          unitNumber: "1S",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "occupied",
-          ownerName: "Mary Jones",
-          tenantName: "Mary Jones",
-          ownerEmail: "mary.jones@example.com",
-          squareFeet: 1100,
-          bedrooms: 2,
-          bathrooms: 1,
-        },
-        {
-          id: "UNIT-3",
-          unitNumber: "2N",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "vacant",
-          ownerName: "Bob Wilson",
-          ownerEmail: "bob.wilson@example.com",
-          squareFeet: 1200,
-          bedrooms: 2,
-          bathrooms: 2,
-        },
-        {
-          id: "UNIT-4",
-          unitNumber: "2S",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "occupied",
-          ownerName: "Lisa Davis",
-          tenantName: "Tom Davis",
-          ownerEmail: "lisa.davis@example.com",
-          squareFeet: 1100,
-          bedrooms: 2,
-          bathrooms: 1,
-        },
-        {
-          id: "UNIT-5",
-          unitNumber: "3N",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "maintenance",
-          squareFeet: 1200,
-          bedrooms: 2,
-          bathrooms: 2,
-        },
-        {
-          id: "UNIT-6",
-          unitNumber: "3S",
-          propertyId: "TEST-PROP-RIDGELAND",
-          propertyName: "6722 S Ridgeland",
-          associationId: "TEST-ASSOC-RIDGELAND",
-          associationName: "Ridgeland Condominium Association",
-          status: "occupied",
-          ownerName: "Karen Lee",
-          tenantName: "Karen Lee",
-          ownerEmail: "karen.lee@example.com",
-          squareFeet: 1100,
-          bedrooms: 2,
-          bathrooms: 1,
-        },
-      ];
+      setIsLoading(true);
+      setError(null);
       
-      setUnits(mockUnits);
+      const response = await fetch("/api/units");
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to load units");
+      }
+      
+      setUnits(result.data.data || []);
     } catch (error) {
       console.error("Error loading units:", error);
+      setError(error instanceof Error ? error.message : "Failed to load units");
     } finally {
       setIsLoading(false);
     }
   }
 
+  async function loadProperties() {
+    try {
+      const response = await fetch("/api/properties");
+      const result = await response.json();
+      
+      if (result.success) {
+        const propMap: Record<string, Property> = {};
+        result.data.data.forEach((prop: Property) => {
+          propMap[prop.id] = prop;
+        });
+        setProperties(propMap);
+      }
+    } catch (error) {
+      console.error("Error loading properties:", error);
+    }
+  }
+
+  async function loadAssociations() {
+    try {
+      const response = await fetch("/api/associations");
+      const result = await response.json();
+      
+      if (result.success) {
+        const assocMap: Record<string, Association> = {};
+        result.data.data.forEach((assoc: Association) => {
+          assocMap[assoc.id] = assoc;
+        });
+        setAssociations(assocMap);
+      }
+    } catch (error) {
+      console.error("Error loading associations:", error);
+    }
+  }
+
   const filteredUnits = units.filter((unit) => {
+    const property = properties[unit.propertyId];
     const matchesSearch = 
       unit.unitNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      unit.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      unit.ownerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      unit.tenantName?.toLowerCase().includes(searchQuery.toLowerCase());
+      (unit.displayName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (property?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || unit.status === statusFilter;
+    const matchesOccupancy = occupancyFilter === "all" || unit.occupancyStatus === occupancyFilter;
+    const matchesProperty = propertyFilter === "all" || unit.propertyId === propertyFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesOccupancy && matchesProperty;
   });
+
+  // Get unique properties for filter
+  const uniqueProperties = Array.from(new Set(units.map((u) => u.propertyId)))
+    .map((id) => ({ id, name: properties[id]?.name || "Unknown Property" }));
+
+  // Calculate stats
+  const totalUnits = units.length;
+  const occupiedUnits = units.filter((u) => u.occupancyStatus === "occupied" || u.status === "occupied").length;
+  const vacantUnits = units.filter((u) => u.occupancyStatus === "vacant" || u.status === "vacant").length;
+  const maintenanceUnits = units.filter((u) => u.status === "maintenance").length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,6 +147,10 @@ export default function UnitsPage() {
         return <Badge className="bg-blue-100 text-blue-700">Vacant</Badge>;
       case "maintenance":
         return <Badge className="bg-amber-100 text-amber-700">Maintenance</Badge>;
+      case "active":
+        return <Badge className="bg-green-100 text-green-700">Active</Badge>;
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-700">Inactive</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
@@ -172,6 +160,17 @@ export default function UnitsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <p className="text-red-500">{error}</p>
+        <Button onClick={loadUnits} variant="outline">
+          Retry
+        </Button>
       </div>
     );
   }
@@ -204,7 +203,7 @@ export default function UnitsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Total Units</p>
-                <p className="text-2xl font-semibold">{units.length}</p>
+                <p className="text-2xl font-semibold">{totalUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -217,9 +216,7 @@ export default function UnitsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Occupied</p>
-                <p className="text-2xl font-semibold">
-                  {units.filter((u) => u.status === "occupied").length}
-                </p>
+                <p className="text-2xl font-semibold">{occupiedUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -232,9 +229,7 @@ export default function UnitsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Vacant</p>
-                <p className="text-2xl font-semibold">
-                  {units.filter((u) => u.status === "vacant").length}
-                </p>
+                <p className="text-2xl font-semibold">{vacantUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -247,9 +242,7 @@ export default function UnitsPage() {
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">Maintenance</p>
-                <p className="text-2xl font-semibold">
-                  {units.filter((u) => u.status === "maintenance").length}
-                </p>
+                <p className="text-2xl font-semibold">{maintenanceUnits}</p>
               </div>
             </div>
           </CardContent>
@@ -269,15 +262,35 @@ export default function UnitsPage() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <select
+                value={propertyFilter}
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                className="input min-w-[150px]"
+              >
+                <option value="all">All Properties</option>
+                {uniqueProperties.map((prop) => (
+                  <option key={prop.id} value={prop.id}>{prop.name}</option>
+                ))}
+              </select>
+              <select
+                value={occupancyFilter}
+                onChange={(e) => setOccupancyFilter(e.target.value)}
+                className="input min-w-[120px]"
+              >
+                <option value="all">All Occupancy</option>
+                <option value="occupied">Occupied</option>
+                <option value="vacant">Vacant</option>
+                <option value="under_renovation">Renovation</option>
+              </select>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="input"
+                className="input min-w-[120px]"
               >
                 <option value="all">All Status</option>
-                <option value="occupied">Occupied</option>
-                <option value="vacant">Vacant</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
                 <option value="maintenance">Maintenance</option>
               </select>
             </div>
@@ -288,7 +301,7 @@ export default function UnitsPage() {
       {/* Units Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Unit List</CardTitle>
+          <CardTitle>Unit List ({filteredUnits.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -305,10 +318,7 @@ export default function UnitsPage() {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Owner
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Tenant
+                    Type
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Details
@@ -319,82 +329,75 @@ export default function UnitsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUnits.map((unit) => (
-                  <tr
-                    key={unit.id}
-                    className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]"
-                  >
-                    <td className="py-3 px-4">
-                      <Link
-                        href={`/management/units/${unit.id}`}
-                        className="font-medium text-[var(--main-text)] hover:text-[var(--teal)]"
-                      >
-                        Unit {unit.unitNumber}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
+                {filteredUnits.map((unit) => {
+                  const property = properties[unit.propertyId];
+                  const association = property ? associations[property.associationId] : null;
+                  
+                  return (
+                    <tr
+                      key={unit.id}
+                      className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]"
+                    >
+                      <td className="py-3 px-4">
                         <Link
-                          href={`/management/properties/${unit.propertyId}`}
-                          className="text-sm text-[var(--teal)] hover:underline"
+                          href={`/management/units/${unit.id}`}
+                          className="font-medium text-[var(--main-text)] hover:text-[var(--teal)]"
                         >
-                          {unit.propertyName}
+                          Unit {unit.unitNumber}
                         </Link>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">{getStatusBadge(unit.status)}</td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {unit.ownerName ? (
-                          <>
-                            <p className="font-medium">{unit.ownerName}</p>
-                            {unit.ownerEmail && (
-                              <p className="text-[var(--secondary-text)] text-xs">{unit.ownerEmail}</p>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-[var(--secondary-text)]">-</span>
+                        {unit.displayName && unit.displayName !== unit.unitNumber && (
+                          <p className="text-sm text-[var(--secondary-text)]">{unit.displayName}</p>
                         )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {unit.tenantName ? (
-                          <>
-                            <p className="font-medium">{unit.tenantName}</p>
-                            {unit.tenantEmail && (
-                              <p className="text-[var(--secondary-text)] text-xs">{unit.tenantEmail}</p>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-[var(--secondary-text)]">-</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm text-[var(--secondary-text)]">
-                        {unit.squareFeet && <p>{unit.squareFeet} sq ft</p>}
-                        {unit.bedrooms && unit.bathrooms && (
-                          <p>{unit.bedrooms} bed, {unit.bathrooms} bath</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <Link href={`/management/units/${unit.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
+                            <Link
+                              href={`/management/properties/${unit.propertyId}`}
+                              className="text-[var(--teal)] hover:underline"
+                            >
+                              {property?.name || "Unknown Property"}
+                            </Link>
+                          </div>
+                          {association && (
+                            <p className="text-[var(--secondary-text)] text-xs mt-1">
+                              {association.name}
+                            </p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">{getStatusBadge(unit.status)}</td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm">{unit.type || "-"}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm text-[var(--secondary-text)]">
+                          {unit.squareFeet && <p>{unit.squareFeet} sq ft</p>}
+                          {unit.bedrooms !== undefined && unit.bathrooms !== undefined && (
+                            <p>{unit.bedrooms} bed, {unit.bathrooms} bath</p>
+                          )}
+                          {unit.floor && <p>Floor {unit.floor}</p>}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link href={`/management/units/${unit.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {filteredUnits.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
-              No units found matching your criteria.
+              {searchQuery || statusFilter !== "all" || occupancyFilter !== "all" || propertyFilter !== "all"
+                ? "No units found matching your criteria."
+                : "No units yet. Click 'Add Unit' to create one."}
             </div>
           )}
         </CardContent>

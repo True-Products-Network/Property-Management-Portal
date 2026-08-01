@@ -5,17 +5,21 @@ import { getProperty, updateProperty, deleteProperty } from "@/lib/api/propertie
 import { z } from "zod";
 
 const updateSchema = z.object({
+  associationId: z.string().uuid().optional(),
   name: z.string().min(1).optional(),
   addressStreet: z.string().min(1).optional(),
   addressCity: z.string().optional(),
   addressState: z.string().optional(),
   addressZip: z.string().optional(),
-  type: z.enum(["Condominium", "Apartment", "Townhouse", "Single Family", "Commercial", "Mixed Use"]).optional(),
+  type: z.string().optional(),
+  status: z.string().optional(),
   yearBuilt: z.number().optional(),
+  totalUnits: z.number().optional(),
   managementStartDate: z.string().optional(),
   accessInstructions: z.string().optional(),
   emergencyNotes: z.string().optional(),
   assignedStaffId: z.string().uuid().optional(),
+  photoUrl: z.string().optional(),
 });
 
 export async function GET(

@@ -1,28 +1,188 @@
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth/session";
-import { isAdmin } from "@/lib/permissions/roles";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { mockGhlAdapter } from "@/lib/ghl/mock-adapter";
-import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-export default async function UserMaintenancePage() {
-  const user = await getSession();
+interface Contact {
+  id: string;
+  contactId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  mobilePhone?: string;
+  portalInvitationStatus: string;
+  createdAt: string;
+}
 
-  if (!user || !isAdmin(user.roles)) {
-    redirect("/access-denied");
+interface ContactRole {
+  id: string;
+  contactId: string;
+  roleType: string;
+  associationId?: string;
+  propertyId?: string;
+  unitId?: string;
+  isActive: boolean;
+}
+
+interface UserWithRoles extends Contact {
+  roles: string[];
+  name: string;
+  status: string;
+}
+
+export default function UserMaintenancePage() {
+  const router = useRouter();
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        
+        // Fetch contacts and contact roles in parallel
+        const [contactsRes, rolesRes] = await Promise.all([
+          fetch("/api/contacts?pageSize=100"),
+          fetch("/api/admin/contact-roles?pageSize=1000"),
+        ]);
+
+        if (!contactsRes.ok) {
+          if (contactsRes.status === 401) {
+            router.push("/access-denied");
+            return;
+          }
+          throw new Error("Failed to fetch contacts");
+        }
+
+        const contactsData = await contactsRes.json();
+        const rolesData = await rolesRes.json();
+
+        if (!contactsData.success) {
+          throw new Error(contactsData.error || "Failed to fetch contacts");
+        }
+
+        const contacts: Contact[] = contactsData.data || [];
+        const roles: ContactRole[] = rolesData.success ? rolesData.data : [];
+
+        // Map contacts to users with their roles
+        const usersWithRoles: UserWithRoles[] = contacts.map((contact) => {
+          const userRoles = roles
+            .filter((r) => r.contactId === contact.id && r.isActive)
+            .map((r) => r.roleType);
+
+          // If no roles found, check if they have portal access
+          const hasPortalAccess = contact.portalInvitationStatus === "active" || 
+                                  contact.portalInvitationStatus === "accepted";
+
+          return {
+            ...contact,
+            name: `${contact.firstName} ${contact.lastName}`,
+            roles: userRoles.length > 0 ? userRoles : hasPortalAccess ? ["contact"] : [],
+            status: contact.portalInvitationStatus === "active" || contact.portalInvitationStatus === "accepted" 
+              ? "active" 
+              : contact.portalInvitationStatus === "pending" || contact.portalInvitationStatus === "invited"
+              ? "pending"
+              : "inactive",
+          };
+        });
+
+        setUsers(usersWithRoles);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+        setError(err instanceof Error ? err.message : "Failed to load users");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, [router]);
+
+  // Filter users based on search and filters
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = 
+      !searchQuery || 
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = 
+      !roleFilter || 
+      user.roles.some((r) => r.toLowerCase().includes(roleFilter.toLowerCase()));
+    
+    const matchesStatus = 
+      !statusFilter || 
+      user.status === statusFilter;
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "active":
+      case "accepted":
+        return "bg-green-100 text-green-700";
+      case "pending":
+      case "invited":
+        return "bg-amber-100 text-amber-700";
+      case "inactive":
+      case "suspended":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const formatRoleLabel = (role: string) => {
+    return role
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              User Maintenance
+            </h1>
+            <p className="text-[var(--secondary-text)] mt-1">Loading...</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="animate-pulse h-32 bg-gray-200 rounded"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Get test users from mock adapter
-  const contacts = await mockGhlAdapter.getContactsByAssociation("TEST-ASSOC-RIDGELAND");
-
-  const users = contacts.map((contact) => ({
-    id: contact.id,
-    name: `${contact.firstName} ${contact.lastName}`,
-    email: contact.email,
-    roles: contact.roles,
-    status: contact.portalAccessStatus,
-    lastActive: "2 hours ago", // Mock data
-  }));
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              User Maintenance
+            </h1>
+            <p className="text-[var(--error)] mt-1">{error}</p>
+          </div>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -36,10 +196,10 @@ export default async function UserMaintenancePage() {
             Manage portal users, invitations, and access
           </p>
         </div>
-        <button className="btn btn-primary">
-          <Plus className="h-4 w-4" />
+        <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white">
+          <Plus className="h-4 w-4 mr-2" />
           Invite User
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -53,25 +213,36 @@ export default async function UserMaintenancePage() {
                   type="text"
                   placeholder="Search users..."
                   className="input pl-10 w-full"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
-            <select className="input w-40">
+            <select 
+              className="input w-40"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+            >
               <option value="">All Roles</option>
               <option value="admin">Admin User</option>
               <option value="management">Management Staff</option>
               <option value="owner">Owner</option>
               <option value="board">Board Member</option>
               <option value="vendor">Vendor</option>
+              <option value="tenant">Tenant</option>
             </select>
-            <select className="input w-40">
+            <select 
+              className="input w-40"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">All Status</option>
               <option value="active">Active</option>
               <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
+              <option value="inactive">Inactive</option>
             </select>
             <button className="btn btn-secondary">
-              <Filter className="h-4 w-4" />
+              <Filter className="h-4 w-4 mr-2" />
               Filter
             </button>
           </div>
@@ -81,86 +252,105 @@ export default async function UserMaintenancePage() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Users ({users.length})</CardTitle>
+          <CardTitle>Users ({filteredUsers.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Roles</th>
-                <th>Status</th>
-                <th>Last Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white text-sm font-medium">
-                        {user.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium text-[var(--main-text)]">{user.name}</p>
-                        <p className="text-sm text-[var(--secondary-text)]">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles.map((role) => (
-                        <span
-                          key={role}
-                          className="px-2 py-0.5 bg-[var(--page-background)] text-xs rounded-full text-[var(--secondary-text)]"
-                        >
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className={`status-pill ${
-                        user.status === "active"
-                          ? "status-active"
-                          : user.status === "pending"
-                          ? "status-pending"
-                          : "status-closed"
-                      }`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="text-[var(--secondary-text)]">{user.lastActive}</td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <button className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--teal)] rounded-lg hover:bg-[var(--page-background)]">
-                        <Mail className="h-4 w-4" />
-                      </button>
-                      <button className="p-1.5 text-[var(--secondary-text)] hover:text-green-600 rounded-lg hover:bg-[var(--page-background)]">
-                        <UserCheck className="h-4 w-4" />
-                      </button>
-                      <button className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--error)] rounded-lg hover:bg-[var(--page-background)]">
-                        <UserX className="h-4 w-4" />
-                      </button>
-                      <button className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--main-text)] rounded-lg hover:bg-[var(--page-background)]">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+          {filteredUsers.length > 0 ? (
+            <table className="data-table w-full">
+              <thead>
+                <tr>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">User</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Roles</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white text-sm font-medium">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--main-text)]">{user.name}</p>
+                          <p className="text-sm text-[var(--secondary-text)]">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.length > 0 ? (
+                          user.roles.map((role) => (
+                            <Badge
+                              key={role}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {formatRoleLabel(role)}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-[var(--secondary-text)]">No roles assigned</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge className={getStatusBadgeClass(user.status)}>
+                        {user.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--teal)] rounded-lg hover:bg-[var(--page-background)]"
+                          title="Send email"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="p-1.5 text-[var(--secondary-text)] hover:text-green-600 rounded-lg hover:bg-[var(--page-background)]"
+                          title="Activate user"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--error)] rounded-lg hover:bg-[var(--page-background)]"
+                          title="Deactivate user"
+                        >
+                          <UserX className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--main-text)] rounded-lg hover:bg-[var(--page-background)]"
+                          title="More options"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-8 text-[var(--secondary-text)]">
+              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No users found</p>
+              <p className="text-sm mt-1">
+                {searchQuery || roleFilter || statusFilter
+                  ? "Try adjusting your filters"
+                  : "Users will appear here once they are added to the system"}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--secondary-text)]">
-          Showing 1 to {users.length} of {users.length} users
+          Showing {filteredUsers.length > 0 ? 1 : 0} to {filteredUsers.length} of {filteredUsers.length} users
         </p>
         <div className="flex items-center gap-2">
           <button className="btn btn-secondary" disabled>

@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       search: searchParams.get("search") || undefined,
       propertyId: searchParams.get("propertyId") || undefined,
+      unitId: searchParams.get("unitId") || undefined,
       status: searchParams.get("status") || undefined,
+      vendorId: searchParams.get("vendorId") || undefined,
+      reportedBy: searchParams.get("reportedBy") || undefined,
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });

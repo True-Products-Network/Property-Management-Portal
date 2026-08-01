@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, CreditCard, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 
 interface Association {
@@ -52,6 +52,10 @@ const PROCESSORS = [
 
 export default function NewPaymentPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paymentId = searchParams.get("id");
+  const isEditMode = !!paymentId;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
@@ -89,10 +93,44 @@ export default function NewPaymentPage() {
         const contactsData = await contactsRes.json();
         if (contactsData.success) setContacts(contactsData.data.data || []);
       }
+
+      // If in edit mode, fetch the payment data
+      if (isEditMode && paymentId) {
+        await loadPaymentData(paymentId);
+      }
     } catch (error) {
       console.error("Error loading initial data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadPaymentData(id: string) {
+    try {
+      const response = await fetch(`/api/payments/${id}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const payment = result.data;
+          setFormData({
+            associationId: payment.associationId || "",
+            contactId: payment.contactId || "",
+            unitId: payment.unitId || "",
+            paymentType: payment.paymentType || "",
+            amount: payment.amount?.toString() || "",
+            description: payment.description || "",
+            processor: payment.processor || "stripe",
+            status: payment.status || "pending",
+            invoiceNumber: payment.invoiceNumber || "",
+          });
+        }
+      } else {
+        console.error("Failed to load payment data");
+        alert("Failed to load payment data for editing");
+      }
+    } catch (error) {
+      console.error("Error loading payment data:", error);
+      alert("An error occurred while loading the payment data");
     }
   }
 
@@ -117,8 +155,11 @@ export default function NewPaymentPage() {
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/payments", {
-        method: "POST",
+      const url = isEditMode ? `/api/payments/${paymentId}` : "/api/payments";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           associationId: formData.associationId,
@@ -136,16 +177,17 @@ export default function NewPaymentPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          router.push(`/management/payments/${result.data.id}`);
+          const redirectId = isEditMode ? paymentId : result.data.id;
+          router.push(`/management/payments/${redirectId}`);
         } else {
-          alert(result.error || "Failed to create payment");
+          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} payment`);
         }
       } else {
-        alert("Failed to create payment");
+        alert(`Failed to ${isEditMode ? "update" : "create"} payment`);
       }
     } catch (error) {
-      console.error("Error creating payment:", error);
-      alert("An error occurred while creating the payment");
+      console.error(`Error ${isEditMode ? "updating" : "creating"} payment:`, error);
+      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the payment`);
     } finally {
       setIsSaving(false);
     }
@@ -176,9 +218,21 @@ export default function NewPaymentPage() {
             Back
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Record Payment</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Record a new payment or charge</p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              {isEditMode ? "Edit Payment" : "Record Payment"}
+            </h1>
+            {isEditMode && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <Edit3 className="h-3 w-3" />
+                Edit Mode
+              </span>
+            )}
+          </div>
+          <p className="text-[var(--secondary-text)] mt-1">
+            {isEditMode ? "Update payment details" : "Record a new payment or charge"}
+          </p>
         </div>
       </div>
 
@@ -346,7 +400,7 @@ export default function NewPaymentPage() {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Record Payment
+                {isEditMode ? "Save Changes" : "Record Payment"}
               </>
             )}
           </Button>
