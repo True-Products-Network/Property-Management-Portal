@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapUnit } from "./mappers";
 
 export interface Unit {
   id: string;
@@ -87,7 +88,7 @@ export async function getUnits(
     return {
       success: true,
       data: {
-        data: data || [],
+        data: (data || []).map(mapUnit),
         total: count || 0,
         page,
         pageSize,
@@ -117,7 +118,7 @@ export async function getUnit(id: string): Promise<ApiResponse<Unit>> {
       return { success: false, error: "Unit not found" };
     }
     
-    return { success: true, data };
+    return { success: true, data: mapUnit(data) };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }

@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapProperty } from "./mappers";
 
 export interface Property {
   id: string;
@@ -84,7 +85,7 @@ export async function getProperties(
     return {
       success: true,
       data: {
-        data: data || [],
+        data: (data || []).map(mapProperty),
         total: count || 0,
         page,
         pageSize,
@@ -114,7 +115,7 @@ export async function getProperty(id: string): Promise<ApiResponse<Property>> {
       return { success: false, error: "Property not found" };
     }
     
-    return { success: true, data };
+    return { success: true, data: mapProperty(data) };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }

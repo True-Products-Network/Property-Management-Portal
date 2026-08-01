@@ -27,26 +27,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Debug: Log user metadata
-    console.log("User metadata:", JSON.stringify(user.user_metadata));
-    console.log("Raw roles:", user.user_metadata?.roles);
-    console.log("Roles type:", typeof user.user_metadata?.roles);
-    console.log("Is array:", Array.isArray(user.user_metadata?.roles));
-
     // Check admin status from user metadata (set during login/token creation)
     const roles = user.user_metadata?.roles;
     const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
     const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
-
-    console.log("Is admin check:", isAdmin, "is_admin:", user.user_metadata?.is_admin, "hasAdminRole:", hasAdminRole);
 
     if (!isAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const result = await getDropdownSettingsGrouped();
-
-    console.log("Dropdown settings result:", result.success, "data keys:", result.data ? Object.keys(result.data) : 'no data');
 
     if (!result.success) {
       console.error("Dropdown settings error:", result.error);

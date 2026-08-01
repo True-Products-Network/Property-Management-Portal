@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapAssociation } from "./mappers";
 
 export interface Association {
   id: string;
@@ -106,7 +107,7 @@ export async function getAssociations(
     return {
       success: true,
       data: {
-        data: data || [],
+        data: (data || []).map(mapAssociation),
         total: count || 0,
         page,
         pageSize,
@@ -150,7 +151,7 @@ export async function getAssociation(
     
     return {
       success: true,
-      data,
+      data: mapAssociation(data),
     };
   } catch (error) {
     return {
@@ -214,7 +215,7 @@ export async function createAssociation(
 
     return {
       success: true,
-      data,
+      data: mapAssociation(data),
       message: "Association created successfully",
     };
   } catch (error) {
@@ -265,7 +266,7 @@ export async function updateAssociation(
     
     return {
       success: true,
-      data,
+      data: mapAssociation(data),
       message: "Association updated successfully",
     };
   } catch (error) {
