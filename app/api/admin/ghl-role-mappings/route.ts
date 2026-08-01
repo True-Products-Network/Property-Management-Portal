@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     if (!countError && userCounts) {
       const counts: Record<string, number> = {};
-      userCounts.forEach((u) => {
+      userCounts.forEach((u: { contact_role: string }) => {
         const role = u.contact_role;
         counts[role] = (counts[role] || 0) + 1;
       });
