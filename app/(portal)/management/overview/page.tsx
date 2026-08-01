@@ -19,6 +19,7 @@ import {
   Clock,
   ArrowRight,
   MessageSquare,
+  BarChart3,
 } from "lucide-react";
 
 interface DashboardStats {
@@ -397,12 +398,20 @@ export default function ManagementDashboardPage() {
             Welcome back{userName ? `, ${userName}` : ""}. Here&apos;s what&apos;s happening across your properties.
           </p>
         </div>
-        <Link href="/management/reports">
-          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white border-2 border-transparent">
-            <TrendingUp className="h-4 w-4 mr-2" />
-            View Reports
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/management/summary">
+            <Button variant="outline" className="border-[var(--teal)] text-[var(--teal)] hover:bg-[var(--teal)] hover:text-white">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Summary
+            </Button>
+          </Link>
+          <Link href="/management/reports">
+            <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white border-2 border-transparent">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              View Reports
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Grid - Row 1 */}
