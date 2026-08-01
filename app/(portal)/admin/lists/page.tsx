@@ -36,7 +36,7 @@ interface CategoryValue {
   sortOrder: number;
   isActive: boolean;
   recordCount: number;
-  fieldName: string;
+  field_name: string;
 }
 
 interface Category {
@@ -203,7 +203,7 @@ export default function CategoryManagementPage() {
                 sortOrder: item.sort_order || 0,
                 isActive: item.is_active !== false,
                 recordCount: 0,
-                fieldName: item.field_name,
+                field_name: item.field_name,
               });
               
               if (item.field_name && !category.fields.includes(item.field_name)) {
@@ -495,7 +495,7 @@ export default function CategoryManagementPage() {
                         </p>
                         <div className="space-y-2">
                           {category.values
-                            .filter((v) => v.fieldName === fieldName)
+                            .filter((v) => v.field_name === fieldName)
                             .sort((a, b) => a.sortOrder - b.sortOrder)
                             .map((value) => (
                               <div

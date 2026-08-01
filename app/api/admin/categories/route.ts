@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
         description: setting.description,
         sortOrder: setting.sort_order || 0,
         isActive: setting.is_active !== false,
-        recordCount: 0, // Will be populated if needed
+        recordCount: 0,
+        field_name: setting.field_name,
       });
     }
 
