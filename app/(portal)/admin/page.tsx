@@ -46,12 +46,19 @@ async function getAdminStats() {
     // Count unique list types
     const uniqueLists = new Set(listsResult.data?.map((d: { record_type: string }) => d.record_type) || []);
 
+    // Get active workflow count
+    const { count: activeWorkflowCount } = await supabase
+      .from("workflows")
+      .select("id", { count: "exact" })
+      .eq("active", true);
+
     return {
       userCount: usersResult.count || 0,
       roleCount: rolesResult.count || 0,
       dropdownCount: dropdownsResult.count || 0,
       listCount: uniqueLists.size,
       workflowCount: workflowsResult.count || 0,
+      activeWorkflowCount: activeWorkflowCount || 0,
       auditCount: auditResult.count || 0,
       ghlConnected: !!ghlStatusResult.data?.value,
       portalRoleCount: portalRolesResult.count || 0,
@@ -65,6 +72,7 @@ async function getAdminStats() {
       dropdownCount: 0,
       listCount: 0,
       workflowCount: 0,
+      activeWorkflowCount: 0,
       auditCount: 0,
       ghlConnected: false,
       portalRoleCount: 0,
@@ -109,7 +117,7 @@ export default async function AdminHomePage() {
       description: "Configure workflow triggers and templates",
       href: "/admin/workflows",
       icon: Activity,
-      count: "Under Construction",
+      count: `${stats.activeWorkflowCount}/${stats.workflowCount} active`,
     },
     {
       title: "Integrations",
@@ -144,7 +152,7 @@ export default async function AdminHomePage() {
       description: "View system activity and security events",
       href: "/admin/audit",
       icon: FileText,
-      count: "Under Construction",
+      count: `${stats.auditCount} events`,
     },
   ];
 
