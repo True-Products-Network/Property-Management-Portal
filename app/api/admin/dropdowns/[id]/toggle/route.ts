@@ -12,8 +12,9 @@ const toggleSchema = z.object({
 function checkAdminFromMetadata(user: any): { isAdmin: boolean; userId: string | null } {
   if (!user) return { isAdmin: false, userId: null };
   
-  const isAdmin = user.user_metadata?.is_admin === true || 
-                  user.user_metadata?.roles?.includes("ADMIN_USER");
+  const roles = user.user_metadata?.roles;
+  const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+  const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
   
   return { isAdmin, userId: user.id };
 }

@@ -30,16 +30,24 @@ CREATE OR REPLACE FUNCTION is_admin_user(user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
     is_admin_flag BOOLEAN;
+    has_admin_role BOOLEAN;
+    user_metadata JSONB;
 BEGIN
-    -- Check raw auth.users metadata (bypasses RLS)
-    SELECT COALESCE(
-        (raw_user_meta_data->>'is_admin')::boolean,
-        false
-    ) INTO is_admin_flag
+    -- Get raw metadata from auth.users (bypasses RLS)
+    SELECT raw_user_meta_data INTO user_metadata
     FROM auth.users
     WHERE id = user_id;
     
-    RETURN COALESCE(is_admin_flag, false);
+    -- Check is_admin flag
+    is_admin_flag := COALESCE((user_metadata->>'is_admin')::boolean, false);
+    
+    -- Check if 'ADMIN_USER' is in the roles array
+    has_admin_role := COALESCE(
+        (user_metadata->'roles') @> '["ADMIN_USER"]'::jsonb,
+        false
+    );
+    
+    RETURN is_admin_flag OR has_admin_role;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

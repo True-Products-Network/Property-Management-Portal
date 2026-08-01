@@ -31,10 +31,11 @@ export async function GET(request: NextRequest) {
     console.log("User metadata:", JSON.stringify(user.user_metadata));
 
     // Check admin status from user metadata (set during login/token creation)
-    const isAdmin = user.user_metadata?.is_admin === true || 
-                    user.user_metadata?.roles?.includes("ADMIN_USER");
+    const roles = user.user_metadata?.roles;
+    const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+    const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
 
-    console.log("Is admin check:", isAdmin, "is_admin:", user.user_metadata?.is_admin, "roles:", user.user_metadata?.roles);
+    console.log("Is admin check:", isAdmin, "is_admin:", user.user_metadata?.is_admin, "roles:", roles, "hasAdminRole:", hasAdminRole);
 
     if (!isAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden - Admin access required" }, { status: 403 });
@@ -72,8 +73,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check admin status from user metadata
-    const isAdmin = user.user_metadata?.is_admin === true || 
-                    user.user_metadata?.roles?.includes("ADMIN_USER");
+    const roles = user.user_metadata?.roles;
+    const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+    const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
 
     if (!isAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
