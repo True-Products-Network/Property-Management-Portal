@@ -27,12 +27,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    // Debug: Log user metadata
+    console.log("User metadata:", JSON.stringify(user.user_metadata));
+
     // Check admin status from user metadata (set during login/token creation)
     const isAdmin = user.user_metadata?.is_admin === true || 
                     user.user_metadata?.roles?.includes("ADMIN_USER");
 
+    console.log("Is admin check:", isAdmin, "is_admin:", user.user_metadata?.is_admin, "roles:", user.user_metadata?.roles);
+
     if (!isAdmin) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ success: false, error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const result = await getDropdownSettingsGrouped();
