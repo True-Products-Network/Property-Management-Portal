@@ -102,15 +102,15 @@ export default function ManagementDashboardPage() {
         const documentsData = await documentsRes.json();
         const complianceData = await complianceRes.json();
 
-        // Calculate stats
-        const associations = associationsData.success ? associationsData.data : [];
-        const properties = propertiesData.success ? propertiesData.data : [];
-        const units = unitsData.success ? unitsData.data : [];
-        const maintenanceRequests = maintenanceData.success ? maintenanceData.data : [];
-        const approvals = approvalsData.success ? approvalsData.data : [];
-        const inspections = inspectionsData.success ? inspectionsData.data : [];
-        const documents = documentsData.success ? documentsData.data : [];
-        const compliance = complianceData.success ? complianceData.data : [];
+        // Calculate stats - handle nested data structure { data: { data: [...], pagination: {...} } }
+        const associations = associationsData.success ? associationsData.data?.data || [] : [];
+        const properties = propertiesData.success ? propertiesData.data?.data || [] : [];
+        const units = unitsData.success ? unitsData.data?.data || [] : [];
+        const maintenanceRequests = maintenanceData.success ? maintenanceData.data?.data || [] : [];
+        const approvals = approvalsData.success ? approvalsData.data?.data || [] : [];
+        const inspections = inspectionsData.success ? inspectionsData.data?.data || [] : [];
+        const documents = documentsData.success ? documentsData.data?.data || [] : [];
+        const compliance = complianceData.success ? complianceData.data?.data || [] : [];
 
         // Count open maintenance requests (not completed or closed)
         const openRequests = maintenanceRequests.filter(
