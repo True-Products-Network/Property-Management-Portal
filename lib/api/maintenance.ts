@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapMaintenanceRequest } from "./mappers";
 
 export interface MaintenanceRequest {
   id: string;

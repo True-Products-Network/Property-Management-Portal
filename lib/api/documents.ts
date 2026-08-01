@@ -1,6 +1,7 @@
 // Documents API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapDocument } from "./mappers";
 
 export interface Document {
   id: string;

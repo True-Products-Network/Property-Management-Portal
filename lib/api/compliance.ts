@@ -1,6 +1,7 @@
 // Compliance Matters API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapComplianceMatter } from "./mappers";
 
 export interface ComplianceMatter {
   id: string;

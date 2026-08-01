@@ -1,6 +1,7 @@
 // Communications API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapCommunication } from "./mappers";
 
 export interface Communication {
   id: string;

@@ -1,6 +1,7 @@
 // Appointments API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapAppointment } from "./mappers";
 
 export interface Appointment {
   id: string;

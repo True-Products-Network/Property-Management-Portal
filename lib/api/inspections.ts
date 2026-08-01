@@ -1,6 +1,7 @@
 // Inspections API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapInspection } from "./mappers";
 
 export interface Inspection {
   id: string;

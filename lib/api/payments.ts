@@ -1,6 +1,7 @@
 // Payments API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapPayment } from "./mappers";
 
 export interface PaymentRecord {
   id: string;

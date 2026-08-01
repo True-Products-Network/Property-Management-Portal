@@ -1,6 +1,7 @@
 // Vendors API
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
+import { mapVendor } from "./mappers";
 
 export interface Vendor {
   id: string;
@@ -67,7 +68,7 @@ export async function getVendors(params: QueryParams = {}): Promise<ApiResponse<
     
     return {
       success: true,
-      data: { data: data || [], total: count || 0, page, pageSize, totalPages: Math.ceil((count || 0) / pageSize) },
+      data: { data: (data || []).map(mapVendor), total: count || 0, page, pageSize, totalPages: Math.ceil((count || 0) / pageSize) },
     };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -80,7 +81,7 @@ export async function getVendor(id: string): Promise<ApiResponse<Vendor>> {
     const { data, error } = await supabase.from("vendors").select("*").eq("id", id).single();
     if (error) return { success: false, error: error.message };
     if (!data) return { success: false, error: "Vendor not found" };
-    return { success: true, data };
+    return { success: true, data: mapVendor(data) };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
