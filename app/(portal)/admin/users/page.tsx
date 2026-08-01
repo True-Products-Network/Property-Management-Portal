@@ -19,29 +19,17 @@ interface Contact {
   createdAt: string;
 }
 
-interface ContactRole {
-  id: string;
-  contactId: string;
-  roleType: string;
-  associationId?: string;
-  propertyId?: string;
-  unitId?: string;
-  isActive: boolean;
-}
-
-interface UserWithRoles extends Contact {
-  roles: string[];
+interface UserWithStatus extends Contact {
   name: string;
   status: string;
 }
 
 export default function UserMaintenancePage() {
   const router = useRouter();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [users, setUsers] = useState<UserWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
@@ -49,11 +37,8 @@ export default function UserMaintenancePage() {
       try {
         setLoading(true);
         
-        // Fetch contacts and contact roles in parallel
-        const [contactsRes, rolesRes] = await Promise.all([
-          fetch("/api/contacts?pageSize=100"),
-          fetch("/api/admin/contact-roles?pageSize=1000"),
-        ]);
+        // Fetch contacts
+        const contactsRes = await fetch("/api/contacts?pageSize=100");
 
         if (!contactsRes.ok) {
           if (contactsRes.status === 401) {
@@ -64,38 +49,29 @@ export default function UserMaintenancePage() {
         }
 
         const contactsData = await contactsRes.json();
-        const rolesData = await rolesRes.json();
 
         if (!contactsData.success) {
           throw new Error(contactsData.error || "Failed to fetch contacts");
         }
 
         const contacts: Contact[] = contactsData.data || [];
-        const roles: ContactRole[] = rolesData.success ? rolesData.data : [];
 
-        // Map contacts to users with their roles
-        const usersWithRoles: UserWithRoles[] = contacts.map((contact) => {
-          const userRoles = roles
-            .filter((r) => r.contactId === contact.id && r.isActive)
-            .map((r) => r.roleType);
-
-          // If no roles found, check if they have portal access
-          const hasPortalAccess = contact.portalInvitationStatus === "active" || 
-                                  contact.portalInvitationStatus === "accepted";
+        // Map contacts to users
+        const usersWithStatus: UserWithStatus[] = contacts.map((contact) => {
+          const status = contact.portalInvitationStatus === "active" || contact.portalInvitationStatus === "accepted" 
+            ? "active" 
+            : contact.portalInvitationStatus === "pending" || contact.portalInvitationStatus === "invited"
+            ? "pending"
+            : "inactive";
 
           return {
             ...contact,
             name: `${contact.firstName} ${contact.lastName}`,
-            roles: userRoles.length > 0 ? userRoles : hasPortalAccess ? ["contact"] : [],
-            status: contact.portalInvitationStatus === "active" || contact.portalInvitationStatus === "accepted" 
-              ? "active" 
-              : contact.portalInvitationStatus === "pending" || contact.portalInvitationStatus === "invited"
-              ? "pending"
-              : "inactive",
+            status,
           };
         });
 
-        setUsers(usersWithRoles);
+        setUsers(usersWithStatus);
         setError(null);
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -115,15 +91,11 @@ export default function UserMaintenancePage() {
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesRole = 
-      !roleFilter || 
-      user.roles.some((r) => r.toLowerCase().includes(roleFilter.toLowerCase()));
-    
     const matchesStatus = 
       !statusFilter || 
       user.status === statusFilter;
 
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const getStatusBadgeClass = (status: string) => {
@@ -140,12 +112,6 @@ export default function UserMaintenancePage() {
       default:
         return "bg-gray-100 text-gray-700";
     }
-  };
-
-  const formatRoleLabel = (role: string) => {
-    return role
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   if (loading) {
@@ -220,19 +186,6 @@ export default function UserMaintenancePage() {
             </div>
             <select 
               className="input w-40"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="">All Roles</option>
-              <option value="admin">Admin User</option>
-              <option value="management">Management Staff</option>
-              <option value="owner">Owner</option>
-              <option value="board">Board Member</option>
-              <option value="vendor">Vendor</option>
-              <option value="tenant">Tenant</option>
-            </select>
-            <select 
-              className="input w-40"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -260,7 +213,7 @@ export default function UserMaintenancePage() {
               <thead>
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">User</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Roles</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Contact ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Actions</th>
                 </tr>
@@ -279,22 +232,8 @@ export default function UserMaintenancePage() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.length > 0 ? (
-                          user.roles.map((role) => (
-                            <Badge
-                              key={role}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {formatRoleLabel(role)}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-[var(--secondary-text)]">No roles assigned</span>
-                        )}
-                      </div>
+                    <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
+                      {user.contactId}
                     </td>
                     <td className="py-3 px-4">
                       <Badge className={getStatusBadgeClass(user.status)}>
@@ -338,7 +277,7 @@ export default function UserMaintenancePage() {
               <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No users found</p>
               <p className="text-sm mt-1">
-                {searchQuery || roleFilter || statusFilter
+                {searchQuery || statusFilter
                   ? "Try adjusting your filters"
                   : "Users will appear here once they are added to the system"}
               </p>
