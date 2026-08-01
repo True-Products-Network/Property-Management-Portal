@@ -50,6 +50,15 @@ interface ActivityItem {
   type: string;
 }
 
+interface UrgentItem {
+  id: string;
+  title: string;
+  type: "maintenance" | "inspection" | "approval" | "compliance" | "document";
+  urgency: "emergency" | "urgent" | "overdue" | "expiring" | "high";
+  date: string;
+  link: string;
+}
+
 export default function ManagementDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     associations: 0,
@@ -63,6 +72,8 @@ export default function ManagementDashboardPage() {
   });
   const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [urgentItems, setUrgentItems] = useState<UrgentItem[]>([]);
+  const [userName, setUserName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +81,15 @@ export default function ManagementDashboardPage() {
     async function fetchDashboardData() {
       try {
         setLoading(true);
+        
+        // Fetch user info first
+        const userRes = await fetch("/api/auth/me");
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData.success && userData.data) {
+            setUserName(userData.data.firstName || userData.data.email?.split("@")[0] || "");
+          }
+        }
         
         // Fetch all data in parallel
         const [
@@ -144,6 +164,109 @@ export default function ManagementDashboardPage() {
         const openCompliance = compliance.filter(
           (c: { status: string }) => c.status === "open"
         ).length;
+
+        // Build urgent items list
+        const urgent: UrgentItem[] = [];
+        
+        // Emergency/Urgent Maintenance
+        maintenanceRequests
+          .filter((m: { urgency?: string; status: string }) => 
+            (m.urgency === "emergency" || m.urgency === "urgent") && 
+            m.status !== "completed" && 
+            m.status !== "closed"
+          )
+          .slice(0, 3)
+          .forEach((m: { id: string; title: string; urgency?: string; reportedDate?: string }) => {
+            urgent.push({
+              id: m.id,
+              title: m.title,
+              type: "maintenance",
+              urgency: m.urgency === "emergency" ? "emergency" : "urgent",
+              date: m.reportedDate || new Date().toISOString(),
+              link: `/management/maintenance/${m.id}`,
+            });
+          });
+        
+        // Overdue Inspections
+        inspections
+          .filter((i: { status: string; scheduledDate?: string }) => 
+            i.status === "overdue" || 
+            (i.status === "scheduled" && i.scheduledDate && i.scheduledDate < today)
+          )
+          .slice(0, 2)
+          .forEach((i: { id: string; inspectionType?: string; scheduledDate?: string }) => {
+            urgent.push({
+              id: i.id,
+              title: i.inspectionType || "Inspection",
+              type: "inspection",
+              urgency: "overdue",
+              date: i.scheduledDate || new Date().toISOString(),
+              link: `/management/inspections/${i.id}`,
+            });
+          });
+        
+        // Pending Approvals
+        approvals
+          .filter((a: { status: string; priority?: string }) => 
+            a.status === "pending"
+          )
+          .slice(0, 2)
+          .forEach((a: { id: string; title: string; requestedAt?: string; priority?: string }) => {
+            urgent.push({
+              id: a.id,
+              title: a.title,
+              type: "approval",
+              urgency: a.priority === "high" || a.priority === "critical" ? "high" : "urgent",
+              date: a.requestedAt || new Date().toISOString(),
+              link: `/management/approvals/${a.id}`,
+            });
+          });
+        
+        // Critical/Open Compliance
+        compliance
+          .filter((c: { status: string; priority?: string; dueDate?: string }) => 
+            c.status === "open" && 
+            (c.priority === "critical" || c.priority === "high")
+          )
+          .slice(0, 2)
+          .forEach((c: { id: string; title: string; dueDate?: string; priority?: string }) => {
+            const isOverdue = c.dueDate && c.dueDate < today;
+            urgent.push({
+              id: c.id,
+              title: c.title,
+              type: "compliance",
+              urgency: isOverdue ? "overdue" : c.priority === "critical" ? "emergency" : "urgent",
+              date: c.dueDate || new Date().toISOString(),
+              link: `/management/compliance/${c.id}`,
+            });
+          });
+        
+        // Expiring Documents
+        documents
+          .filter((d: { expiryDate?: string; status: string }) => {
+            if (!d.expiryDate || d.status === "expired") return false;
+            const expiry = new Date(d.expiryDate);
+            const sevenDays = new Date();
+            sevenDays.setDate(sevenDays.getDate() + 7);
+            return expiry <= sevenDays && expiry >= new Date();
+          })
+          .slice(0, 2)
+          .forEach((d: { id: string; title: string; expiryDate?: string }) => {
+            urgent.push({
+              id: d.id,
+              title: d.title,
+              type: "document",
+              urgency: "expiring",
+              date: d.expiryDate || new Date().toISOString(),
+              link: `/management/documents/${d.id}`,
+            });
+          });
+        
+        // Sort by urgency level
+        const urgencyOrder = { emergency: 0, overdue: 1, expiring: 2, urgent: 3, high: 4 };
+        urgent.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+        
+        setUrgentItems(urgent.slice(0, 8));
 
         setStats({
           associations: associations.length,
@@ -271,7 +394,7 @@ export default function ManagementDashboardPage() {
             Dashboard
           </h1>
           <p className="text-[var(--secondary-text)] mt-1">
-            Welcome back. Here&apos;s what&apos;s happening across your properties.
+            Welcome back{userName ? `, ${userName}` : ""}. Here&apos;s what&apos;s happening across your properties.
           </p>
         </div>
         <Link href="/management/reports">
@@ -466,7 +589,7 @@ export default function ManagementDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Right Column */}
+        {/* Right Column - Urgent Items Only */}
         <div className="space-y-6">
           {/* Urgent Items */}
           <Card>
@@ -474,103 +597,56 @@ export default function ManagementDashboardPage() {
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-[var(--error)]" />
                 Urgent Items
+                {urgentItems.length > 0 && (
+                  <Badge className="bg-red-100 text-red-700 ml-2">{urgentItems.length}</Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {stats.openRequests > 0 || stats.pendingApprovals > 0 || stats.overdueInspections > 0 ? (
-                <div className="space-y-3">
-                  {stats.overdueInspections > 0 && (
-                    <div className="p-3 bg-[var(--page-background)] rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <Badge className="bg-red-100 text-red-700">Overdue</Badge>
-                        <span className="text-xs text-[var(--secondary-text)] flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Now
-                        </span>
+              {urgentItems.length > 0 ? (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {urgentItems.map((item) => (
+                    <Link key={item.id} href={item.link} className="block">
+                      <div className="p-3 bg-[var(--page-background)] rounded-lg hover:bg-[var(--border-color)] transition-colors">
+                        <div className="flex items-center justify-between">
+                          <Badge 
+                            className={
+                              item.urgency === "emergency" 
+                                ? "bg-red-100 text-red-700" 
+                                : item.urgency === "overdue"
+                                ? "bg-red-100 text-red-700"
+                                : item.urgency === "expiring"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-orange-100 text-orange-700"
+                            }
+                          >
+                            {item.urgency === "emergency" && "Emergency"}
+                            {item.urgency === "overdue" && "Overdue"}
+                            {item.urgency === "expiring" && "Expiring"}
+                            {item.urgency === "urgent" && "Urgent"}
+                            {item.urgency === "high" && "High Priority"}
+                          </Badge>
+                          <span className="text-xs text-[var(--secondary-text)] capitalize">
+                            {item.type}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-[var(--main-text)] mt-2 line-clamp-2">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-[var(--secondary-text)] mt-1">
+                          {formatTimeAgo(item.date)}
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-[var(--main-text)] mt-2">
-                        {stats.overdueInspections} inspection{stats.overdueInspections > 1 ? "s" : ""} overdue
-                      </p>
-                    </div>
-                  )}
-                  {stats.openRequests > 0 && (
-                    <div className="p-3 bg-[var(--page-background)] rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <Badge className="bg-amber-100 text-amber-700">High Priority</Badge>
-                        <span className="text-xs text-[var(--secondary-text)] flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Active
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-[var(--main-text)] mt-2">
-                        {stats.openRequests} open maintenance request{stats.openRequests > 1 ? "s" : ""}
-                      </p>
-                    </div>
-                  )}
-                  {stats.pendingApprovals > 0 && (
-                    <div className="p-3 bg-[var(--page-background)] rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <Badge className="bg-blue-100 text-blue-700">Pending</Badge>
-                        <span className="text-xs text-[var(--secondary-text)] flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          Awaiting
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-[var(--main-text)] mt-2">
-                        {stats.pendingApprovals} approval{stats.pendingApprovals > 1 ? "s" : ""} pending
-                      </p>
-                    </div>
-                  )}
+                    </Link>
+                  ))}
                 </div>
               ) : (
-                <div className="text-center py-6 text-[var(--secondary-text)]">
-                  <CheckSquare className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <div className="text-center py-8 text-[var(--secondary-text)]">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
                   <p className="text-sm">No urgent items</p>
                   <p className="text-xs mt-1">Everything is up to date!</p>
                 </div>
               )}
-              <Link
-                href="/management/maintenance"
-                className="w-full mt-4 text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center justify-center gap-1"
-              >
-                View all items
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <Link href="/management/maintenance/new">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Wrench className="h-4 w-4 mr-2" />
-                    New Maintenance Request
-                  </Button>
-                </Link>
-                <Link href="/management/people/new">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Owner or Occupant
-                  </Button>
-                </Link>
-                <Link href="/management/communications/announcement">
-                  <Button className="w-full justify-start" variant="outline">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Announcement
-                  </Button>
-                </Link>
-                <Link href="/management/approvals/request">
-                  <Button className="w-full justify-start" variant="outline">
-                    <CheckSquare className="h-4 w-4 mr-2" />
-                    Request Board Approval
-                  </Button>
-                </Link>
-              </div>
             </CardContent>
           </Card>
         </div>
