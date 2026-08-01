@@ -40,6 +40,20 @@ function AuthCallbackContent() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // Check if user is admin and update metadata
+        const { data: portalUser } = await supabase
+          .from("portal_users")
+          .select("is_admin")
+          .eq("id", user.id)
+          .single();
+        
+        // Update user metadata with admin status for RLS policies
+        if (portalUser?.is_admin && !user.user_metadata?.is_admin) {
+          await supabase.auth.updateUser({
+            data: { is_admin: true }
+          });
+        }
+        
         setStatus("success");
         setMessage("Authentication successful! Redirecting...");
         
