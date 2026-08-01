@@ -54,7 +54,7 @@ export default function UserMaintenancePage() {
           throw new Error(contactsData.error || "Failed to fetch contacts");
         }
 
-        const contacts: Contact[] = contactsData.data || [];
+        const contacts: Contact[] = contactsData.data?.data || [];
 
         // Map contacts to users
         const usersWithStatus: UserWithStatus[] = contacts.map((contact) => {

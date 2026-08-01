@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Bell,
-  Search,
   HelpCircle,
   User,
   Users,
@@ -19,6 +18,7 @@ import {
   FileText,
   ChevronDown,
   CheckSquare,
+  Palette,
 } from "lucide-react";
 
 interface HeaderProps {
@@ -60,19 +60,7 @@ export function Header({
   }
 
   return (
-    <header className="h-16 bg-white border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-10">
-      {/* Search */}
-      <div className="flex-1 max-w-xl">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="input pl-10 w-full max-w-md"
-          />
-        </div>
-      </div>
-
+    <header className="h-16 bg-white border-b border-[var(--border-color)] flex items-center justify-end px-6 sticky top-0 z-10">
       {/* Actions */}
       <div className="flex items-center gap-3">
         {/* Quick Action Buttons */}
@@ -108,18 +96,23 @@ export function Header({
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-[var(--secondary-text)] hover:text-[var(--main-text)] transition-colors">
-          <Bell className="h-5 w-5" />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--error)] text-white text-xs rounded-full flex items-center justify-center">
-              {notificationCount > 9 ? "9+" : notificationCount}
-            </span>
-          )}
-        </button>
+        <div className="relative">
+          <button 
+            className="relative p-2 text-[var(--secondary-text)] hover:text-[var(--main-text)] transition-colors"
+            onClick={() => alert("Notifications feature coming soon!")}
+          >
+            <Bell className="h-5 w-5" />
+            {notificationCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--error)] text-white text-xs rounded-full flex items-center justify-center">
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Help */}
         <Link
-          href="/help"
+          href="/management/help"
           className="p-2 text-[var(--secondary-text)] hover:text-[var(--main-text)] transition-colors"
         >
           <HelpCircle className="h-5 w-5" />
@@ -129,16 +122,8 @@ export function Header({
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-3 pl-4 border-l border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg p-2 transition-colors"
+            className="flex items-center gap-2 pl-4 border-l border-[var(--border-color)] hover:bg-[var(--page-background)] rounded-lg p-2 transition-colors"
           >
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-[var(--main-text)]">
-                {userName}
-              </p>
-              {userEmail && (
-                <p className="text-xs text-[var(--secondary-text)]">{userEmail}</p>
-              )}
-            </div>
             <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white">
               <User className="h-4 w-4" />
             </div>
@@ -148,7 +133,7 @@ export function Header({
           {/* Dropdown Menu */}
           {isUserMenuOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-[var(--border-color)] py-2 z-50">
-              <div className="px-4 py-2 border-b border-[var(--border-color)] sm:hidden">
+              <div className="px-4 py-2 border-b border-[var(--border-color)]">
                 <p className="font-medium text-[var(--main-text)]">{userName}</p>
                 {userEmail && (
                   <p className="text-xs text-[var(--secondary-text)]">{userEmail}</p>
@@ -186,6 +171,14 @@ export function Header({
                   >
                     <Shield className="h-4 w-4 text-[var(--secondary-text)]" />
                     Admin Home
+                  </Link>
+                  <Link
+                    href="/admin/branding"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-[var(--main-text)] hover:bg-[var(--page-background)] transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Palette className="h-4 w-4 text-[var(--secondary-text)]" />
+                    Brand Customization
                   </Link>
                   <Link
                     href="/admin/dropdowns"

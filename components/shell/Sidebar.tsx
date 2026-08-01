@@ -63,6 +63,14 @@ interface GhlStatus {
   locationName?: string;
 }
 
+interface BrandSettings {
+  brand_logo_url: string;
+  brand_logo_svg: string;
+  brand_name_line1: string;
+  brand_name_line2: string;
+  brand_primary_color: string;
+}
+
 // Menu groups with dividers
 const MENU_GROUPS = [
   {
@@ -168,6 +176,13 @@ function MenuItemComponent({
 
 export function Sidebar({ role, userName, userEmail }: SidebarProps) {
   const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
+  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
+    brand_logo_url: "",
+    brand_logo_svg: "",
+    brand_name_line1: "Exemplary",
+    brand_name_line2: "Property Management",
+    brand_primary_color: "#0d3b66",
+  });
 
   useEffect(() => {
     // Fetch GHL status
@@ -175,6 +190,21 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
       .then(res => res.json())
       .then(data => setGhlStatus(data))
       .catch(() => setGhlStatus({ connected: false }));
+    
+    // Fetch brand settings
+    fetch("/api/settings?category=branding")
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && result.data) {
+          setBrandSettings(prev => ({
+            ...prev,
+            ...result.data,
+          }));
+        }
+      })
+      .catch(() => {
+        // Use defaults on error
+      });
   }, []);
 
   return (
@@ -182,12 +212,28 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
       {/* Logo */}
       <div className="p-4 border-b border-white/10">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[var(--teal)] rounded-lg flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-white" />
-          </div>
+          {brandSettings.brand_logo_url ? (
+            <img 
+              src={brandSettings.brand_logo_url} 
+              alt="Logo" 
+              className="w-8 h-8 object-contain rounded"
+            />
+          ) : brandSettings.brand_logo_svg ? (
+            <div 
+              className="w-8 h-8 flex items-center justify-center"
+              dangerouslySetInnerHTML={{ __html: brandSettings.brand_logo_svg }}
+            />
+          ) : (
+            <div 
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
+              style={{ backgroundColor: brandSettings.brand_primary_color }}
+            >
+              {brandSettings.brand_name_line1.charAt(0)}
+            </div>
+          )}
           <div className="flex flex-col">
-            <span className="font-semibold text-white text-sm">Exemplary</span>
-            <span className="text-xs text-white/60">Property Management</span>
+            <span className="font-semibold text-white text-sm">{brandSettings.brand_name_line1}</span>
+            <span className="text-xs text-white/60">{brandSettings.brand_name_line2}</span>
           </div>
         </Link>
       </div>
