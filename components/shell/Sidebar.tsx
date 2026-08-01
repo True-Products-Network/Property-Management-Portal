@@ -84,6 +84,7 @@ const MENU_GROUPS = [
     items: [
       { label: "Maintenance", href: "/management/maintenance", icon: "Wrench" },
       { label: "Inspections", href: "/management/inspections", icon: "ClipboardCheck" },
+      { label: "Documents", href: "/management/documents", icon: "FileText" },
       { label: "Approvals", href: "/management/approvals", icon: "CheckSquare" },
       { label: "Compliance", href: "/management/compliance", icon: "Scale" },
     ],
