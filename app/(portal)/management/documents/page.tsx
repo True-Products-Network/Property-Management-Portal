@@ -267,7 +267,7 @@ export default function DocumentsPage() {
         <Link href="/management/documents/new">
           <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
             <Plus className="h-4 w-4 mr-2" />
-            Add New
+            Upload Document
           </Button>
         </Link>
       </div>

@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, FileText, Loader2, Edit } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Save, FileText, Loader2, Edit, Upload, Link } from "lucide-react";
+import LinkComponent from "next/link";
 
 interface Association {
   id: string;
@@ -39,6 +39,8 @@ interface DocumentData {
   isConfidential: boolean;
   requiresAcknowledgment: boolean;
   filePath: string;
+  fileName: string;
+  fileSize: number;
 }
 
 interface FormData {
@@ -54,6 +56,7 @@ interface FormData {
   isConfidential: boolean;
   requiresAcknowledgment: boolean;
   filePath: string;
+  fileName: string;
 }
 
 const DOCUMENT_TYPES = [
@@ -81,6 +84,8 @@ const CATEGORIES = [
   { value: "board", label: "Board" },
 ];
 
+type UploadMethod = "file" | "url";
+
 export default function NewDocumentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,10 +94,13 @@ export default function NewDocumentPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [uploadMethod, setUploadMethod] = useState<UploadMethod>("file");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState<FormData>({
     title: "",
     documentType: "",
@@ -106,6 +114,7 @@ export default function NewDocumentPage() {
     isConfidential: false,
     requiresAcknowledgment: false,
     filePath: "",
+    fileName: "",
   });
 
   useEffect(() => {
@@ -172,7 +181,11 @@ export default function NewDocumentPage() {
             isConfidential: doc.isConfidential || false,
             requiresAcknowledgment: doc.requiresAcknowledgment || false,
             filePath: doc.filePath || "",
+            fileName: doc.fileName || "",
           });
+          if (doc.filePath && !doc.filePath.startsWith("http")) {
+            setUploadMethod("url");
+          }
         } else {
           alert("Document not found");
           router.push("/management/documents");
@@ -214,12 +227,63 @@ export default function NewDocumentPage() {
     }
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setFormData(prev => ({
+        ...prev,
+        fileName: file.name,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+      }));
+    }
+  }
+
+  async function uploadFile(): Promise<string | null> {
+    if (!selectedFile) return formData.filePath;
+    
+    setIsUploading(true);
+    try {
+      // Create FormData for file upload
+      const uploadData = new FormData();
+      uploadData.append("file", selectedFile);
+      
+      // Upload to your storage API
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to upload file");
+      }
+
+      const result = await response.json();
+      return result.url || result.filePath;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file. Please try again.");
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   function validateForm(): boolean {
     const newErrors: Partial<FormData> = {};
 
     if (!formData.title?.trim()) newErrors.title = "Title is required";
     if (!formData.documentType) newErrors.documentType = "Document type is required";
-    if (!formData.filePath?.trim()) newErrors.filePath = "File path/URL is required";
+    
+    if (uploadMethod === "file" && !isEditMode) {
+      if (!selectedFile && !formData.filePath) {
+        newErrors.filePath = "Please select a file to upload";
+      }
+    } else if (uploadMethod === "url") {
+      if (!formData.filePath?.trim()) {
+        newErrors.filePath = "File URL is required";
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -232,6 +296,20 @@ export default function NewDocumentPage() {
 
     setIsSaving(true);
     try {
+      let filePath = formData.filePath;
+      let fileSize = 0;
+
+      // Upload file if selected
+      if (uploadMethod === "file" && selectedFile) {
+        const uploadedPath = await uploadFile();
+        if (!uploadedPath) {
+          setIsSaving(false);
+          return;
+        }
+        filePath = uploadedPath;
+        fileSize = selectedFile.size;
+      }
+
       const payload = {
         title: formData.title,
         documentType: formData.documentType,
@@ -244,46 +322,31 @@ export default function NewDocumentPage() {
         unitId: formData.unitId || undefined,
         isConfidential: formData.isConfidential,
         requiresAcknowledgment: formData.requiresAcknowledgment,
-        filePath: formData.filePath,
+        filePath: filePath,
+        fileName: formData.fileName || (selectedFile?.name),
+        fileSize: fileSize || undefined,
       };
 
-      let response;
-      if (isEditMode) {
-        response = await fetch(`/api/documents/${documentId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        response = await fetch("/api/documents", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      }
+      const url = isEditMode ? `/api/documents/${documentId}` : "/api/documents";
+      const method = isEditMode ? "PUT" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          router.push(`/management/documents/${isEditMode ? documentId : result.data.id}`);
-        } else {
-          alert(result.error || `Failed to ${isEditMode ? "update" : "create"} document`);
-        }
+        router.push("/management/documents");
       } else {
-        alert(`Failed to ${isEditMode ? "update" : "create"} document`);
+        const error = await response.json();
+        alert(error.error || "Failed to save document");
       }
     } catch (error) {
-      console.error(`Error ${isEditMode ? "updating" : "creating"} document:`, error);
-      alert(`An error occurred while ${isEditMode ? "updating" : "creating"} the document`);
+      console.error("Error saving document:", error);
+      alert("An error occurred while saving the document");
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  function handleChange(field: keyof FormData, value: any) {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   }
 
@@ -296,40 +359,130 @@ export default function NewDocumentPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/management/documents">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <LinkComponent href="/management/documents">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </LinkComponent>
           <div>
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
               {isEditMode ? "Edit Document" : "Upload Document"}
             </h1>
             <p className="text-[var(--secondary-text)] mt-1">
-              {isEditMode ? "Update document details" : "Add a new document to the system"}
+              {isEditMode ? "Update document details" : "Upload a new document to the system"}
             </p>
           </div>
-          {isEditMode && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 border border-amber-200">
-              <Edit className="h-3.5 w-3.5" />
-              Edit Mode
-            </span>
-          )}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Document Information */}
+        {/* File Upload Section */}
+        {!isEditMode && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-[var(--teal)]" />
+                Document File
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Upload Method Toggle */}
+              <div className="flex gap-2 p-1 bg-[var(--page-background)] rounded-lg w-fit">
+                <button
+                  type="button"
+                  onClick={() => setUploadMethod("file")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    uploadMethod === "file"
+                      ? "bg-white text-[var(--teal)] shadow-sm"
+                      : "text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+                  }`}
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMethod("url")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    uploadMethod === "url"
+                      ? "bg-white text-[var(--teal)] shadow-sm"
+                      : "text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+                  }`}
+                >
+                  <Link className="h-4 w-4" />
+                  File URL
+                </button>
+              </div>
+
+              {/* File Upload */}
+              {uploadMethod === "file" && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Select File <span className="text-red-500">*</span>
+                  </label>
+                  <div className="border-2 border-dashed border-[var(--border-color)] rounded-lg p-8 text-center hover:border-[var(--teal)] transition-colors">
+                    <input
+                      type="file"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="file-upload"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <Upload className="h-10 w-10 text-[var(--secondary-text)] mb-3" />
+                      <p className="text-sm font-medium text-[var(--main-text)]">
+                        {selectedFile ? selectedFile.name : "Click to select a file"}
+                      </p>
+                      <p className="text-xs text-[var(--secondary-text)] mt-1">
+                        PDF, Word, Excel, or images up to 50MB
+                      </p>
+                    </label>
+                  </div>
+                  {errors.filePath && (
+                    <p className="text-sm text-red-500 mt-2">{errors.filePath}</p>
+                  )}
+                </div>
+              )}
+
+              {/* URL Input */}
+              {uploadMethod === "url" && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    File URL <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="url"
+                    value={formData.filePath}
+                    onChange={(e) => setFormData({ ...formData, filePath: e.target.value })}
+                    placeholder="https://example.com/document.pdf"
+                    className={errors.filePath ? "border-red-500" : ""}
+                  />
+                  {errors.filePath && (
+                    <p className="text-sm text-red-500 mt-1">{errors.filePath}</p>
+                  )}
+                  <p className="text-xs text-[var(--secondary-text)] mt-2">
+                    Enter a direct link to the file (GHL storage, Google Drive, etc.)
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Document Details */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-[var(--teal)]" />
-              Document Information
+              Document Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -338,10 +491,11 @@ export default function NewDocumentPage() {
                 Title <span className="text-red-500">*</span>
               </label>
               <Input
+                type="text"
                 value={formData.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                placeholder="e.g., 2024 Insurance Policy"
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className={errors.title ? "border-red-500" : ""}
+                placeholder="Enter document title"
               />
               {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
             </div>
@@ -353,28 +507,31 @@ export default function NewDocumentPage() {
                 </label>
                 <select
                   value={formData.documentType}
-                  onChange={(e) => handleChange("documentType", e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
                   className={`input w-full ${errors.documentType ? "border-red-500" : ""}`}
                 >
-                  <option value="">Select Type</option>
+                  <option value="">Select type</option>
                   {DOCUMENT_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
                     </option>
                   ))}
                 </select>
-                {errors.documentType && <p className="text-sm text-red-500 mt-1">{errors.documentType}</p>}
+                {errors.documentType && (
+                  <p className="text-sm text-red-500 mt-1">{errors.documentType}</p>
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Category
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="">Select Category</option>
+                  <option value="">Select category</option>
                   {CATEGORIES.map((cat) => (
                     <option key={cat.value} value={cat.value}>
                       {cat.label}
@@ -391,85 +548,32 @@ export default function NewDocumentPage() {
                 </label>
                 <select
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="input w-full"
                 >
                   <option value="active">Active</option>
                   <option value="archived">Archived</option>
-                  <option value="expired">Expired</option>
+                  <option value="pending_review">Pending Review</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Issue Date
+                  Association
                 </label>
-                <Input
-                  type="date"
-                  value={formData.issueDate}
-                  onChange={(e) => handleChange("issueDate", e.target.value)}
-                />
+                <select
+                  value={formData.associationId}
+                  onChange={(e) => setFormData({ ...formData, associationId: e.target.value })}
+                  className="input w-full"
+                >
+                  <option value="">Select association</option>
+                  {associations.map((assoc) => (
+                    <option key={assoc.id} value={assoc.id}>
+                      {assoc.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                Expiry Date
-              </label>
-              <Input
-                type="date"
-                value={formData.expiryDate}
-                onChange={(e) => handleChange("expiryDate", e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* File Upload */}
-        <Card>
-          <CardHeader>
-            <CardTitle>File</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                File Path / URL <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={formData.filePath}
-                onChange={(e) => handleChange("filePath", e.target.value)}
-                placeholder="https://... or /path/to/file.pdf"
-                className={errors.filePath ? "border-red-500" : ""}
-              />
-              {errors.filePath && <p className="text-sm text-red-500 mt-1">{errors.filePath}</p>}
-              <p className="text-sm text-[var(--secondary-text)] mt-1">
-                Enter the file URL or path. File upload functionality coming soon.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Relationships */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Relationships</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                Association
-              </label>
-              <select
-                value={formData.associationId}
-                onChange={(e) => handleChange("associationId", e.target.value)}
-                className="input w-full"
-              >
-                <option value="">Select Association</option>
-                {associations.map((assoc) => (
-                  <option key={assoc.id} value={assoc.id}>
-                    {assoc.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -479,11 +583,11 @@ export default function NewDocumentPage() {
                 </label>
                 <select
                   value={formData.propertyId}
-                  onChange={(e) => handleChange("propertyId", e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, propertyId: e.target.value })}
                   className="input w-full"
                   disabled={!formData.associationId}
                 >
-                  <option value="">Select Property</option>
+                  <option value="">Select property</option>
                   {properties.map((prop) => (
                     <option key={prop.id} value={prop.id}>
                       {prop.name}
@@ -491,56 +595,71 @@ export default function NewDocumentPage() {
                   ))}
                 </select>
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Unit
                 </label>
                 <select
                   value={formData.unitId}
-                  onChange={(e) => handleChange("unitId", e.target.value)}
+                  onChange={(e) => setFormData({ ...formData, unitId: e.target.value })}
                   className="input w-full"
                   disabled={!formData.propertyId}
                 >
-                  <option value="">Select Unit</option>
+                  <option value="">Select unit</option>
                   {units.map((unit) => (
                     <option key={unit.id} value={unit.id}>
-                      Unit {unit.unitNumber}
+                      {unit.unitNumber}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Options */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Options</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isConfidential"
-                checked={formData.isConfidential}
-                onChange={(e) => handleChange("isConfidential", e.target.checked)}
-                className="rounded border-[var(--border-color)]"
-              />
-              <label htmlFor="isConfidential" className="text-sm text-[var(--main-text)]">
-                Confidential Document
-              </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Issue Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.issueDate}
+                  onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Expiry Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.expiryDate}
+                  onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="requiresAcknowledgment"
-                checked={formData.requiresAcknowledgment}
-                onChange={(e) => handleChange("requiresAcknowledgment", e.target.checked)}
-                className="rounded border-[var(--border-color)]"
-              />
-              <label htmlFor="requiresAcknowledgment" className="text-sm text-[var(--main-text)]">
-                Requires Acknowledgment
+
+            <div className="flex gap-6 pt-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isConfidential}
+                  onChange={(e) => setFormData({ ...formData, isConfidential: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Confidential</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.requiresAcknowledgment}
+                  onChange={(e) =>
+                    setFormData({ ...formData, requiresAcknowledgment: e.target.checked })
+                  }
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Requires Acknowledgment</span>
               </label>
             </div>
           </CardContent>
@@ -548,25 +667,30 @@ export default function NewDocumentPage() {
 
         {/* Actions */}
         <div className="flex justify-end gap-4">
-          <Link href="/management/documents">
+          <LinkComponent href="/management/documents">
             <Button variant="outline" type="button">
               Cancel
             </Button>
-          </Link>
+          </LinkComponent>
           <Button
             type="submit"
             className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
-            disabled={isSaving}
+            disabled={isSaving || isUploading}
           >
-            {isSaving ? (
+            {isSaving || isUploading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
+                {isUploading ? "Uploading..." : "Saving..."}
+              </>
+            ) : isEditMode ? (
+              <>
+                <Edit className="h-4 w-4 mr-2" />
+                Save Changes
               </>
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                {isEditMode ? "Save Changes" : "Upload Document"}
+                Upload Document
               </>
             )}
           </Button>
