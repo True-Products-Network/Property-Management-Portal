@@ -86,6 +86,12 @@ export default function NewUnitPage() {
       }
     } catch (error) {
       console.error("Error loading properties:", error);
+    } finally {
+      // Only set loading to false if not in edit mode
+      // In edit mode, loading will be set to false after unit data loads
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
     }
   }
 

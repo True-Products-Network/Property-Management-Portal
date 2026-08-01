@@ -99,6 +99,12 @@ export default function NewPropertyPage() {
       }
     } catch (error) {
       console.error("Error loading associations:", error);
+    } finally {
+      // Only set loading to false if not in edit mode
+      // In edit mode, loading will be set to false after property data loads
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
     }
   }
 
