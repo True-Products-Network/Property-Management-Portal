@@ -938,7 +938,7 @@ export default function AdminIntegrationsPage() {
                   3
                 </span>
                 <span>
-                  Go to Settings → API → Generate Access Token & Refresh Token
+                  Go to Settings → Private Integrations → Create New Integration → Generate Access Token & Refresh Token
                 </span>
               </li>
               <li className="flex items-start gap-3">
