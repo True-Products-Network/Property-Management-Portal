@@ -29,6 +29,8 @@ async function getAdminStats() {
       workflowsResult,
       auditResult,
       ghlStatusResult,
+      portalRolesResult,
+      ghlMappingsResult,
     ] = await Promise.all([
       supabase.from("contacts").select("id", { count: "exact" }),
       supabase.from("contact_roles").select("id", { count: "exact" }),
@@ -37,6 +39,8 @@ async function getAdminStats() {
       supabase.from("workflows").select("id", { count: "exact" }),
       supabase.from("audit_logs").select("id", { count: "exact" }),
       supabase.from("app_settings").select("value").eq("key", "ghl_location_id").single(),
+      supabase.from("portal_roles").select("id", { count: "exact" }),
+      supabase.from("ghl_role_mappings").select("id", { count: "exact" }),
     ]);
 
     // Count unique list types
@@ -50,6 +54,8 @@ async function getAdminStats() {
       workflowCount: workflowsResult.count || 0,
       auditCount: auditResult.count || 0,
       ghlConnected: !!ghlStatusResult.data?.value,
+      portalRoleCount: portalRolesResult.count || 0,
+      ghlMappingCount: ghlMappingsResult.count || 0,
     };
   } catch (error) {
     console.error("Error fetching admin stats:", error);
@@ -61,6 +67,8 @@ async function getAdminStats() {
       workflowCount: 0,
       auditCount: 0,
       ghlConnected: false,
+      portalRoleCount: 0,
+      ghlMappingCount: 0,
     };
   }
 }
@@ -87,14 +95,14 @@ export default async function AdminHomePage() {
       description: "Configure portal roles and access levels",
       href: "/admin/roles",
       icon: Shield,
-      count: "Under Construction",
+      count: `${stats.portalRoleCount} roles`,
     },
     {
       title: "GHL Role Mapping",
       description: "Map GHL Contact Roles to portal permissions",
       href: "/admin/ghl-mapping",
       icon: Workflow,
-      count: "Under Construction",
+      count: `${stats.ghlMappingCount} mappings`,
     },
     {
       title: "Workflow Settings",
