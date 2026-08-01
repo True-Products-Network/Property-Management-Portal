@@ -4,7 +4,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
 import { mapContact } from "./mappers";
-import { mapContact } from "./mappers";
 
 export interface Contact {
   id: string;
