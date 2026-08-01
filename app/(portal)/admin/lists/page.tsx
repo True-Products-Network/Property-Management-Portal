@@ -36,6 +36,7 @@ interface CategoryValue {
   sortOrder: number;
   isActive: boolean;
   recordCount: number;
+  fieldName: string;
 }
 
 interface Category {
@@ -45,6 +46,7 @@ interface Category {
   icon: string;
   values: CategoryValue[];
   isSystem: boolean;
+  fields: string[];
 }
 
 interface FormData {
@@ -176,17 +178,41 @@ export default function CategoryManagementPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          // Merge with definitions to ensure all categories exist
-          const loadedCategories = result.data || [];
-          const mergedCategories = CATEGORY_DEFINITIONS.map((def) => {
-            const existing = loadedCategories.find((c: Category) => c.id === def.id);
-            return {
+          // Group values by record_type and collect unique field_names
+          const categoriesMap = new Map<string, Category>();
+          
+          for (const def of CATEGORY_DEFINITIONS) {
+            categoriesMap.set(def.id, {
               ...def,
-              values: existing?.values || [],
+              values: [],
+              fields: [],
               isSystem: true,
-            };
-          });
-          setCategories(mergedCategories);
+            });
+          }
+          
+          for (const item of result.data || []) {
+            const catId = item.record_type?.toLowerCase().replace(/\s+/g, '_');
+            const category = categoriesMap.get(catId);
+            
+            if (category) {
+              category.values.push({
+                id: item.id,
+                value: item.value,
+                label: item.label,
+                description: item.description,
+                sortOrder: item.sort_order || 0,
+                isActive: item.is_active !== false,
+                recordCount: 0,
+                fieldName: item.field_name,
+              });
+              
+              if (item.field_name && !category.fields.includes(item.field_name)) {
+                category.fields.push(item.field_name);
+              }
+            }
+          }
+          
+          setCategories(Array.from(categoriesMap.values()));
         }
       } else {
         // Use default categories if API fails
@@ -194,6 +220,7 @@ export default function CategoryManagementPage() {
           CATEGORY_DEFINITIONS.map((def) => ({
             ...def,
             values: [],
+            fields: [],
             isSystem: true,
           }))
         );
@@ -204,6 +231,7 @@ export default function CategoryManagementPage() {
         CATEGORY_DEFINITIONS.map((def) => ({
           ...def,
           values: [],
+          fields: [],
           isSystem: true,
         }))
       );
@@ -459,46 +487,53 @@ export default function CategoryManagementPage() {
                     No values defined yet
                   </p>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {category.values
-                      .sort((a, b) => a.sortOrder - b.sortOrder)
-                      .map((value) => (
-                        <div
-                          key={value.id}
-                          className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex flex-col">
-                              <span className="font-medium">{value.label}</span>
-                              <span className="text-xs text-[var(--secondary-text)]">
-                                {value.value}
-                                {value.recordCount > 0 && (
-                                  <span className="ml-2 text-amber-600">
-                                    ({value.recordCount} records)
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                            {!value.isActive && (
-                              <Badge className="bg-gray-100 text-gray-700">
-                                Inactive
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditValue(category.id, value)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRetireValue(category.id, value)}
-                              className={
-                                value.recordCount > 0
+                  <div className="space-y-4 max-h-64 overflow-y-auto">
+                    {category.fields.map((fieldName) => (
+                      <div key={fieldName}>
+                        <p className="text-xs font-medium text-[var(--secondary-text)] uppercase tracking-wider mb-2">
+                          {fieldName}
+                        </p>
+                        <div className="space-y-2">
+                          {category.values
+                            .filter((v) => v.fieldName === fieldName)
+                            .sort((a, b) => a.sortOrder - b.sortOrder)
+                            .map((value) => (
+                              <div
+                                key={value.id}
+                                className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{value.label}</span>
+                                    <span className="text-xs text-[var(--secondary-text)]">
+                                      {value.value}
+                                      {value.recordCount > 0 && (
+                                        <span className="ml-2 text-amber-600">
+                                          ({value.recordCount} records)
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  {!value.isActive && (
+                                    <Badge className="bg-gray-100 text-gray-700">
+                                      Inactive
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditValue(category.id, value)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRetireValue(category.id, value)}
+                                    className={
+                                      value.recordCount > 0
                                   ? "text-amber-600"
                                   : "text-red-500"
                               }
@@ -508,6 +543,9 @@ export default function CategoryManagementPage() {
                           </div>
                         </div>
                       ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
