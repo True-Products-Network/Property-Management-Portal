@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -154,18 +155,28 @@ export default function UserMaintenancePage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">
-            User Maintenance
-          </h1>
-          <p className="text-[var(--secondary-text)] mt-1">
-            Manage portal users, invitations, and access
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Admin
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+              User Maintenance
+            </h1>
+            <p className="text-[var(--secondary-text)] mt-1">
+              Manage portal users, invitations, and access
+            </p>
+          </div>
         </div>
-        <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Invite User
-        </Button>
+        <Link href="/admin/users/invite">
+          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Invite User
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}

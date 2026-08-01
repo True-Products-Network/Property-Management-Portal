@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare } from "lucide-react";
+import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 interface BrandSettings {
   brand_logo_url: string;
@@ -119,11 +120,19 @@ export default function BrandingPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--main-text)]">Brand Customization</h1>
-        <p className="text-[var(--secondary-text)] mt-1">
-          Customize the appearance of your property management portal
-        </p>
+      <div className="flex items-center gap-4">
+        <Link href="/admin">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Admin
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Brand Customization</h1>
+          <p className="text-[var(--secondary-text)] mt-1">
+            Customize the appearance of your property management portal
+          </p>
+        </div>
       </div>
 
       {/* Preview Card */}

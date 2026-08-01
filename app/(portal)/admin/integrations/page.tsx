@@ -21,7 +21,9 @@ import {
   Clock,
   Calendar,
   Save,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 interface GhlConnectionStatus {
   connected: boolean;
@@ -254,15 +256,23 @@ export default function AdminIntegrationsPage() {
   const tokenStatus = getTokenExpiryStatus(ghlStatus?.lastSync);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--main-text)]">
-          Integrations
-        </h1>
-        <p className="text-[var(--secondary-text)] mt-1">
-          Manage connections to external services
-        </p>
+      <div className="flex items-center gap-4">
+        <Link href="/admin">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Admin
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">
+            Integrations
+          </h1>
+          <p className="text-[var(--secondary-text)] mt-1">
+            Manage connections to external services
+          </p>
+        </div>
       </div>
 
       {/* GHL Integration Card */}

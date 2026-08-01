@@ -11,7 +11,60 @@ import {
   FileText,
   Activity,
   AlertTriangle,
+  Palette,
+  Link,
+  CheckSquare,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+
+async function getAdminStats() {
+  try {
+    const supabase = await createClient();
+    
+    // Get counts from various tables
+    const [
+      usersResult,
+      rolesResult,
+      dropdownsResult,
+      listsResult,
+      workflowsResult,
+      auditResult,
+      ghlStatusResult,
+    ] = await Promise.all([
+      supabase.from("contacts").select("id", { count: "exact" }),
+      supabase.from("contact_roles").select("id", { count: "exact" }),
+      supabase.from("dropdown_settings").select("id", { count: "exact" }),
+      supabase.from("dropdown_settings").select("record_type", { count: "exact" }).limit(1000),
+      supabase.from("workflows").select("id", { count: "exact" }),
+      supabase.from("audit_logs").select("id", { count: "exact" }),
+      supabase.from("app_settings").select("value").eq("key", "ghl_location_id").single(),
+    ]);
+
+    // Count unique list types
+    const uniqueLists = new Set(listsResult.data?.map((d: { record_type: string }) => d.record_type) || []);
+
+    return {
+      userCount: usersResult.count || 0,
+      roleCount: rolesResult.count || 0,
+      dropdownCount: dropdownsResult.count || 0,
+      listCount: uniqueLists.size,
+      workflowCount: workflowsResult.count || 0,
+      auditCount: auditResult.count || 0,
+      ghlConnected: !!ghlStatusResult.data?.value,
+    };
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
+    return {
+      userCount: 0,
+      roleCount: 0,
+      dropdownCount: 0,
+      listCount: 0,
+      workflowCount: 0,
+      auditCount: 0,
+      ghlConnected: false,
+    };
+  }
+}
 
 export default async function AdminHomePage() {
   const user = await getSession();
@@ -20,55 +73,71 @@ export default async function AdminHomePage() {
     redirect("/access-denied");
   }
 
+  const stats = await getAdminStats();
+
   const adminCards = [
     {
       title: "User Maintenance",
       description: "Invite, manage, and suspend portal users",
       href: "/admin/users",
       icon: Users,
-      count: "24 users",
+      count: `${stats.userCount} users`,
     },
     {
       title: "Roles & Permissions",
       description: "Configure portal roles and access levels",
       href: "/admin/roles",
       icon: Shield,
-      count: "6 roles",
+      count: "Under Construction",
     },
     {
       title: "GHL Role Mapping",
       description: "Map GHL Contact Roles to portal permissions",
       href: "/admin/ghl-mapping",
       icon: Workflow,
-      count: "12 mappings",
+      count: "Under Construction",
     },
     {
       title: "Workflow Settings",
       description: "Configure workflow triggers and templates",
       href: "/admin/workflows",
       icon: Activity,
-      count: "28 workflows",
+      count: "Under Construction",
     },
     {
       title: "Integrations",
       description: "Manage GHL and payment processor connections",
       href: "/admin/integrations",
       icon: Settings,
-      count: "2 connected",
+      count: stats.ghlConnected ? "GHL Connected" : "Not Connected",
     },
     {
       title: "System Lists",
       description: "Manage dropdown values and categories",
       href: "/admin/lists",
       icon: List,
-      count: "15 lists",
+      count: `${stats.listCount} lists`,
+    },
+    {
+      title: "Dropdown Settings",
+      description: "Configure dropdown values and options",
+      href: "/admin/dropdowns",
+      icon: CheckSquare,
+      count: `${stats.dropdownCount} options`,
+    },
+    {
+      title: "Brand Customization",
+      description: "Customize logo, colors, and white-label settings",
+      href: "/admin/branding",
+      icon: Palette,
+      count: "Customize",
     },
     {
       title: "Audit Log",
       description: "View system activity and security events",
       href: "/admin/audit",
       icon: FileText,
-      count: "1,247 events",
+      count: "Under Construction",
     },
   ];
 
@@ -89,12 +158,14 @@ export default async function AdminHomePage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <Settings className="h-5 w-5 text-green-600" />
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stats.ghlConnected ? 'bg-green-100' : 'bg-red-100'}`}>
+                <Settings className={`h-5 w-5 ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`} />
               </div>
               <div>
                 <p className="text-sm text-[var(--secondary-text)]">GHL Connection</p>
-                <p className="font-medium text-green-600">Connected</p>
+                <p className={`font-medium ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`}>
+                  {stats.ghlConnected ? 'Connected' : 'Not Connected'}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -150,37 +221,6 @@ export default async function AdminHomePage() {
           </a>
         ))}
       </div>
-
-      {/* Recent Admin Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Admin Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {[
-              { action: "User invited", detail: "alex.morgan@example.com", time: "5 min ago", user: "Admin" },
-              { action: "Role mapping updated", detail: "Board Member permissions", time: "1 hour ago", user: "Admin" },
-              { action: "Workflow configured", detail: "MNT-01 New Maintenance Request", time: "2 hours ago", user: "Admin" },
-              { action: "Integration tested", detail: "GHL connection verified", time: "3 hours ago", user: "Admin" },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between py-3 border-b border-[var(--border-color)] last:border-0"
-              >
-                <div>
-                  <p className="text-sm font-medium text-[var(--main-text)]">{item.action}</p>
-                  <p className="text-xs text-[var(--secondary-text)]">{item.detail}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-[var(--secondary-text)]">{item.time}</p>
-                  <p className="text-xs text-[var(--secondary-text)]">by {item.user}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

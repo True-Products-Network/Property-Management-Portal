@@ -13,7 +13,9 @@ import {
   GripVertical,
   ChevronDown,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 interface DropdownValue {
   id: string;
@@ -187,12 +189,21 @@ export default function AdminDropdownsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[var(--main-text)]">Dropdown Settings</h1>
-        <p className="text-[var(--secondary-text)] mt-1">
-          Manage dropdown values for all record types across the portal
-        </p>
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/admin">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Admin
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Dropdown Settings</h1>
+          <p className="text-[var(--secondary-text)] mt-1">
+            Manage dropdown values for all record types across the portal
+          </p>
+        </div>
       </div>
 
       {error && (
