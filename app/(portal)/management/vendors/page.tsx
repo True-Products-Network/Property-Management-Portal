@@ -20,10 +20,12 @@ export default function VendorsPage() {
           <h1 className="text-2xl font-semibold text-[var(--main-text)]">Vendors</h1>
           <p className="text-[var(--secondary-text)] mt-1">Manage vendor relationships and contracts</p>
         </div>
-        <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Vendor
-        </Button>
+        <Link href="/management/vendors/new">
+          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Vendor
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
