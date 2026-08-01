@@ -128,10 +128,10 @@ export default async function AdminHomePage() {
     },
     {
       title: "Category Management",
-      description: "Manage Categories",
+      description: "Manage dropdown categories and values",
       href: "/admin/lists",
       icon: List,
-      count: "Under Construction",
+      count: `${stats.listCount} categories`,
     },
     {
       title: "Dropdown Settings",
