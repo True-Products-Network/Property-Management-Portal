@@ -14,6 +14,19 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowLeft,
+  Search,
+  MoreVertical,
+  CheckCircle2,
+  XCircle,
+  Edit2,
+  RefreshCw,
+  Building2,
+  Users,
+  Wrench,
+  ClipboardCheck,
+  FileText,
+  Scale,
+  Tag,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -28,60 +41,87 @@ interface DropdownValue {
   isDefault: boolean;
 }
 
-const RECORD_TYPES = [
+interface RecordType {
+  id: string;
+  label: string;
+  icon: string;
+  fields: string[];
+}
+
+const RECORD_TYPES: RecordType[] = [
   {
     id: "Association Company",
     label: "Association Company",
+    icon: "building",
     fields: ["Association Status", "Association Type"],
   },
   {
     id: "People",
     label: "People",
+    icon: "users",
     fields: ["Contact Role(s)", "Board Position", "Preferred Contact Method"],
   },
   {
     id: "Vendor Company",
     label: "Vendor Company",
+    icon: "truck",
     fields: ["Vendor Status", "Vendor Type"],
   },
   {
     id: "Property",
     label: "Property",
+    icon: "building",
     fields: ["Property Status", "Property Type"],
   },
   {
     id: "Unit",
     label: "Unit",
+    icon: "home",
     fields: ["Occupancy Status", "Rental Status"],
   },
   {
     id: "Maintenance Request",
     label: "Maintenance Request",
+    icon: "wrench",
     fields: ["Category", "Urgency", "Current Status"],
   },
   {
     id: "Inspection",
     label: "Inspection",
+    icon: "clipboard",
     fields: ["Overall Result", "Inspection Status"],
   },
   {
     id: "Document Record",
     label: "Document Record",
+    icon: "file",
     fields: ["Document Type"],
   },
   {
     id: "Compliance Matter",
     label: "Compliance Matter",
+    icon: "scale",
     fields: ["Compliance Status"],
   },
 ];
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  building: Building2,
+  users: Users,
+  truck: Tag,
+  home: Tag,
+  wrench: Wrench,
+  clipboard: ClipboardCheck,
+  file: FileText,
+  scale: Scale,
+};
 
 export default function AdminDropdownsPage() {
   const [dropdowns, setDropdowns] = useState<Record<string, Record<string, DropdownValue[]>>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [expandedTypes, setExpandedTypes] = useState<Record<string, boolean>>({});
-  const [expandedFields, setExpandedFields] = useState<Record<string, boolean>>({});
   const [editingValue, setEditingValue] = useState<DropdownValue | null>(null);
   const [newValue, setNewValue] = useState({ value: "", label: "" });
   const [activeField, setActiveField] = useState<{ type: string; field: string } | null>(null);
@@ -180,6 +220,48 @@ export default function AdminDropdownsPage() {
     }
   }
 
+  function toggleType(typeId: string) {
+    setExpandedTypes((prev) => ({
+      ...prev,
+      [typeId]: !prev[typeId],
+    }));
+  }
+
+  function expandAll() {
+    const allExpanded: Record<string, boolean> = {};
+    RECORD_TYPES.forEach((type) => {
+      allExpanded[type.id] = true;
+    });
+    setExpandedTypes(allExpanded);
+  }
+
+  function collapseAll() {
+    setExpandedTypes({});
+  }
+
+  const filteredTypes = RECORD_TYPES.filter((type) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    if (type.label.toLowerCase().includes(query)) return true;
+    if (type.fields.some((f) => f.toLowerCase().includes(query))) return true;
+    // Check values
+    const typeDropdowns = dropdowns[type.id];
+    if (typeDropdowns) {
+      for (const field of type.fields) {
+        const values = typeDropdowns[field] || [];
+        if (values.some((v) => v.label.toLowerCase().includes(query))) return true;
+      }
+    }
+    return false;
+  });
+
+  const totalValues = Object.values(dropdowns).reduce(
+    (sum, typeData) =>
+      sum +
+      Object.values(typeData).reduce((fieldSum, values) => fieldSum + values.length, 0),
+    0
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -191,19 +273,60 @@ export default function AdminDropdownsPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/admin">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Admin
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Dropdown Settings</h1>
-          <p className="text-[var(--secondary-text)] mt-1">
-            Manage dropdown values for all record types across the portal
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/admin">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Admin
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Dropdown Settings</h1>
+            <p className="text-[var(--secondary-text)] mt-1">
+              Manage dropdown values for all record types
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-[var(--teal)]/10 rounded-xl flex items-center justify-center">
+              <Tag className="h-6 w-6 text-[var(--teal)]" />
+            </div>
+            <div>
+              <p className="text-sm text-[var(--secondary-text)]">Record Types</p>
+              <p className="text-2xl font-semibold">{RECORD_TYPES.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-[var(--secondary-text)]">Total Values</p>
+              <p className="text-2xl font-semibold">{totalValues}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+              <Building2 className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-[var(--secondary-text)]">Fields</p>
+              <p className="text-2xl font-semibold">
+                {RECORD_TYPES.reduce((sum, t) => sum + t.fields.length, 0)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {error && (
@@ -212,167 +335,227 @@ export default function AdminDropdownsPage() {
         </div>
       )}
 
-      <div className="space-y-4">
-        {RECORD_TYPES.map((recordType) => (
-          <Card key={recordType.id}>
-            <CardHeader className="pb-3">
-              <button
-                onClick={() =>
-                  setExpandedTypes((prev) => ({
-                    ...prev,
-                    [recordType.id]: !prev[recordType.id],
-                  }))
-                }
-                className="flex items-center justify-between w-full"
+      {/* Search and Controls */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="relative flex-1 min-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
+          <Input
+            placeholder="Search record types, fields, or values..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={expandAll}>
+            Expand All
+          </Button>
+          <Button variant="outline" size="sm" onClick={collapseAll}>
+            Collapse All
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadDropdowns}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Record Types List */}
+      <div className="space-y-3">
+        {filteredTypes.map((recordType) => {
+          const Icon = ICON_MAP[recordType.icon] || Tag;
+          const isExpanded = expandedTypes[recordType.id];
+          const typeValues = dropdowns[recordType.id] || {};
+          const totalTypeValues = Object.values(typeValues).reduce(
+            (sum, vals) => sum + vals.length,
+            0
+          );
+
+          return (
+            <Card key={recordType.id} className="overflow-hidden">
+              {/* Record Type Header */}
+              <div
+                className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--page-background)] transition-colors"
+                onClick={() => toggleType(recordType.id)}
               >
-                <CardTitle className="text-lg">{recordType.label}</CardTitle>
-                {expandedTypes[recordType.id] ? (
-                  <ChevronDown className="h-5 w-5 text-[var(--secondary-text)]" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
-                )}
-              </button>
-            </CardHeader>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center">
+                    <Icon className="h-5 w-5 text-[var(--teal)]" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-[var(--main-text)]">{recordType.label}</h3>
+                    <p className="text-sm text-[var(--secondary-text)]">
+                      {recordType.fields.length} fields • {totalTypeValues} values
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isExpanded ? (
+                    <ChevronDown className="h-5 w-5 text-[var(--secondary-text)]" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
+                  )}
+                </div>
+              </div>
 
-            {expandedTypes[recordType.id] && (
-              <CardContent className="space-y-4">
-                {recordType.fields.map((fieldName) => {
-                  const fieldKey = `${recordType.id}-${fieldName}`;
-                  const values = dropdowns[recordType.id]?.[fieldName] || [];
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="border-t border-[var(--border-color)]">
+                  <div className="p-4 space-y-4">
+                    {recordType.fields.map((fieldName) => {
+                      const values = typeValues[fieldName] || [];
+                      const activeValues = values.filter((v) => v.isActive);
 
-                  return (
-                    <div key={fieldKey} className="border border-[var(--border-color)] rounded-lg p-4">
-                      <button
-                        onClick={() =>
-                          setExpandedFields((prev) => ({
-                            ...prev,
-                            [fieldKey]: !prev[fieldKey],
-                          }))
-                        }
-                        className="flex items-center justify-between w-full mb-3"
-                      >
-                        <h3 className="font-medium text-[var(--main-text)]">{fieldName}</h3>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">{values.length} values</Badge>
-                          {expandedFields[fieldKey] ? (
-                            <ChevronDown className="h-4 w-4 text-[var(--secondary-text)]" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-[var(--secondary-text)]" />
-                          )}
-                        </div>
-                      </button>
-
-                      {expandedFields[fieldKey] && (
-                        <div className="space-y-2">
-                          {values.map((value) => (
-                            <div
-                              key={value.id}
-                              className="flex items-center gap-3 p-2 bg-[var(--page-background)] rounded-lg"
-                            >
-                              <GripVertical className="h-4 w-4 text-[var(--secondary-text)] cursor-move" />
-
-                              {editingValue?.id === value.id ? (
-                                <>
-                                  <Input
-                                    value={editingValue.value}
-                                    onChange={(e) =>
-                                      setEditingValue({ ...editingValue, value: e.target.value })
-                                    }
-                                    className="w-32"
-                                    placeholder="Value"
-                                  />
-                                  <Input
-                                    value={editingValue.label}
-                                    onChange={(e) =>
-                                      setEditingValue({ ...editingValue, label: e.target.value })
-                                    }
-                                    className="flex-1"
-                                    placeholder="Label"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleSave(editingValue)}
-                                  >
-                                    <Save className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setEditingValue(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="w-32 font-mono text-sm text-[var(--secondary-text)]">
-                                    {value.value}
-                                  </span>
-                                  <span className="flex-1">{value.label}</span>
-                                  {value.isDefault && (
-                                    <Badge className="bg-[var(--teal)] text-white">Default</Badge>
-                                  )}
-                                  <Badge variant={value.isActive ? "default" : "secondary"}>
-                                    {value.isActive ? "Active" : "Inactive"}
-                                  </Badge>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => setEditingValue(value)}
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleToggleActive(value.id, !value.isActive)}
-                                  >
-                                    {value.isActive ? "Deactivate" : "Activate"}
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-red-600 hover:text-red-700"
-                                    onClick={() => handleDelete(value.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                      return (
+                        <div
+                          key={fieldName}
+                          className="bg-[var(--page-background)] rounded-lg p-4"
+                        >
+                          {/* Field Header */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <h4 className="font-medium text-[var(--main-text)]">{fieldName}</h4>
+                              <p className="text-sm text-[var(--secondary-text)]">
+                                {activeValues.length} active
+                                {values.length > activeValues.length &&
+                                  ` • ${values.length - activeValues.length} inactive`}
+                              </p>
                             </div>
-                          ))}
+                          </div>
 
-                          {/* Add new value */}
+                          {/* Values Grid */}
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {values
+                              .sort((a, b) => a.sortOrder - b.sortOrder)
+                              .map((value) => (
+                                <div
+                                  key={value.id}
+                                  className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                                    value.isActive
+                                      ? "bg-white border-[var(--border-color)] hover:border-[var(--teal)]"
+                                      : "bg-gray-100 border-gray-200 opacity-60"
+                                  }`}
+                                >
+                                  {editingValue?.id === value.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        value={editingValue.label}
+                                        onChange={(e) =>
+                                          setEditingValue({
+                                            ...editingValue,
+                                            label: e.target.value,
+                                          })
+                                        }
+                                        className="w-32 h-7 text-sm"
+                                        autoFocus
+                                      />
+                                      <Button
+                                        size="sm"
+                                        className="h-7 px-2"
+                                        onClick={() => handleSave(editingValue)}
+                                      >
+                                        <Save className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 px-2"
+                                        onClick={() => setEditingValue(null)}
+                                      >
+                                        <XCircle className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm font-medium">{value.label}</span>
+                                      {value.isDefault && (
+                                        <Badge className="bg-[var(--teal)] text-white text-xs px-1.5 py-0">
+                                          Default
+                                        </Badge>
+                                      )}
+                                      {!value.isActive && (
+                                        <Badge className="bg-gray-200 text-gray-600 text-xs px-1.5 py-0">
+                                          Inactive
+                                        </Badge>
+                                      )}
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingValue(value);
+                                          }}
+                                        >
+                                          <Edit2 className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleActive(value.id, !value.isActive);
+                                          }}
+                                        >
+                                          {value.isActive ? (
+                                            <XCircle className="h-3 w-3 text-amber-500" />
+                                          ) : (
+                                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-red-500"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(value.id);
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+
+                          {/* Add New Value */}
                           {activeField?.type === recordType.id &&
                           activeField?.field === fieldName ? (
-                            <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg">
+                            <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-[var(--teal)]">
                               <Input
                                 value={newValue.value}
                                 onChange={(e) =>
                                   setNewValue({ ...newValue, value: e.target.value })
                                 }
-                                className="w-32"
-                                placeholder="Value (key)"
+                                className="w-32 h-8 text-sm"
+                                placeholder="Code"
                               />
                               <Input
                                 value={newValue.label}
                                 onChange={(e) =>
                                   setNewValue({ ...newValue, label: e.target.value })
                                 }
-                                className="flex-1"
-                                placeholder="Label (display)"
+                                className="flex-1 h-8 text-sm"
+                                placeholder="Display label"
                               />
                               <Button
                                 size="sm"
+                                className="h-8"
                                 onClick={() => handleCreate(recordType.id, fieldName)}
                                 disabled={!newValue.value || !newValue.label}
                               >
                                 <Save className="h-4 w-4 mr-1" />
-                                Save
+                                Add
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
+                                className="h-8"
                                 onClick={() => {
                                   setActiveField(null);
                                   setNewValue({ value: "", label: "" });
@@ -395,14 +578,14 @@ export default function AdminDropdownsPage() {
                             </Button>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            )}
-          </Card>
-        ))}
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
