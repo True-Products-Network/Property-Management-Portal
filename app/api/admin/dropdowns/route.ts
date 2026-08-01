@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
 
     const result = await getDropdownSettingsGrouped();
 
+    console.log("Dropdown settings result:", result.success, "data keys:", result.data ? Object.keys(result.data) : 'no data');
+
     if (!result.success) {
       console.error("Dropdown settings error:", result.error);
       return NextResponse.json(
