@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +118,11 @@ export default function AdminIntegrationsPage() {
   });
   const [isSavingPayment, setIsSavingPayment] = useState(false);
   const [isTestingWebhook, setIsTestingWebhook] = useState(false);
-  const [activeTab, setActiveTab] = useState<"ghl" | "payment">("ghl");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"ghl" | "payment">(() => {
+    const tab = searchParams.get("tab");
+    return tab === "payment" ? "payment" : "ghl";
+  });
 
   // Fetch GHL connection status and calendar settings
   useEffect(() => {

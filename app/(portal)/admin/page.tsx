@@ -170,34 +170,38 @@ export default async function AdminHomePage() {
 
       {/* System Status */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stats.ghlConnected ? 'bg-green-100' : 'bg-red-100'}`}>
-                <Settings className={`h-5 w-5 ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`} />
+        <Link href="/admin/integrations">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stats.ghlConnected ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <Settings className={`h-5 w-5 ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--secondary-text)]">GHL Connection</p>
+                  <p className={`font-medium ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`}>
+                    {stats.ghlConnected ? 'Connected' : 'Not Connected'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-[var(--secondary-text)]">GHL Connection</p>
-                <p className={`font-medium ${stats.ghlConnected ? 'text-green-600' : 'text-red-600'}`}>
-                  {stats.ghlConnected ? 'Connected' : 'Not Connected'}
-                </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/integrations?tab=payment">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-[var(--secondary-text)]">Payment Processor</p>
+                  <p className="font-medium text-yellow-600">Not Configured</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[var(--secondary-text)]">Payment Processor</p>
-                <p className="font-medium text-yellow-600">Not Configured</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
