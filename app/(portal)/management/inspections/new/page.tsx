@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, ClipboardCheck, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, Save, ClipboardCheck, Loader2, Pencil, Calendar } from "lucide-react";
 import Link from "next/link";
 
 interface Property {
@@ -39,6 +39,12 @@ interface FormData {
   followUpRequired: boolean;
 }
 
+interface CalendarSettings {
+  enable_calendar_integration: string;
+  ghl_inspection_calendar_url: string;
+  calendar_provider: string;
+}
+
 const INSPECTION_TYPES = [
   { value: "annual", label: "Annual Inspection" },
   { value: "move_in", label: "Move-In Inspection" },
@@ -67,6 +73,8 @@ export default function NewInspectionPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [calendarSettings, setCalendarSettings] = useState<CalendarSettings | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     propertyId: "",
     unitId: "",
@@ -84,6 +92,7 @@ export default function NewInspectionPage() {
 
   useEffect(() => {
     loadInitialData();
+    loadCalendarSettings();
   }, []);
 
   useEffect(() => {
@@ -118,6 +127,12 @@ export default function NewInspectionPage() {
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
+    } finally {
+      // Only set loading to false if not in edit mode
+      // In edit mode, loading will be set to false after inspection data loads
+      if (!isEditMode) {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -164,6 +179,28 @@ export default function NewInspectionPage() {
     } catch (error) {
       console.error("Error loading units:", error);
     }
+  }
+
+  async function loadCalendarSettings() {
+    try {
+      const response = await fetch("/api/settings?category=calendar");
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setCalendarSettings(result.data);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading calendar settings:", error);
+    }
+  }
+
+  function handleScheduleViaCalendar() {
+    if (!calendarSettings?.ghl_inspection_calendar_url) {
+      alert("Calendar URL not configured. Please contact your administrator.");
+      return;
+    }
+    setShowCalendarModal(true);
   }
 
   function validateForm(): boolean {
@@ -383,6 +420,31 @@ export default function NewInspectionPage() {
               </div>
             </div>
 
+            {/* Calendar Integration */}
+            {calendarSettings?.enable_calendar_integration === "true" && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">
+                      Schedule via Calendar
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Let the inspector book their preferred time slot
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleScheduleViaCalendar}
+                    className="bg-white border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Open Calendar
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                 Inspector / Vendor
@@ -500,6 +562,42 @@ export default function NewInspectionPage() {
           </Button>
         </div>
       </form>
+
+      {/* Calendar Modal */}
+      {showCalendarModal && calendarSettings?.ghl_inspection_calendar_url && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h3 className="text-lg font-semibold">Schedule Inspection</h3>
+                <p className="text-sm text-gray-500">
+                  Select a date and time. The booking will sync back to this inspection record.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCalendarModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="flex-1 p-0 overflow-hidden">
+              <iframe
+                src={calendarSettings.ghl_inspection_calendar_url}
+                className="w-full h-full border-0"
+                allow="fullscreen"
+              />
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <p className="text-xs text-gray-500">
+                After booking, the selected date will automatically update in this inspection record.
+                Make sure to save the inspection after closing this calendar.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

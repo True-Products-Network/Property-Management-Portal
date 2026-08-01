@@ -19,6 +19,8 @@ import {
   Eye,
   EyeOff,
   Clock,
+  Calendar,
+  Save,
 } from "lucide-react";
 
 interface GhlConnectionStatus {
@@ -36,6 +38,14 @@ interface GhlConnectionStatus {
   error?: string;
 }
 
+interface CalendarSettings {
+  ghl_inspection_calendar_id: string;
+  ghl_inspection_calendar_url: string;
+  ghl_inspection_calendar_embed: string;
+  calendar_provider: string;
+  enable_calendar_integration: string;
+}
+
 export default function AdminIntegrationsPage() {
   const [ghlStatus, setGhlStatus] = useState<GhlConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,10 +57,21 @@ export default function AdminIntegrationsPage() {
   const [accessToken, setAccessToken] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
   const [showTokens, setShowTokens] = useState(false);
+  
+  // Calendar settings
+  const [calendarSettings, setCalendarSettings] = useState<CalendarSettings>({
+    ghl_inspection_calendar_id: "",
+    ghl_inspection_calendar_url: "",
+    ghl_inspection_calendar_embed: "",
+    calendar_provider: "ghl",
+    enable_calendar_integration: "false",
+  });
+  const [isSavingCalendar, setIsSavingCalendar] = useState(false);
 
-  // Fetch GHL connection status
+  // Fetch GHL connection status and calendar settings
   useEffect(() => {
     fetchGhlStatus();
+    fetchCalendarSettings();
   }, []);
 
   async function fetchGhlStatus() {
@@ -64,6 +85,52 @@ export default function AdminIntegrationsPage() {
       console.error("Error fetching GHL status:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function fetchCalendarSettings() {
+    try {
+      const response = await fetch("/api/admin/settings?category=calendar");
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          const settings: Partial<CalendarSettings> = {};
+          result.data.forEach((setting: { key: keyof CalendarSettings; value: string }) => {
+            settings[setting.key] = setting.value;
+          });
+          setCalendarSettings(prev => ({ ...prev, ...settings }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching calendar settings:", error);
+    }
+  }
+
+  async function saveCalendarSettings() {
+    setIsSavingCalendar(true);
+    try {
+      const settingsToSave = [
+        { key: "ghl_inspection_calendar_id", value: calendarSettings.ghl_inspection_calendar_id },
+        { key: "ghl_inspection_calendar_url", value: calendarSettings.ghl_inspection_calendar_url },
+        { key: "ghl_inspection_calendar_embed", value: calendarSettings.ghl_inspection_calendar_embed },
+        { key: "calendar_provider", value: calendarSettings.calendar_provider },
+        { key: "enable_calendar_integration", value: calendarSettings.enable_calendar_integration },
+      ];
+
+      for (const setting of settingsToSave) {
+        await fetch("/api/admin/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(setting),
+        });
+      }
+
+      alert("Calendar settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving calendar settings:", error);
+      alert("Failed to save calendar settings");
+    } finally {
+      setIsSavingCalendar(false);
     }
   }
 
@@ -482,6 +549,165 @@ export default function AdminIntegrationsPage() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Calendar Integration Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-[var(--teal)]" />
+            Calendar Integration
+          </CardTitle>
+          <CardDescription>
+            Configure GHL Calendar for scheduling inspections and appointments
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Enable Calendar Integration */}
+          <div className="flex items-center justify-between p-4 bg-[var(--page-background)] rounded-lg">
+            <div>
+              <p className="font-medium">Enable Calendar Integration</p>
+              <p className="text-sm text-gray-500">
+                Allow users to schedule inspections via integrated calendar
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={calendarSettings.enable_calendar_integration === "true"}
+                onChange={(e) =>
+                  setCalendarSettings((prev) => ({
+                    ...prev,
+                    enable_calendar_integration: e.target.checked ? "true" : "false",
+                  }))
+                }
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--teal)]"></div>
+            </label>
+          </div>
+
+          {calendarSettings.enable_calendar_integration === "true" && (
+            <div className="space-y-4">
+              {/* Calendar Provider */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Calendar Provider
+                </label>
+                <select
+                  value={calendarSettings.calendar_provider}
+                  onChange={(e) =>
+                    setCalendarSettings((prev) => ({
+                      ...prev,
+                      calendar_provider: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white"
+                >
+                  <option value="ghl">GoHighLevel (GHL)</option>
+                  <option value="calendly">Calendly</option>
+                  <option value="acuity">Acuity Scheduling</option>
+                  <option value="custom">Custom/Other</option>
+                </select>
+              </div>
+
+              {/* GHL Calendar ID */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  GHL Calendar ID
+                </label>
+                <Input
+                  type="text"
+                  value={calendarSettings.ghl_inspection_calendar_id}
+                  onChange={(e) =>
+                    setCalendarSettings((prev) => ({
+                      ...prev,
+                      ghl_inspection_calendar_id: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g., CAlxxxxxxxxxxxxxxxx"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Found in GHL → Scheduling → Calendar Settings → Calendar ID
+                </p>
+              </div>
+
+              {/* Calendar Booking URL */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Calendar Booking URL
+                </label>
+                <Input
+                  type="url"
+                  value={calendarSettings.ghl_inspection_calendar_url}
+                  onChange={(e) =>
+                    setCalendarSettings((prev) => ({
+                      ...prev,
+                      ghl_inspection_calendar_url: e.target.value,
+                    }))
+                  }
+                  placeholder="https://api.leadconnectorhq.com/widget/booking/..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  The direct booking link or widget URL for your calendar
+                </p>
+              </div>
+
+              {/* Embed Code (Optional) */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Embed Code (Optional)
+                </label>
+                <textarea
+                  value={calendarSettings.ghl_inspection_calendar_embed}
+                  onChange={(e) =>
+                    setCalendarSettings((prev) => ({
+                      ...prev,
+                      ghl_inspection_calendar_embed: e.target.value,
+                    }))
+                  }
+                  placeholder="<iframe src=... or <script..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  HTML embed code if you want to embed the calendar directly (instead of popup)
+                </p>
+              </div>
+
+              {/* Webhook Info */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">
+                  Webhook Configuration
+                </p>
+                <p className="text-xs text-blue-700 mb-2">
+                  To automatically sync bookings back to the portal, configure this webhook URL in your GHL Calendar:
+                </p>
+                <code className="block p-2 bg-white rounded text-xs font-mono break-all">
+                  {typeof window !== "undefined" ? `${window.location.origin}/api/webhooks/ghl/calendar` : "https://your-domain.com/api/webhooks/ghl/calendar"}
+                </code>
+                <p className="text-xs text-blue-600 mt-2">
+                  GHL → Settings → Calendars → [Your Calendar] → Webhooks → Add Endpoint
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4 border-t">
+            <Button
+              onClick={saveCalendarSettings}
+              disabled={isSavingCalendar}
+              className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+            >
+              {isSavingCalendar ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Calendar Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
