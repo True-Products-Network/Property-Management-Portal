@@ -34,6 +34,8 @@ export async function GET(request: Request) {
       "calendar_provider",
       "enable_calendar_integration",
       "ghl_inspection_calendar_url",
+      "ghl_chat_widget_code",
+      "enable_live_chat",
     ];
     
     query = query.in("key", allowedKeys);

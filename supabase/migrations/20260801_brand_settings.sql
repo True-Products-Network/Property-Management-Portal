@@ -6,5 +6,7 @@ INSERT INTO app_settings (key, value, description, category) VALUES
     ('brand_name_line2', 'Property Management', 'Company name - second line (tagline/subtitle)', 'branding'),
     ('brand_primary_color', '#0d3b66', 'Primary brand color (hex)', 'branding'),
     ('brand_secondary_color', '#f4d35e', 'Secondary brand color (hex)', 'branding'),
-    ('brand_favicon_url', '', 'URL to favicon image', 'branding')
+    ('brand_favicon_url', '', 'URL to favicon image', 'branding'),
+    ('ghl_chat_widget_code', '', 'GHL or other chat widget embed code', 'branding'),
+    ('enable_live_chat', 'false', 'Enable live chat widget on help page', 'branding')
 ON CONFLICT (key) DO NOTHING;

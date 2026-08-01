@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Palette, Image, Type, Save, Building2 } from "lucide-react";
+import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare } from "lucide-react";
 
 interface BrandSettings {
   brand_logo_url: string;
@@ -14,6 +14,8 @@ interface BrandSettings {
   brand_primary_color: string;
   brand_secondary_color: string;
   brand_favicon_url: string;
+  ghl_chat_widget_code: string;
+  enable_live_chat: string;
 }
 
 export default function BrandingPage() {
@@ -25,6 +27,8 @@ export default function BrandingPage() {
     brand_primary_color: "#0d3b66",
     brand_secondary_color: "#f4d35e",
     brand_favicon_url: "",
+    ghl_chat_widget_code: "",
+    enable_live_chat: "false",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,6 +72,8 @@ export default function BrandingPage() {
         { key: "brand_primary_color", value: settings.brand_primary_color },
         { key: "brand_secondary_color", value: settings.brand_secondary_color },
         { key: "brand_favicon_url", value: settings.brand_favicon_url },
+        { key: "ghl_chat_widget_code", value: settings.ghl_chat_widget_code },
+        { key: "enable_live_chat", value: settings.enable_live_chat },
       ];
 
       for (const setting of settingsToSave) {
@@ -344,6 +350,66 @@ export default function BrandingPage() {
                 placeholder="https://your-cdn.com/favicon.ico"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Chat Widget */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-[var(--teal)]" />
+              Live Chat Widget
+            </CardTitle>
+            <CardDescription>
+              Add GHL or other chat widget code for customer support
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg">
+              <div>
+                <p className="font-medium">Enable Live Chat</p>
+                <p className="text-sm text-gray-500">
+                  Show chat widget on help page
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.enable_live_chat === "true"}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      enable_live_chat: e.target.checked ? "true" : "false",
+                    }))
+                  }
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--teal)]"></div>
+              </label>
+            </div>
+
+            {settings.enable_live_chat === "true" && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Chat Widget Code
+                </label>
+                <textarea
+                  value={settings.ghl_chat_widget_code}
+                  onChange={(e) => setSettings(prev => ({ ...prev, ghl_chat_widget_code: e.target.value }))}
+                  placeholder="<script src='...'></script>"
+                  rows={6}
+                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Paste your GHL or other chat provider embed code here
+                </p>
+                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-700">
+                    <strong>GHL Instructions:</strong> Go to GHL → Settings → Chat Widget → Copy the embed code and paste it above.
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
