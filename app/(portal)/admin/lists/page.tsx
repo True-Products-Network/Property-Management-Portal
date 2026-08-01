@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { List, ArrowLeft, ChevronRight, Tag, Settings } from "lucide-react";
+import { List, ArrowLeft, Tag, FolderTree } from "lucide-react";
 
 interface ListCategory {
   id: string;
   name: string;
   description: string;
   count: number;
-  icon: typeof Tag;
 }
 
 export default function AdminListsPage() {
@@ -35,9 +34,8 @@ export default function AdminListsPage() {
             const mappedCategories: ListCategory[] = Array.from(types.entries()).map(([name, count]) => ({
               id: name,
               name: name.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-              description: `Manage ${name.replace(/_/g, " ")} dropdown options`,
+              description: `Manage ${name.replace(/_/g, " ")} options`,
               count,
-              icon: Tag,
             }));
 
             setCategories(mappedCategories);
@@ -53,16 +51,6 @@ export default function AdminListsPage() {
     fetchCategories();
   }, []);
 
-  const staticCategories: ListCategory[] = [
-    {
-      id: "dropdowns",
-      name: "Dropdown Settings",
-      description: "Manage all dropdown values and options",
-      count: 0,
-      icon: Settings,
-    },
-  ];
-
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -74,60 +62,64 @@ export default function AdminListsPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">System Lists</h1>
-          <p className="text-[var(--secondary-text)] mt-1">Manage dropdown values and categories</p>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Category Management</h1>
+          <p className="text-[var(--secondary-text)] mt-1">Manage custom categories for your data</p>
         </div>
       </div>
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Dropdown Settings Card */}
-        <Link href="/admin/dropdowns">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="w-12 h-12 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                  <Settings className="h-6 w-6 text-[var(--teal)]" />
-                </div>
-                <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--main-text)] mt-4">
-                Dropdown Settings
-              </h3>
-              <p className="text-sm text-[var(--secondary-text)] mt-1">
-                Manage all dropdown values, options, and categories
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+      {/* Under Construction Notice */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardContent className="pt-6 pb-6 text-center">
+          <FolderTree className="h-16 w-16 mx-auto mb-4 text-amber-500" />
+          <h2 className="text-xl font-semibold text-amber-800 mb-2">
+            Category Management - Under Construction
+          </h2>
+          <p className="text-amber-700 mb-4 max-w-md mx-auto">
+            This feature is currently being developed. You will be able to create and manage 
+            custom categories for organizing your properties, units, and other data.
+          </p>
+          <p className="text-sm text-amber-600">
+            For now, please use <Link href="/admin/dropdowns" className="underline font-medium">Dropdown Settings</Link> to manage list values.
+          </p>
+        </CardContent>
+      </Card>
 
-        {/* Category List - Coming Soon */}
-        <Card className="opacity-60">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="w-12 h-12 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                <List className="h-6 w-6 text-[var(--secondary-text)]" />
-              </div>
-              <span className="text-xs text-[var(--secondary-text)] bg-gray-100 px-2 py-1 rounded">
-                Coming Soon
-              </span>
-            </div>
-            <h3 className="text-lg font-semibold text-[var(--main-text)] mt-4">
-              Category Management
-            </h3>
-            <p className="text-sm text-[var(--secondary-text)] mt-1">
-              Create and organize custom categories for your data
+      {/* Existing Categories Preview */}
+      {categories.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tag className="h-5 w-5 text-[var(--teal)]" />
+              Existing Categories
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-[var(--secondary-text)] mb-4">
+              These categories are currently managed through Dropdown Settings:
             </p>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <span
+                  key={category.id}
+                  className="px-3 py-1 bg-[var(--page-background)] rounded-full text-sm text-[var(--main-text)]"
+                >
+                  {category.name} ({category.count})
+                </span>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* Info Card */}
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="pt-6">
           <p className="text-sm text-blue-800">
-            <strong>Tip:</strong> Use Dropdown Settings to manage all dropdown options across the system. 
-            Categories can be used for properties, units, maintenance types, and more.
+            <strong>Need to manage dropdown values?</strong> Use{" "}
+            <Link href="/admin/dropdowns" className="underline text-blue-600">
+              Dropdown Settings
+            </Link>{" "}
+            to configure all dropdown options across the system.
           </p>
         </CardContent>
       </Card>

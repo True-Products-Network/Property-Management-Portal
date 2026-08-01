@@ -12,6 +12,7 @@ import {
   Activity,
   AlertTriangle,
   Palette,
+  CheckSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -115,6 +116,13 @@ export default async function AdminHomePage() {
       href: "/admin/lists",
       icon: List,
       count: "Under Construction",
+    },
+    {
+      title: "Dropdown Settings",
+      description: "Configure dropdown values and options",
+      href: "/admin/dropdowns",
+      icon: CheckSquare,
+      count: `${stats.dropdownCount} options`,
     },
     {
       title: "Brand Customization",
