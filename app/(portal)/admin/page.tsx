@@ -12,8 +12,6 @@ import {
   Activity,
   AlertTriangle,
   Palette,
-  Link,
-  CheckSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -112,18 +110,11 @@ export default async function AdminHomePage() {
       count: stats.ghlConnected ? "GHL Connected" : "Not Connected",
     },
     {
-      title: "System Lists",
-      description: "Manage dropdown values and categories",
+      title: "Category Management",
+      description: "Manage Categories",
       href: "/admin/lists",
       icon: List,
-      count: `${stats.listCount} lists`,
-    },
-    {
-      title: "Dropdown Settings",
-      description: "Configure dropdown values and options",
-      href: "/admin/dropdowns",
-      icon: CheckSquare,
-      count: `${stats.dropdownCount} options`,
+      count: "Under Construction",
     },
     {
       title: "Brand Customization",

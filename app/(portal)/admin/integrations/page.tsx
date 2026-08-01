@@ -762,17 +762,7 @@ export default function AdminIntegrationsPage() {
                 </span>
               </li>
             </ol>
-            <div className="mt-4 pt-4 border-t">
-              <a
-                href="https://highlevel.stoplight.io/docs/integrations/0443d7d1a4bd0-overview"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center gap-1"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View GHL API Documentation
-              </a>
-            </div>
+
           </CardContent>
         </Card>
       )}
