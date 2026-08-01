@@ -72,10 +72,17 @@ export async function GET(request: NextRequest) {
         totalUnits: units.length,
         totalContacts: contacts.length,
         totalVendors: vendors.length,
+        totalCommunications: communications.length,
         activeAssociations: associations.filter((a: { status: string }) => a.status === "active").length,
         activeProperties: properties.filter((p: { status: string }) => p.status === "active").length,
         occupiedUnits: units.filter((u: { occupancy_status?: string; status?: string }) => u.occupancy_status === "occupied" || u.status === "occupied").length,
         vacantUnits: units.filter((u: { occupancy_status?: string; status?: string }) => u.occupancy_status === "vacant" || u.status === "vacant").length,
+      },
+      communications: {
+        total: communications.length,
+        sent: communications.filter((c: { status: string }) => c.status === "sent").length,
+        scheduled: communications.filter((c: { status: string }) => c.status === "scheduled").length,
+        draft: communications.filter((c: { status: string }) => c.status === "draft").length,
       },
       maintenance: {
         total: maintenance.length,

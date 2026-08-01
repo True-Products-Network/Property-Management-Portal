@@ -22,6 +22,8 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  Truck,
+  MessageSquare,
 } from "lucide-react";
 
 interface ReportData {
@@ -31,10 +33,17 @@ interface ReportData {
     totalUnits: number;
     totalContacts: number;
     totalVendors: number;
+    totalCommunications: number;
     activeAssociations: number;
     activeProperties: number;
     occupiedUnits: number;
     vacantUnits: number;
+  };
+  communications: {
+    total: number;
+    sent: number;
+    scheduled: number;
+    draft: number;
   };
   maintenance: {
     total: number;
@@ -182,7 +191,7 @@ export default function SummaryPage() {
     );
   }
 
-  const { summary, maintenance, inspections, compliance, approvals, payments, documents, activity } = reportData;
+  const { summary, maintenance, inspections, compliance, approvals, payments, documents, activity, communications } = reportData;
 
   return (
     <div className="space-y-6 p-6">
@@ -246,16 +255,16 @@ export default function SummaryPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Contacts</p>
+                <p className="text-sm text-[var(--secondary-text)]">Vendors</p>
                 <p className="text-3xl font-semibold text-[var(--main-text)] mt-1">
-                  {summary.totalContacts}
+                  {summary.totalVendors}
                 </p>
-                <p className="text-xs text-[var(--secondary-text)] mt-1">
-                  {summary.totalVendors} vendors
+                <p className="text-xs text-green-600 mt-1">
+                  service providers
                 </p>
               </div>
               <div className="w-12 h-12 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                <Users className="h-6 w-6 text-[var(--teal)]" />
+                <Truck className="h-6 w-6 text-[var(--teal)]" />
               </div>
             </div>
           </CardContent>
@@ -265,21 +274,94 @@ export default function SummaryPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Maintenance</p>
+                <p className="text-sm text-[var(--secondary-text)]">Communications</p>
                 <p className="text-3xl font-semibold text-[var(--main-text)] mt-1">
-                  {maintenance.open}
+                  {communications?.sent || 0}
                 </p>
-                <p className="text-xs text-amber-600 mt-1">
-                  {maintenance.emergency} emergency
+                <p className="text-xs text-blue-600 mt-1">
+                  messages sent
                 </p>
               </div>
               <div className="w-12 h-12 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
-                <Wrench className="h-6 w-6 text-[var(--teal)]" />
+                <MessageSquare className="h-6 w-6 text-[var(--teal)]" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Activity - Moved up */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-[var(--teal)]" />
+            Recent Activity
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* New This Week */}
+            <div className="p-4 bg-[var(--page-background)] rounded-lg">
+              <h4 className="font-medium text-[var(--main-text)] mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-[var(--teal)]" />
+                New This Week
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
+                  <Badge variant="outline">+{activity.newThisWeek.associations}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Properties</span>
+                  <Badge variant="outline">+{activity.newThisWeek.properties}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Units</span>
+                  <Badge variant="outline">+{activity.newThisWeek.units}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Contacts</span>
+                  <Badge variant="outline">+{activity.newThisWeek.contacts}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Maintenance Requests</span>
+                  <Badge variant="outline">+{activity.newThisWeek.maintenance}</Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* New This Month */}
+            <div className="p-4 bg-[var(--page-background)] rounded-lg">
+              <h4 className="font-medium text-[var(--main-text)] mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-[var(--teal)]" />
+                New This Month
+              </h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
+                  <Badge variant="outline">+{activity.newThisMonth.associations}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Properties</span>
+                  <Badge variant="outline">+{activity.newThisMonth.properties}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Units</span>
+                  <Badge variant="outline">+{activity.newThisMonth.units}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Contacts</span>
+                  <Badge variant="outline">+{activity.newThisMonth.contacts}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--secondary-text)]">Maintenance Requests</span>
+                  <Badge variant="outline">+{activity.newThisMonth.maintenance}</Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -498,79 +580,6 @@ export default function SummaryPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-[var(--teal)]" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* New This Week */}
-            <div className="p-4 bg-[var(--page-background)] rounded-lg">
-              <h4 className="font-medium text-[var(--main-text)] mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-[var(--teal)]" />
-                New This Week
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
-                  <Badge variant="outline">+{activity.newThisWeek.associations}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Properties</span>
-                  <Badge variant="outline">+{activity.newThisWeek.properties}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Units</span>
-                  <Badge variant="outline">+{activity.newThisWeek.units}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Contacts</span>
-                  <Badge variant="outline">+{activity.newThisWeek.contacts}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Maintenance Requests</span>
-                  <Badge variant="outline">+{activity.newThisWeek.maintenance}</Badge>
-                </div>
-              </div>
-            </div>
-
-            {/* New This Month */}
-            <div className="p-4 bg-[var(--page-background)] rounded-lg">
-              <h4 className="font-medium text-[var(--main-text)] mb-3 flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[var(--teal)]" />
-                New This Month
-              </h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
-                  <Badge variant="outline">+{activity.newThisMonth.associations}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Properties</span>
-                  <Badge variant="outline">+{activity.newThisMonth.properties}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Units</span>
-                  <Badge variant="outline">+{activity.newThisMonth.units}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Contacts</span>
-                  <Badge variant="outline">+{activity.newThisMonth.contacts}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Maintenance Requests</span>
-                  <Badge variant="outline">+{activity.newThisMonth.maintenance}</Badge>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Footer */}
       <div className="text-center text-sm text-[var(--secondary-text)]">
