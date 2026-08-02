@@ -430,9 +430,10 @@ export default function AdminFeaturesPage() {
                       id={`assoc-${assoc.id}`}
                       checked={formData.associations.includes(assoc.id)}
                       onChange={(e) => {
+                        const isChecked = (e.target as HTMLInputElement).checked;
                         setFormData((prev) => ({
                           ...prev,
-                          associations: checked
+                          associations: isChecked
                             ? [...prev.associations, assoc.id]
                             : prev.associations.filter((id) => id !== assoc.id),
                         }));
@@ -477,9 +478,10 @@ export default function AdminFeaturesPage() {
                       id={`prop-${prop.id}`}
                       checked={formData.properties.includes(prop.id)}
                       onChange={(e) => {
+                        const isChecked = (e.target as HTMLInputElement).checked;
                         setFormData((prev) => ({
                           ...prev,
-                          properties: checked
+                          properties: isChecked
                             ? [...prev.properties, prop.id]
                             : prev.properties.filter((id) => id !== prop.id),
                         }));
