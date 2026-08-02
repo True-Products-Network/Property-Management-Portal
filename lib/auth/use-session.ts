@@ -36,7 +36,7 @@ export function useSession() {
     getUser();
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session) => {
       if (session?.user) {
         const metadata = session.user.user_metadata;
         setUser({
