@@ -180,11 +180,12 @@ export async function GET(request: NextRequest) {
           initiatedAt: p.initiated_at,
           invoiceNumber: p.invoice_number,
         })),
-        upcomingAppointments: (appointments || []).map((a: { id: string; title: string; start_time: string; appointment_type: string }) => ({
+        upcomingAppointments: (appointments || []).map((a: { id: string; title: string; start_time: string; appointment_type: string; is_virtual?: boolean }) => ({
           id: a.id,
           title: a.title,
           startTime: a.start_time,
           appointmentType: a.appointment_type,
+          isVirtual: a.is_virtual || false,
           isVirtual: a.is_virtual,
         })),
         outstandingBalance,
