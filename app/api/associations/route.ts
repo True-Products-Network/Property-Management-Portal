@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "created_at";
     const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
-    // Get associations
+    // Get associations (filtered by business_id)
     const result = await getAssociations({
       page,
       pageSize,
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       sortOrder,
       filters: status ? { status } : undefined,
-    });
+    }, user.businessId);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create association
-    const result = await createAssociation(validation.data, user.id);
+    // Create association (with business_id)
+    const result = await createAssociation(validation.data, user.id, user.businessId);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });

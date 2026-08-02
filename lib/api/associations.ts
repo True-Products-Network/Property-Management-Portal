@@ -61,7 +61,8 @@ export interface UpdateAssociationInput extends Partial<CreateAssociationInput> 
 
 // Get all associations with pagination
 export async function getAssociations(
-  params: QueryParams = {}
+  params: QueryParams = {},
+  businessId?: string
 ): Promise<ApiResponse<PaginatedResponse<Association>>> {
   try {
     const supabase = await createClient();
@@ -74,6 +75,11 @@ export async function getAssociations(
     let query = supabase
       .from("associations")
       .select("*", { count: "exact" });
+    
+    // Filter by business_id if provided
+    if (businessId) {
+      query = query.eq("business_id", businessId);
+    }
     
     // Apply search
     if (params.search) {
@@ -164,7 +170,8 @@ export async function getAssociation(
 // Create new association
 export async function createAssociation(
   input: CreateAssociationInput,
-  userId: string
+  userId: string,
+  businessId?: string
 ): Promise<ApiResponse<Association>> {
   try {
     const supabase = await createClient();
@@ -200,6 +207,7 @@ export async function createAssociation(
         document_storage_link: input.documentStorageLink,
         emergency_instructions: input.emergencyInstructions,
         general_notes: input.generalNotes,
+        business_id: businessId,
         created_by: userId,
         updated_by: userId,
       })
