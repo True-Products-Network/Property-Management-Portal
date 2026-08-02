@@ -8,6 +8,29 @@ interface ContactRole {
   unit_id: string | null;
 }
 
+interface Notice {
+  id: string;
+  matter_number: string;
+  title: string;
+  type: string;
+  status: string;
+  created_at: string;
+  response_deadline: string | null;
+  property_id: string;
+  unit_id: string | null;
+  required_action: string | null;
+}
+
+interface Property {
+  id: string;
+  name: string;
+}
+
+interface Unit {
+  id: string;
+  unit_number: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession();
@@ -73,7 +96,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get property names
-    const allPropertyIds = [...new Set((notices || []).map((n) => n.property_id).filter(Boolean))];
+    const allPropertyIds = [...new Set((notices || []).map((n: Notice) => n.property_id).filter(Boolean))];
     const { data: properties } = allPropertyIds.length > 0
       ? await supabase
           .from("properties")
@@ -81,10 +104,10 @@ export async function GET(request: NextRequest) {
           .in("id", allPropertyIds)
       : { data: [] };
 
-    const propertyMap = new Map((properties || []).map((p) => [p.id, p.name]));
+    const propertyMap = new Map((properties || []).map((p: Property) => [p.id, p.name]));
 
     // Get unit numbers
-    const allUnitIds = [...new Set((notices || []).map((n) => n.unit_id).filter(Boolean))];
+    const allUnitIds = [...new Set((notices || []).map((n: Notice) => n.unit_id).filter(Boolean))];
     const { data: units } = allUnitIds.length > 0
       ? await supabase
           .from("units")
@@ -92,9 +115,9 @@ export async function GET(request: NextRequest) {
           .in("id", allUnitIds)
       : { data: [] };
 
-    const unitMap = new Map((units || []).map((u) => [u.id, u.unit_number]));
+    const unitMap = new Map((units || []).map((u: Unit) => [u.id, u.unit_number]));
 
-    const formattedNotices = (notices || []).map((notice) => {
+    const formattedNotices = (notices || []).map((notice: Notice) => {
       const isOverdue = notice.response_deadline
         ? new Date(notice.response_deadline) < new Date() && notice.status === "notice_sent"
         : false;
