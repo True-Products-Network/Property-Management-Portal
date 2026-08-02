@@ -71,11 +71,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- RLS Policies for feature_flags
+DROP POLICY IF EXISTS "Feature flags are viewable by authenticated users" ON feature_flags;
 CREATE POLICY "Feature flags are viewable by authenticated users"
     ON feature_flags FOR SELECT
     TO authenticated
     USING (true);
 
+DROP POLICY IF EXISTS "Feature flags are manageable by admin users only" ON feature_flags;
 CREATE POLICY "Feature flags are manageable by admin users only"
     ON feature_flags FOR ALL
     TO authenticated
@@ -83,11 +85,13 @@ CREATE POLICY "Feature flags are manageable by admin users only"
     WITH CHECK (is_admin_user());
 
 -- RLS Policies for feature_flag_overrides
+DROP POLICY IF EXISTS "Feature flag overrides are viewable by authenticated users" ON feature_flag_overrides;
 CREATE POLICY "Feature flag overrides are viewable by authenticated users"
     ON feature_flag_overrides FOR SELECT
     TO authenticated
     USING (true);
 
+DROP POLICY IF EXISTS "Feature flag overrides are manageable by admin users only" ON feature_flag_overrides;
 CREATE POLICY "Feature flag overrides are manageable by admin users only"
     ON feature_flag_overrides FOR ALL
     TO authenticated
