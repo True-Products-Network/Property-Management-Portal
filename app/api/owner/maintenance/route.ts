@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           .in("id", propertyIds)
       : { data: [] };
 
-    const propertyMap = new Map((properties || []).map(p => [p.id, p.name]));
+    const propertyMap = new Map((properties || []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
     // Fetch unit numbers
     const { data: units } = propertyIds.length > 0
@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
           .in("property_id", propertyIds)
       : { data: [] };
 
-    const unitMap = new Map((units || []).map(u => [u.id, u.unit_number]));
+    const unitMap = new Map((units || []).map((u: { id: string; unit_number: string }) => [u.id, u.unit_number]));
 
     // Fetch vendor names
     const { data: vendors } = await supabase
       .from("vendors")
       .select("id, company_name");
 
-    const vendorMap = new Map((vendors || []).map(v => [v.id, v.company_name]));
+    const vendorMap = new Map((vendors || []).map((v: { id: string; company_name: string }) => [v.id, v.company_name]));
 
     // Fetch maintenance requests for this contact
     const { data: maintenanceRequests, error } = await supabase
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: (maintenanceRequests || []).map(m => ({
+      data: (maintenanceRequests || []).map((m: { id: string; request_number: string; title: string; description: string; status: string; urgency: string; category: string; property_id: string; unit_id: string; assigned_vendor_id: string; requested_date: string; scheduled_date: string; completed_date: string; created_at: string; updated_at: string }) => ({
         id: m.id,
         requestNumber: m.request_number,
         title: m.title,
