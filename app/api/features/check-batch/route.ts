@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
           .in("feature_flag_id", flagIds)
       : { data: [] };
 
-    const overrideMap = new Map(
+    const overrideMap = new Map<string, boolean>(
       overrides?.map((o: Override) => [o.feature_flag_id, o.enabled]) || []
     );
 
