@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
       unreadNotices: unreadNotices || 0,
       documentsRequiringAction: documentsAction || 0,
       recentRequests:
-        maintenanceRequests?.map((r) => ({
+        maintenanceRequests?.map((r: { id: string; title: string; status: string; urgency: string; updated_at: string }) => ({
           id: r.id,
           title: r.title,
           status: r.status,
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
           updatedAt: r.updated_at,
         })) || [],
       recentMessages:
-        messages?.map((m) => ({
+        messages?.map((m: { id: string; subject: string; content: string; read_by: string[]; created_at: string }) => ({
           id: m.id,
           subject: m.subject,
           preview: m.content?.substring(0, 100) + "..." || "",
@@ -185,14 +185,14 @@ export async function GET(request: NextRequest) {
           createdAt: m.created_at,
         })) || [],
       announcements:
-        announcements?.map((a) => ({
+        announcements?.map((a: { id: string; subject: string; content: string; created_at: string }) => ({
           id: a.id,
           title: a.subject,
           content: a.content,
           date: a.created_at,
         })) || [],
       upcomingAppointments:
-        appointments?.map((a) => ({
+        appointments?.map((a: { id: string; title: string; start_time: string; appointment_type: string }) => ({
           id: a.id,
           title: a.title,
           startTime: a.start_time,
