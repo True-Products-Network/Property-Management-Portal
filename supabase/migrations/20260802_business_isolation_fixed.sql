@@ -76,9 +76,8 @@ SELECT add_business_id_if_table_exists('communication_recipients');
 SELECT add_business_id_if_table_exists('appointments');
 SELECT add_business_id_if_table_exists('appointment_participants');
 
--- Workflows
+-- Workflows (only workflows table exists, not workflow_executions)
 SELECT add_business_id_if_table_exists('workflows');
-SELECT add_business_id_if_table_exists('workflow_executions');
 
 -- Feature flags
 SELECT add_business_id_if_table_exists('feature_flags');
@@ -270,7 +269,6 @@ BEGIN
         UPDATE communications SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE appointments SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE workflows SET business_id = default_business_id WHERE business_id IS NULL;
-        UPDATE workflow_executions SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE feature_flags SET business_id = default_business_id WHERE business_id IS NULL;
     END IF;
 END $$;
