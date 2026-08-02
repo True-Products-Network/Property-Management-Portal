@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch units" }, { status: 500 });
     }
 
-    const unitIds = contactUnits?.map((cu) => cu.unit_id) || [];
+    const unitIds = contactUnits?.map((cu: { unit_id: string }) => cu.unit_id) || [];
 
     if (unitIds.length === 0) {
       return NextResponse.json({
