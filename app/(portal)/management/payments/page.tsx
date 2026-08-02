@@ -171,13 +171,13 @@ export default function PaymentsPage() {
               Record Payment
             </Button>
           </Link>
-          <Link href="/management/payments/invoice/new">
+          <Link href="/management/payments/invoice">
             <Button variant="outline">
               <FileText className="h-4 w-4 mr-2" />
               Create Invoice
             </Button>
           </Link>
-          <Link href="/management/payments/link/new">
+          <Link href="/management/payments/link">
             <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
               <Link2 className="h-4 w-4 mr-2" />
               Payment Link
