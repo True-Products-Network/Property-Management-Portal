@@ -33,8 +33,8 @@ const TableHead = ({ children, className }: { children: React.ReactNode; classNa
   </th>
 )
 
-const TableCell = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <td className={cn("p-4 align-middle", className)}>
+const TableCell = ({ children, className, colSpan }: { children: React.ReactNode; className?: string; colSpan?: number }) => (
+  <td className={cn("p-4 align-middle", className)} colSpan={colSpan}>
     {children}
   </td>
 )
