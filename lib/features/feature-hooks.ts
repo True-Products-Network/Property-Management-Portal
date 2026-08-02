@@ -184,27 +184,30 @@ export function useEnabledFeatures(): {
 }
 
 // Higher-order component for feature-gated components
-export function withFeature<P extends object>(
+export function withFeature<P extends Record<string, unknown>>(
   Component: React.ComponentType<P>,
   featureKey: FeatureFlagKey,
   FallbackComponent?: React.ComponentType<P>
-) {
-  return function FeatureGatedComponent(props: P) {
+): React.FC<P> {
+  const FeatureGatedComponent: React.FC<P> = (props) => {
     const { enabled, loading } = useFeature(featureKey);
 
     if (loading) {
-      return null; // Or a loading spinner
+      return null;
     }
 
     if (!enabled) {
       if (FallbackComponent) {
-        return <FallbackComponent {...props} />;
+        return React.createElement(FallbackComponent, props);
       }
       return null;
     }
 
-    return <Component {...props} />;
+    return React.createElement(Component, props);
   };
+
+  FeatureGatedComponent.displayName = `withFeature(${Component.displayName || Component.name})`;
+  return FeatureGatedComponent;
 }
 
 // Component for conditional rendering based on feature flag
