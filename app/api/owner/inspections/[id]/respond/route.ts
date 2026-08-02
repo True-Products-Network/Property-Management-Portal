@@ -1,4 +1,4 @@
-// Owner Document Acknowledgment API
+// Owner Inspection Response API
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +13,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const documentId = params.id;
+    const inspectionId = params.id;
+    const body = await request.json();
     const supabase = await createClient();
 
     // Get contact ID for the current user
@@ -30,25 +31,35 @@ export async function POST(
       );
     }
 
-    // Create acknowledgment record
-    const { error: ackError } = await supabase
-      .from("document_acknowledgments")
+    // Create response record
+    const { error: responseError } = await supabase
+      .from("inspection_owner_responses")
       .insert({
-        document_id: documentId,
+        inspection_id: inspectionId,
         contact_id: contactData.id,
-        acknowledged_at: new Date().toISOString(),
-        ip_address: request.headers.get("x-forwarded-for") || "unknown",
+        response: body.response,
+        created_at: new Date().toISOString(),
       });
 
-    if (ackError) {
-      throw ackError;
+    if (responseError) {
+      throw responseError;
     }
+
+    // Update inspection
+    await supabase
+      .from("inspections")
+      .update({
+        owner_responded_at: new Date().toISOString(),
+        requires_owner_action: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", inspectionId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error acknowledging document:", error);
+    console.error("Error submitting inspection response:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to acknowledge document" },
+      { success: false, error: "Failed to submit response" },
       { status: 500 }
     );
   }

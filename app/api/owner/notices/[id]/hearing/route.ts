@@ -1,4 +1,4 @@
-// Owner Document Acknowledgment API
+// Owner Notice Hearing Request API
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +13,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const documentId = params.id;
+    const noticeId = params.id;
     const supabase = await createClient();
 
     // Get contact ID for the current user
@@ -30,25 +30,35 @@ export async function POST(
       );
     }
 
-    // Create acknowledgment record
-    const { error: ackError } = await supabase
-      .from("document_acknowledgments")
+    // Create hearing request record
+    const { error: hearingError } = await supabase
+      .from("compliance_hearing_requests")
       .insert({
-        document_id: documentId,
+        compliance_matter_id: noticeId,
         contact_id: contactData.id,
-        acknowledged_at: new Date().toISOString(),
-        ip_address: request.headers.get("x-forwarded-for") || "unknown",
+        requested_at: new Date().toISOString(),
+        status: "pending",
       });
 
-    if (ackError) {
-      throw ackError;
+    if (hearingError) {
+      throw hearingError;
     }
+
+    // Update compliance matter status
+    await supabase
+      .from("compliance_matters")
+      .update({
+        status: "hearing_requested",
+        hearing_requested_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", noticeId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error acknowledging document:", error);
+    console.error("Error requesting hearing:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to acknowledge document" },
+      { success: false, error: "Failed to request hearing" },
       { status: 500 }
     );
   }

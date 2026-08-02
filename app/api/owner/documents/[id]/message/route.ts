@@ -1,4 +1,4 @@
-// Owner Document Acknowledgment API
+// Owner Document Message API
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +14,7 @@ export async function POST(
     }
 
     const documentId = params.id;
+    const body = await request.json();
     const supabase = await createClient();
 
     // Get contact ID for the current user
@@ -30,25 +31,25 @@ export async function POST(
       );
     }
 
-    // Create acknowledgment record
-    const { error: ackError } = await supabase
-      .from("document_acknowledgments")
+    // Create message
+    const { error: messageError } = await supabase
+      .from("document_messages")
       .insert({
         document_id: documentId,
         contact_id: contactData.id,
-        acknowledged_at: new Date().toISOString(),
-        ip_address: request.headers.get("x-forwarded-for") || "unknown",
+        message: body.message,
+        created_at: new Date().toISOString(),
       });
 
-    if (ackError) {
-      throw ackError;
+    if (messageError) {
+      throw messageError;
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error acknowledging document:", error);
+    console.error("Error sending document message:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to acknowledge document" },
+      { success: false, error: "Failed to send message" },
       { status: 500 }
     );
   }
