@@ -29,11 +29,11 @@ CREATE TABLE IF NOT EXISTS business_users (
 ALTER TABLE business_users ENABLE ROW LEVEL SECURITY;
 
 -- Function to safely add business_id column if table exists
-CREATE OR REPLACE FUNCTION add_business_id_if_table_exists(table_name TEXT)
+CREATE OR REPLACE FUNCTION add_business_id_if_table_exists(p_table_name TEXT)
 RETURNS VOID AS $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = $1) THEN
-        EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id)', $1);
+    IF EXISTS (SELECT 1 FROM information_schema.tables t WHERE t.table_name = p_table_name) THEN
+        EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id)', p_table_name);
     END IF;
 END;
 $$ LANGUAGE plpgsql;
