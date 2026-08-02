@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, Info } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Loader2, Info, X, Search, Plus } from "lucide-react";
 
 const ASSOCIATION_TYPES = [
   { value: "condominium", label: "Condominium" },
@@ -36,10 +37,33 @@ const FINANCIAL_PLATFORMS = [
   { value: "paypal", label: "PayPal" },
 ];
 
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
+
 export default function NewAssociationPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Manager selection modal state
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [managerSearchQuery, setManagerSearchQuery] = useState("");
+  const [existingContacts, setExistingContacts] = useState<Contact[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showNewManagerForm, setShowNewManagerForm] = useState(false);
+  
+  // New manager form state
+  const [newManager, setNewManager] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
 
   const [formData, setFormData] = useState<{
     name: string;
@@ -98,6 +122,77 @@ export default function NewAssociationPage() {
     assignedManagerId: "",
     assignedManagerName: "",
   });
+
+  // Search for existing contacts
+  async function searchContacts(query: string) {
+    if (!query || query.length < 2) return;
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/contacts?search=${encodeURIComponent(query)}&limit=10`);
+      const result = await response.json();
+      if (result.success) {
+        setExistingContacts(result.data || []);
+      }
+    } catch (error) {
+      console.error("Error searching contacts:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  // Handle selecting an existing contact as manager
+  function selectExistingManager(contact: Contact) {
+    setFormData({
+      ...formData,
+      assignedManagerId: contact.id,
+      assignedManagerName: `${contact.firstName} ${contact.lastName}`,
+    });
+    setShowManagerModal(false);
+    setManagerSearchQuery("");
+    setExistingContacts([]);
+  }
+
+  // Handle creating a new manager
+  async function createNewManager() {
+    if (!newManager.firstName || !newManager.lastName || !newManager.email) {
+      alert("First name, last name, and email are required");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: newManager.firstName,
+          lastName: newManager.lastName,
+          email: newManager.email,
+          phone: newManager.phone,
+          roleType: "property_manager",
+        }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create contact");
+      }
+
+      // Set the newly created manager
+      setFormData({
+        ...formData,
+        assignedManagerId: result.data.id,
+        assignedManagerName: `${newManager.firstName} ${newManager.lastName}`,
+      });
+
+      // Reset and close modal
+      setNewManager({ firstName: "", lastName: "", email: "", phone: "" });
+      setShowNewManagerForm(false);
+      setShowManagerModal(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to create manager");
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -302,23 +397,38 @@ export default function NewAssociationPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
-                  Assigned Manager
+                  Assigned Property Manager
                 </label>
                 <div className="flex gap-2">
                   <Input
                     value={formData.assignedManagerName}
-                    placeholder="Select a manager..."
+                    placeholder="Select or create a manager..."
                     readOnly
                     className="flex-1"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => alert("Manager selection modal would open here")}
+                    onClick={() => setShowManagerModal(true)}
                   >
-                    Select
+                    {formData.assignedManagerId ? "Change" : "Select"}
                   </Button>
+                  {formData.assignedManagerId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setFormData({ ...formData, assignedManagerId: "", assignedManagerName: "" })}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
+                {formData.assignedManagerId && (
+                  <p className="text-xs text-green-600">
+                    Will be assigned as Property Manager for this association
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -603,6 +713,160 @@ export default function NewAssociationPage() {
           </Button>
         </div>
       </form>
+
+      {/* Manager Selection Modal */}
+      {showManagerModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Select Property Manager</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowManagerModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-4 overflow-y-auto">
+              {!showNewManagerForm ? (
+                <>
+                  {/* Search existing contacts */}
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={managerSearchQuery}
+                        onChange={(e) => {
+                          setManagerSearchQuery(e.target.value);
+                          searchContacts(e.target.value);
+                        }}
+                        className="pl-10"
+                      />
+                    </div>
+
+                    {/* Search results */}
+                    {isSearching ? (
+                      <div className="text-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
+                      </div>
+                    ) : existingContacts.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-gray-500">Select from existing contacts:</p>
+                        {existingContacts.map((contact) => (
+                          <button
+                            key={contact.id}
+                            onClick={() => selectExistingManager(contact)}
+                            className="w-full text-left p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <p className="font-medium">
+                              {contact.firstName} {contact.lastName}
+                            </p>
+                            <p className="text-sm text-gray-500">{contact.email}</p>
+                            {contact.phone && (
+                              <p className="text-sm text-gray-500">{contact.phone}</p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : managerSearchQuery.length >= 2 ? (
+                      <p className="text-center text-gray-500 py-4">No contacts found</p>
+                    ) : null}
+
+                    {/* Divider */}
+                    <div className="relative py-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t"></div>
+                      </div>
+                      <div className="relative flex justify-center">
+                        <span className="bg-white px-2 text-sm text-gray-500">or</span>
+                      </div>
+                    </div>
+
+                    {/* Create new manager button */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowNewManagerForm(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Property Manager
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* New manager form */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Create New Property Manager</h3>
+                    <p className="text-sm text-gray-500">
+                      This person will be created as a contact and automatically assigned the Property Manager role for this association.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="mgr-firstName">First Name *</Label>
+                        <Input
+                          id="mgr-firstName"
+                          value={newManager.firstName}
+                          onChange={(e) => setNewManager({ ...newManager, firstName: e.target.value })}
+                          placeholder="John"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="mgr-lastName">Last Name *</Label>
+                        <Input
+                          id="mgr-lastName"
+                          value={newManager.lastName}
+                          onChange={(e) => setNewManager({ ...newManager, lastName: e.target.value })}
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mgr-email">Email *</Label>
+                      <Input
+                        id="mgr-email"
+                        type="email"
+                        value={newManager.email}
+                        onChange={(e) => setNewManager({ ...newManager, email: e.target.value })}
+                        placeholder="john.doe@example.com"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="mgr-phone">Phone</Label>
+                      <Input
+                        id="mgr-phone"
+                        value={newManager.phone}
+                        onChange={(e) => setNewManager({ ...newManager, phone: e.target.value })}
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        type="button"
+                        onClick={createNewManager}
+                        className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+                      >
+                        Create & Assign
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowNewManagerForm(false)}
+                      >
+                        Back to Search
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
