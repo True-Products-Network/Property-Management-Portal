@@ -71,8 +71,30 @@ interface BrandSettings {
   brand_primary_color: string;
 }
 
-// Menu groups with dividers
-const MENU_GROUPS = [
+// Owner portal menu groups
+const OWNER_MENU_GROUPS = [
+  {
+    id: "dashboard",
+    items: [{ label: "Home", href: "/owner", icon: "LayoutDashboard" }],
+  },
+  {
+    id: "my-property",
+    items: [
+      { label: "My Properties", href: "/owner/properties", icon: "Home" },
+      { label: "Maintenance", href: "/owner/maintenance", icon: "Wrench" },
+      { label: "Documents", href: "/owner/documents", icon: "FileText" },
+    ],
+  },
+  {
+    id: "financial",
+    items: [
+      { label: "Payments", href: "/owner/payments", icon: "CircleDollarSign" },
+    ],
+  },
+];
+
+// Management menu groups
+const MANAGEMENT_MENU_GROUPS = [
   {
     id: "dashboard",
     items: [{ label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" }],
@@ -184,6 +206,10 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
     brand_primary_color: "#0d3b66",
   });
 
+  // Determine which menu groups to show based on role
+  const isOwner = role === "OWNER" || role === "RESIDENT";
+  const menuGroups = isOwner ? OWNER_MENU_GROUPS : MANAGEMENT_MENU_GROUPS;
+
   useEffect(() => {
     // Fetch GHL status
     fetch("/api/admin/ghl/status")
@@ -240,7 +266,7 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {MENU_GROUPS.map((group, index) => (
+        {menuGroups.map((group, index) => (
           <div key={group.id}>
             {index > 0 && (
               <div className="my-3 mx-4 border-t border-white/20" />
