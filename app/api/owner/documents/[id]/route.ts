@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getSession();
@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const documentId = params.id;
+    const { id: documentId } = await params;
     const supabase = await createClient();
 
     // Get contact ID for the current user
