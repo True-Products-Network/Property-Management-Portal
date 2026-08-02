@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from '@/lib/auth/session';
+import { useSession } from '@/lib/auth/use-session';
 import { FeatureFlagKey } from './feature-flags';
 
 interface FeatureState {
