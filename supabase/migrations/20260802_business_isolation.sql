@@ -37,7 +37,13 @@ ALTER TABLE vendors ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES busines
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
 ALTER TABLE inspections ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
-ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
+-- Note: compliance_items table may not exist yet, skip if it doesn't
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'compliance_items') THEN
+        ALTER TABLE compliance_items ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
+    END IF;
+END $$;
 ALTER TABLE approvals ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
 ALTER TABLE communications ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
@@ -55,7 +61,13 @@ CREATE INDEX IF NOT EXISTS idx_vendors_business ON vendors(business_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_business ON maintenance_requests(business_id);
 CREATE INDEX IF NOT EXISTS idx_inspections_business ON inspections(business_id);
 CREATE INDEX IF NOT EXISTS idx_documents_business ON documents(business_id);
-CREATE INDEX IF NOT EXISTS idx_compliance_business ON compliance_items(business_id);
+-- Note: compliance_items index only if table exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'compliance_items') THEN
+        CREATE INDEX IF NOT EXISTS idx_compliance_business ON compliance_items(business_id);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_approvals_business ON approvals(business_id);
 CREATE INDEX IF NOT EXISTS idx_payments_business ON payments(business_id);
 CREATE INDEX IF NOT EXISTS idx_communications_business ON communications(business_id);
@@ -143,12 +155,17 @@ CREATE POLICY documents_business_isolation ON documents
         OR is_admin_from_jwt()
     );
 
--- Compliance: Filter by business
-CREATE POLICY compliance_business_isolation ON compliance_items
-    FOR ALL USING (
-        business_id = get_current_business_id() 
-        OR is_admin_from_jwt()
-    );
+-- Compliance: Filter by business (only if table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'compliance_items') THEN
+        CREATE POLICY compliance_business_isolation ON compliance_items
+            FOR ALL USING (
+                business_id = get_current_business_id() 
+                OR is_admin_from_jwt()
+            );
+    END IF;
+END $$;
 
 -- Approvals: Filter by business
 CREATE POLICY approvals_business_isolation ON approvals
@@ -207,7 +224,10 @@ BEGIN
         UPDATE maintenance_requests SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE inspections SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE documents SET business_id = default_business_id WHERE business_id IS NULL;
-        UPDATE compliance_items SET business_id = default_business_id WHERE business_id IS NULL;
+        -- Update compliance_items only if it exists
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'compliance_items') THEN
+            UPDATE compliance_items SET business_id = default_business_id WHERE business_id IS NULL;
+        END IF;
         UPDATE approvals SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE payments SET business_id = default_business_id WHERE business_id IS NULL;
         UPDATE communications SET business_id = default_business_id WHERE business_id IS NULL;
