@@ -1,0 +1,96 @@
+// Get All Enabled Features API
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import { isFeatureEnabled, FeatureFlagUserRole } from "@/lib/features/feature-flags";
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getSession();
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabase = await createClient();
+
+    // Get user's role and association info
+    const { data: contactData } = await supabase
+      .from("contacts")
+      .select("id, portal_user_id, roles")
+      .eq("portal_user_id", user.id)
+      .single();
+
+    const userRole = (contactData?.roles?.[0] || "owner") as FeatureFlagUserRole;
+    const userId = contactData?.id || user.id;
+
+    // Get user's association/property info
+    const { data: contactRoles } = await supabase
+      .from("contact_roles")
+      .select("association_id, property_id")
+      .eq("contact_id", userId)
+      .eq("is_active", true)
+      .limit(1)
+      .single();
+
+    // Fetch all active feature flags
+    const { data: flags, error } = await supabase
+      .from("feature_flags")
+      .select("*")
+      .eq("enabled", true);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: "Failed to fetch feature flags" },
+        { status: 500 }
+      );
+    }
+
+    // Fetch user-specific overrides
+    const flagIds = flags?.map(f => f.id) || [];
+    const { data: overrides } = flagIds.length > 0
+      ? await supabase
+          .from("feature_flag_overrides")
+          .select("feature_flag_id, enabled")
+          .eq("user_id", userId)
+          .in("feature_flag_id", flagIds)
+      : { data: [] };
+
+    const overrideMap = new Map(
+      overrides?.map(o => [o.feature_flag_id, o.enabled]) || []
+    );
+
+    // Filter enabled features
+    const environment = process.env.NODE_ENV === "production" ? "production" : "development";
+    const enabledFeatures: string[] = [];
+
+    for (const flag of flags || []) {
+      // Check for override
+      if (overrideMap.has(flag.id)) {
+        if (overrideMap.get(flag.id)) {
+          enabledFeatures.push(flag.key);
+        }
+        continue;
+      }
+
+      // Check if feature is enabled for this user
+      if (isFeatureEnabled(
+        flag,
+        userId,
+        userRole,
+        environment,
+        contactRoles?.association_id,
+        contactRoles?.property_id
+      )) {
+        enabledFeatures.push(flag.key);
+      }
+    }
+
+    return NextResponse.json({ success: true, features: enabledFeatures });
+  } catch (error) {
+    console.error("Error fetching enabled features:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch enabled features" },
+      { status: 500 }
+    );
+  }
+}
