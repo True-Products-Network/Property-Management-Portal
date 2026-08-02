@@ -56,23 +56,8 @@ CREATE INDEX IF NOT EXISTS idx_feature_flag_overrides_property ON feature_flag_o
 ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feature_flag_overrides ENABLE ROW LEVEL SECURITY;
 
--- Create helper function to check if user is admin
--- Checks user metadata for ADMIN_USER role (set during JWT token creation)
-CREATE OR REPLACE FUNCTION is_admin_user()
-RETURNS BOOLEAN AS $$
-DECLARE
-    user_roles JSONB;
-    is_admin BOOLEAN;
-BEGIN
-    -- Get roles from user metadata
-    user_roles := auth.jwt() -> 'user_metadata' -> 'roles';
-    is_admin := (auth.jwt() -> 'user_metadata' ->> 'is_admin')::BOOLEAN;
-    
-    -- Check if user has ADMIN_USER role or is_admin flag
-    RETURN is_admin = true OR 
-           (user_roles IS NOT NULL AND user_roles @> '["ADMIN_USER"]'::JSONB);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Note: is_admin_user() function is defined in 20260802_workflows.sql
+-- It checks the user_roles table for ADMIN_USER role
 
 -- RLS Policies for feature_flags
 DROP POLICY IF EXISTS "Feature flags are viewable by authenticated users" ON feature_flags;
