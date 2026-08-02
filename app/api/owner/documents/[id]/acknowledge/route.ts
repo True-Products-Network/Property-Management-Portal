@@ -1,4 +1,4 @@
-// Document Acknowledgment API
+// Document Acknowledgment API - Updated for Next.js 15
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
