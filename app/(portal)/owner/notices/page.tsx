@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+
 import {
   Loader2,
   AlertCircle,
@@ -153,10 +153,10 @@ export default function OwnerNoticesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-[var(--secondary-text)]" />
-              <Select
+              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-40"
+                className="w-40 h-10 px-3 border rounded-md"
               >
                 <option value="all">All Status</option>
                 <option value="notice_sent">Notice Sent</option>
@@ -164,7 +164,7 @@ export default function OwnerNoticesPage() {
                 <option value="hearing_scheduled">Hearing Scheduled</option>
                 <option value="corrective_action">Corrective Action</option>
                 <option value="resolved">Resolved</option>
-              </Select>
+              </select>
             </div>
           </div>
         </CardContent>

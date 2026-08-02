@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Loader2,
@@ -278,30 +278,32 @@ export default function OwnerPreferencesPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="preferredContactMethod">Primary Contact Method</Label>
-              <Select
+              <select
                 id="preferredContactMethod"
                 value={editedPreferences.preferredContactMethod}
                 onChange={(e) => handleChange("preferredContactMethod", e.target.value)}
+                className="w-full h-10 px-3 border rounded-md"
               >
                 <option value="email">Email</option>
                 <option value="phone">Phone Call</option>
                 <option value="sms">Text Message (SMS)</option>
                 <option value="portal">Portal Message</option>
                 <option value="mail">Postal Mail</option>
-              </Select>
+              </select>
             </div>
 
             <div>
               <Label htmlFor="mailingPreference">Mailing Preference</Label>
-              <Select
+              <select
                 id="mailingPreference"
                 value={editedPreferences.mailingPreference}
                 onChange={(e) => handleChange("mailingPreference", e.target.value)}
+                className="w-full h-10 px-3 border rounded-md"
               >
                 <option value="email">Email Only</option>
                 <option value="mail">Postal Mail Only</option>
                 <option value="both">Both Email and Mail</option>
-              </Select>
+              </select>
             </div>
           </CardContent>
         </Card>
