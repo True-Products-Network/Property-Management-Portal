@@ -162,9 +162,17 @@ export async function PUT(request: NextRequest) {
     const flagsToInsert = DEFAULT_FEATURE_FLAGS
       .filter(f => !existingKeys.has(f.key))
       .map(f => ({
-        ...f,
+        key: f.key,
+        name: f.name,
+        description: f.description,
+        enabled: f.enabled,
+        environment: f.environment,
         allowed_roles: f.allowedRoles,
         user_percentage: f.userPercentage,
+        associations: f.associations,
+        properties: f.properties,
+        users: f.users,
+        metadata: f.metadata,
         created_by: contactData?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
