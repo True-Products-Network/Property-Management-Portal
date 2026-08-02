@@ -2,6 +2,7 @@
 // CRUD operations for contacts
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
 import { mapContact } from "./mappers";
 
@@ -129,7 +130,8 @@ export async function createContact(
   userId: string
 ): Promise<ApiResponse<Contact>> {
   try {
-    const supabase = await createClient();
+    // Use service client to bypass RLS for admin operations
+    const supabase = createServiceClient();
     
     const contactId = `CONT-${Date.now()}`;
     
