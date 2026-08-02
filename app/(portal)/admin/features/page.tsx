@@ -350,7 +350,7 @@ export default function AdminFeaturesPage() {
           <Switch
             id="enabled"
             checked={formData.enabled}
-            onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
+            onChange={(checked) => setFormData({ ...formData, enabled: checked })}
           />
         </div>
       </TabsContent>
@@ -397,7 +397,7 @@ export default function AdminFeaturesPage() {
                 <Checkbox
                   id={`role-${role.value}`}
                   checked={formData.allowedRoles.includes(role.value)}
-                  onCheckedChange={() => toggleRole(role.value)}
+                  onChange={() => toggleRole(role.value)}
                 />
                 <Label htmlFor={`role-${role.value}`} className="text-sm cursor-pointer">
                   {role.label}
@@ -429,7 +429,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`assoc-${assoc.id}`}
                       checked={formData.associations.includes(assoc.id)}
-                      onCheckedChange={(checked) => {
+                      onChange={(checked) => {
                         setFormData((prev) => ({
                           ...prev,
                           associations: checked
@@ -476,7 +476,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`prop-${prop.id}`}
                       checked={formData.properties.includes(prop.id)}
-                      onCheckedChange={(checked) => {
+                      onChange={(checked) => {
                         setFormData((prev) => ({
                           ...prev,
                           properties: checked
