@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
       .select("key")
       .in("key", DEFAULT_FEATURE_FLAGS.map(f => f.key));
 
-    const existingKeys = new Set(existingFlags?.map(f => f.key) || []);
+    const existingKeys = new Set(existingFlags?.map((f: { key: string }) => f.key) || []);
 
     // Insert only missing flags
     const flagsToInsert = DEFAULT_FEATURE_FLAGS
