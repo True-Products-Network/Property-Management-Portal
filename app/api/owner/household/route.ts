@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+interface ContactRole {
+  unit_id: string | null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession();
@@ -44,7 +48,8 @@ export async function GET(request: NextRequest) {
       .eq("contact_id", contactId)
       .eq("is_active", true);
 
-    const unitIds = [...new Set((contactRoles || []).map((r) => r.unit_id).filter(Boolean))];
+    const typedContactRoles = (contactRoles || []) as ContactRole[];
+    const unitIds = [...new Set(typedContactRoles.map((r) => r.unit_id).filter(Boolean))];
 
     // Get household data from first unit (simplified for now)
     // In production, this would be a separate household/occupancy table
@@ -147,7 +152,8 @@ export async function PUT(request: NextRequest) {
       .eq("contact_id", contactId)
       .eq("is_active", true);
 
-    const unitIds = [...new Set((contactRoles || []).map((r) => r.unit_id).filter(Boolean))];
+    const typedContactRoles = (contactRoles || []) as ContactRole[];
+    const unitIds = [...new Set(typedContactRoles.map((r) => r.unit_id).filter(Boolean))];
 
     if (unitIds.length > 0) {
       const { error: unitUpdateError } = await supabase

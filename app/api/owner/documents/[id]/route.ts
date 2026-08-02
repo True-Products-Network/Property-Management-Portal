@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+interface ContactRole {
+  property_id: string | null;
+  unit_id: string | null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -71,8 +76,9 @@ export async function GET(
       .eq("contact_id", contactData.id)
       .eq("is_active", true);
 
-    const userPropertyIds = (contactRoles || []).map((r) => r.property_id).filter(Boolean);
-    const userUnitIds = (contactRoles || []).map((r) => r.unit_id).filter(Boolean);
+    const typedContactRoles = (contactRoles || []) as ContactRole[];
+    const userPropertyIds = typedContactRoles.map((r) => r.property_id).filter(Boolean);
+    const userUnitIds = typedContactRoles.map((r) => r.unit_id).filter(Boolean);
 
     const hasAccess =
       userPropertyIds.includes(document.property_id) ||
