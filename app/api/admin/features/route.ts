@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const { data: flags, error } = await supabase
       .from("feature_flags")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("key", { ascending: true });
 
     if (error) {
       throw error;
