@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           .in("id", associationIds)
       : { data: [] };
 
-    const associationMap = new Map((associations || []).map(a => [a.id, a]));
+    const associationMap = new Map((associations || []).map((a: { id: string }) => [a.id, a]));
 
     // Fetch units
     let units: any[] = [];

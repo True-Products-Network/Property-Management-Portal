@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
           .in("id", associationIds)
       : { data: [] };
 
-    const associationMap = new Map((associations || []).map(a => [a.id, a.name]));
+    const associationMap = new Map((associations || []).map((a: { id: string; name: string }) => [a.id, a.name]));
 
     // Fetch units
     const { data: units } = unitIds.length > 0
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
       : { data: [] };
 
     // Create property map for unit lookups
-    const propertyMap = new Map((properties || []).map(p => [p.id, p.name]));
+    const propertyMap = new Map((properties || []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
     // Fetch maintenance requests for this contact
     const { data: maintenanceRequests } = await supabase
