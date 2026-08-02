@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+interface Document {
+  id: string;
+  title: string;
+  document_type: string;
+  created_at: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -103,7 +110,7 @@ export async function GET(
       ownerActionDeadline: inspection.owner_action_deadline,
     };
 
-    const formattedDocuments = (documents || []).map((doc) => ({
+    const formattedDocuments = (documents || []).map((doc: Document) => ({
       id: doc.id,
       title: doc.title,
       documentType: doc.document_type,
