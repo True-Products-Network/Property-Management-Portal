@@ -3,6 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+interface Thread {
+  id: string;
+  subject: string;
+  status: string;
+  related_type: string | null;
+  related_id: string | null;
+  related_title: string | null;
+  participants: string[];
+  last_message: string;
+  last_message_at: string | null;
+  created_at: string;
+}
+
+interface UnreadCount {
+  thread_id: string;
+  id: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession();
@@ -48,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unread counts for each thread
-    const threadIds = (threads || []).map((t) => t.id);
+    const threadIds = (threads || []).map((t: Thread) => t.id);
     const { data: unreadCounts } = threadIds.length > 0
       ? await supabase
           .from("messages")
@@ -59,11 +77,11 @@ export async function GET(request: NextRequest) {
       : { data: [] };
 
     const unreadMap = new Map();
-    (unreadCounts || []).forEach((msg) => {
+    (unreadCounts || []).forEach((msg: UnreadCount) => {
       unreadMap.set(msg.thread_id, (unreadMap.get(msg.thread_id) || 0) + 1);
     });
 
-    const formattedThreads = (threads || []).map((thread) => ({
+    const formattedThreads = (threads || []).map((thread: Thread) => ({
       id: thread.id,
       subject: thread.subject,
       lastMessage: thread.last_message,

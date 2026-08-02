@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+interface Message {
+  id: string;
+  content: string;
+  sender_id: string;
+  created_at: string;
+}
+
+interface Sender {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -77,7 +90,7 @@ export async function GET(
     }
 
     // Get sender names
-    const senderIds = [...new Set((messages || []).map((m) => m.sender_id))];
+    const senderIds = [...new Set((messages || []).map((m: Message) => m.sender_id))];
     const { data: senders } = senderIds.length > 0
       ? await supabase
           .from("contacts")
@@ -86,7 +99,7 @@ export async function GET(
       : { data: [] };
 
     const senderMap = new Map(
-      (senders || []).map((s) => [
+      (senders || []).map((s: Sender) => [
         s.id,
         `${s.first_name} ${s.last_name}`,
       ])
@@ -102,7 +115,7 @@ export async function GET(
       participants: thread.participants || [],
     };
 
-    const formattedMessages = (messages || []).map((msg) => ({
+    const formattedMessages = (messages || []).map((msg: Message) => ({
       id: msg.id,
       sender: senderMap.get(msg.sender_id) || "Unknown",
       senderRole: msg.sender_id === contactData.id ? "Owner" : "Management",
