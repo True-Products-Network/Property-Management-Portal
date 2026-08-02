@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getSession();
@@ -14,7 +14,7 @@ export async function POST(
     }
 
     const supabase = await createClient();
-    const documentId = params.id;
+    const { id: documentId } = await params;
 
     // Get contact ID for the current user
     const { data: contactData, error: contactError } = await supabase
