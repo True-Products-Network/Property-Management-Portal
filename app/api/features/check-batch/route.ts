@@ -2,7 +2,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { isFeatureEnabled, FeatureFlagUserRole } from "@/lib/features/feature-flags";
+import { isFeatureEnabled, FeatureFlagUserRole, FeatureFlag } from "@/lib/features/feature-flags";
+
+interface Override {
+  feature_flag_id: string;
+  enabled: boolean;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch user-specific overrides
-    const flagIds = flags?.map(f => f.id) || [];
+    const flagIds = flags?.map((f: FeatureFlag) => f.id) || [];
     const { data: overrides } = flagIds.length > 0
       ? await supabase
           .from("feature_flag_overrides")
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
       : { data: [] };
 
     const overrideMap = new Map(
-      overrides?.map(o => [o.feature_flag_id, o.enabled]) || []
+      overrides?.map((o: Override) => [o.feature_flag_id, o.enabled]) || []
     );
 
     // Check each feature
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
     const features: Record<string, boolean> = {};
 
     for (const key of keys) {
-      const flag = flags?.find(f => f.key === key);
+      const flag = flags?.find((f: FeatureFlag) => f.key === key);
 
       if (!flag) {
         features[key] = false;
