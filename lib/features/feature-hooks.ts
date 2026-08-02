@@ -223,18 +223,18 @@ export function FeatureGate({
   children,
   fallback = null,
   loadingComponent = null,
-}: FeatureGateProps) {
+}: FeatureGateProps): React.ReactElement | null {
   const { enabled, loading } = useFeature(feature);
 
   if (loading) {
-    return <>{loadingComponent}</>;
+    return React.createElement(React.Fragment, null, loadingComponent);
   }
 
   if (!enabled) {
-    return <>{fallback}</>;
+    return React.createElement(React.Fragment, null, fallback);
   }
 
-  return <>{children}</>;
+  return React.createElement(React.Fragment, null, children);
 }
 
 // Hook for admin feature flag management
