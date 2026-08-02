@@ -8,7 +8,7 @@ export interface SessionUser {
   roles: PortalRole[];
   mfaEnabled: boolean;
   status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING_INVITE";
-  tenantId?: string;
+  businessId?: string;
 }
 
 export async function getSession(): Promise<SessionUser | null> {
@@ -30,7 +30,7 @@ export async function getSession(): Promise<SessionUser | null> {
     roles: metadata?.roles || [],
     mfaEnabled: metadata?.mfa_enabled || false,
     status: metadata?.status || "ACTIVE",
-    tenantId: metadata?.tenant_id,
+    businessId: metadata?.business_id,
   };
 }
 
