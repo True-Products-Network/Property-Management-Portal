@@ -429,7 +429,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`assoc-${assoc.id}`}
                       checked={formData.associations.includes(assoc.id)}
-                      onCheckedChange={(checked) => {
+                      onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
                           associations: checked
@@ -476,7 +476,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`prop-${prop.id}`}
                       checked={formData.properties.includes(prop.id)}
-                      onCheckedChange={(checked) => {
+                      onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
                           properties: checked
