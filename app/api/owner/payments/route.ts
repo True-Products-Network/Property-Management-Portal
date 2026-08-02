@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           .in("id", propertyIds)
       : { data: [] };
 
-    const propertyMap = new Map((properties || []).map(p => [p.id, p.name]));
+    const propertyMap = new Map((properties || []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
     // Fetch unit numbers
     const { data: units } = unitIds.length > 0
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           .in("id", unitIds)
       : { data: [] };
 
-    const unitMap = new Map((units || []).map(u => [u.id, u.unit_number]));
+    const unitMap = new Map((units || []).map((u: { id: string; unit_number: string }) => [u.id, u.unit_number]));
 
     // Fetch payments for this contact
     const { data: payments, error } = await supabase
@@ -83,13 +83,13 @@ export async function GET(request: NextRequest) {
 
     // Calculate outstanding balance
     const outstandingBalance = (payments || [])
-      .filter(p => p.status === "pending" || p.status === "invoiced")
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .filter((p: { status: string }) => p.status === "pending" || p.status === "invoiced")
+      .reduce((sum: number, p: { amount: number }) => sum + (p.amount || 0), 0);
 
     return NextResponse.json({
       success: true,
       data: {
-        payments: (payments || []).map(p => ({
+        payments: (payments || []).map((p: { id: string; payment_id: string; amount: number; status: string; payment_type: string; payment_mode: string; processor: string; invoice_number: string; ghl_payment_link_url: string; ghl_invoice_id: string; due_date: string; initiated_at: string; completed_at: string; association_id: string; unit_id: string; line_items: any }) => ({
           id: p.id,
           paymentId: p.payment_id,
           amount: p.amount,
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
           dueDate: p.due_date,
           initiatedAt: p.initiated_at,
           completedAt: p.completed_at,
-          propertyName: propertyMap.get(p.association_id), // Using association_id as property reference
+          propertyName: propertyMap.get(p.association_id),
           unitNumber: unitMap.get(p.unit_id),
           lineItems: p.line_items,
         })),
