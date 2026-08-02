@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { DEFAULT_FEATURE_FLAGS } from "@/lib/features/feature-flags";
 
 // Helper function to check if user is admin from JWT metadata
@@ -143,6 +144,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Use service client to bypass RLS for initialization
+    const serviceClient = createServiceClient();
+
     // Get contact ID for created_by
     const { data: contactData } = await supabase
       .from("contacts")
@@ -151,7 +155,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     // Check which default flags already exist
-    const { data: existingFlags } = await supabase
+    const { data: existingFlags } = await serviceClient
       .from("feature_flags")
       .select("key")
       .in("key", DEFAULT_FEATURE_FLAGS.map((f: { key: string }) => f.key));
@@ -179,7 +183,7 @@ export async function PUT(request: NextRequest) {
       }));
 
     if (flagsToInsert.length > 0) {
-      const { error } = await supabase
+      const { error } = await serviceClient
         .from("feature_flags")
         .insert(flagsToInsert);
 
