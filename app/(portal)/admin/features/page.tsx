@@ -350,7 +350,7 @@ export default function AdminFeaturesPage() {
           <Switch
             id="enabled"
             checked={formData.enabled}
-            onChange={(checked) => setFormData({ ...formData, enabled: checked })}
+            onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
           />
         </div>
       </TabsContent>
@@ -429,7 +429,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`assoc-${assoc.id}`}
                       checked={formData.associations.includes(assoc.id)}
-                      onChange={(checked) => {
+                      onCheckedChange={(checked) => {
                         setFormData((prev) => ({
                           ...prev,
                           associations: checked
@@ -476,7 +476,7 @@ export default function AdminFeaturesPage() {
                     <Checkbox
                       id={`prop-${prop.id}`}
                       checked={formData.properties.includes(prop.id)}
-                      onChange={(checked) => {
+                      onCheckedChange={(checked) => {
                         setFormData((prev) => ({
                           ...prev,
                           properties: checked
