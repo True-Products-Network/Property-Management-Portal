@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           .in("id", propertyIds)
       : { data: [] };
 
-    const propertyMap = new Map((properties || []).map(p => [p.id, p.name]));
+    const propertyMap = new Map((properties || []).map((p: { id: string; name: string }) => [p.id, p.name]));
 
     // Fetch unit numbers
     const { data: units } = unitIds.length > 0
@@ -88,10 +88,10 @@ export async function GET(request: NextRequest) {
           .in("id", unitIds)
       : { data: [] };
 
-    const unitMap = new Map((units || []).map(u => [u.id, u.unit_number]));
+    const unitMap = new Map((units || []).map((u: { id: string; unit_number: string }) => [u.id, u.unit_number]));
 
     // Fetch acknowledgments for this contact
-    const documentIds = (documents || []).map(d => d.id);
+    const documentIds = (documents || []).map((d: { id: string }) => d.id);
     const { data: acknowledgments } = documentIds.length > 0
       ? await supabase
           .from("document_acknowledgments")
@@ -100,11 +100,11 @@ export async function GET(request: NextRequest) {
           .in("document_id", documentIds)
       : { data: [] };
 
-    const acknowledgmentMap = new Map((acknowledgments || []).map(a => [a.document_id, a.acknowledged_at]));
+    const acknowledgmentMap = new Map((acknowledgments || []).map((a: { document_id: string; acknowledged_at: string }) => [a.document_id, a.acknowledged_at]));
 
     return NextResponse.json({
       success: true,
-      data: (documents || []).map(d => ({
+      data: (documents || []).map((d: { id: string; document_id: string; title: string; file_name: string; file_path: string; file_size: number; content_type: string; document_type: string; category: string; status: string; issue_date: string; expiry_date: string; property_id: string; unit_id: string; is_confidential: boolean; requires_acknowledgment: boolean; created_at: string }) => ({
         id: d.id,
         documentId: d.document_id,
         title: d.title,
