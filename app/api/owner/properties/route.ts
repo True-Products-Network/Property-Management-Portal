@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           .in("id", associationIds)
       : { data: [] };
 
-    const associationMap = new Map((associations || []).map((a: { id: string }) => [a.id, a]));
+    const associationMap = new Map((associations || []).map((a: { id: string; name: string; phone: string; email: string }) => [a.id, a]));
 
     // Fetch units
     let units: any[] = [];
@@ -87,12 +87,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Create property map for unit lookups
-    const propertyMap = new Map(properties.map(p => [p.id, p.name]));
+    const propertyMap = new Map(properties.map((p: { id: string; name: string }) => [p.id, p.name]));
 
     return NextResponse.json({
       success: true,
       data: {
-        properties: properties.map(p => {
+        properties: properties.map((p: { id: string; property_id: string; name: string; address_street: string; address_city: string; address_state: string; address_zip: string; type: string; status: string; year_built: number; total_units: number; management_start_date: string; access_instructions: string; emergency_notes: string; association_id: string }) => {
           const assoc = associationMap.get(p.association_id);
           return {
             id: p.id,
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
             associationEmail: assoc?.email,
           };
         }),
-        units: units.map(u => ({
+        units: units.map((u: { id: string; unit_id: string; property_id: string; unit_number: string; display_name: string; type: string; status: string; square_feet: number; bedrooms: number; bathrooms: number; floor: string; occupancy_status: string; rental_status: string; parking_spot: string; storage_unit: string; move_in_date: string; mailing_address: string; access_notes: string }) => ({
           id: u.id,
           unitId: u.unit_id,
           propertyId: u.property_id,
