@@ -65,6 +65,10 @@ export default function NewAssociationPage() {
     documentStorageLink: string;
     emergencyInstructions: string;
     generalNotes: string;
+    propertyCount: number | '';
+    unitCount: number | '';
+    assignedManagerId: string;
+    assignedManagerName: string;
   }>({
     name: "",
     shortName: "",
@@ -89,6 +93,10 @@ export default function NewAssociationPage() {
     documentStorageLink: "",
     emergencyInstructions: "",
     generalNotes: "",
+    propertyCount: '',
+    unitCount: '',
+    assignedManagerId: "",
+    assignedManagerName: "",
   });
 
   async function handleSubmit(e: React.FormEvent) {
@@ -104,18 +112,45 @@ export default function NewAssociationPage() {
     }
 
     try {
+      // Transform form data to match API schema
+      const apiData = {
+        name: formData.name,
+        legalName: formData.legalName || undefined,
+        type: formData.type.charAt(0).toUpperCase() + formData.type.slice(1), // Convert to proper case
+        addressStreet: formData.addressStreet || undefined,
+        addressCity: formData.addressCity || undefined,
+        addressState: formData.addressState || undefined,
+        addressZip: formData.addressZip || undefined,
+        phone: formData.phone || undefined,
+        email: formData.email || undefined,
+        fiscalYear: formData.fiscalYear || undefined,
+        annualMeetingMonth: formData.annualMeetingMonth || undefined,
+        managementStartDate: formData.managementStartDate || undefined,
+        assignedManagerId: formData.assignedManagerId || undefined,
+        propertyCount: formData.propertyCount ? parseInt(formData.propertyCount.toString()) : undefined,
+        unitCount: formData.unitCount ? parseInt(formData.unitCount.toString()) : undefined,
+      };
+
       const response = await fetch("/api/associations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(apiData),
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        // Show detailed validation errors
+        if (result.details) {
+          const errorMessages = result.details.map((err: any) => `${err.path}: ${err.message}`).join("\n");
+          throw new Error(`Validation failed:\n${errorMessages}`);
+        }
         throw new Error(result.error || "Failed to create association");
       }
 
+      // Show success message with Association ID
+      alert(`Association created successfully!\n\nAssociation ID: ${result.data?.id || result.data?.associationId || 'N/A'}\nName: ${formData.name}`);
+      
       router.push("/management/associations");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -150,7 +185,7 @@ export default function NewAssociationPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 whitespace-pre-line">
             {error}
           </div>
         )}
@@ -237,6 +272,53 @@ export default function NewAssociationPage() {
                   onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
                   placeholder="XX-XXXXXXX"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--main-text)]">
+                  Number of Properties
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.propertyCount}
+                  onChange={(e) => setFormData({ ...formData, propertyCount: e.target.value ? parseInt(e.target.value) : '' })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--main-text)]">
+                  Number of Units
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.unitCount}
+                  onChange={(e) => setFormData({ ...formData, unitCount: e.target.value ? parseInt(e.target.value) : '' })}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-[var(--main-text)]">
+                  Assigned Manager
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.assignedManagerName}
+                    placeholder="Select a manager..."
+                    readOnly
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => alert("Manager selection modal would open here")}
+                  >
+                    Select
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
