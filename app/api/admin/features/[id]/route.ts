@@ -1,25 +1,20 @@
 // Admin Individual Feature Flag API
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
-// Helper function to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-  const { data: contactData } = await supabase
-    .from("contacts")
-    .select("id")
-    .eq("portal_user_id", userId)
-    .single();
+// Helper function to check if user is admin from JWT metadata
+async function checkAdmin(supabase: any) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { isAdmin: false, user: null };
+  }
 
-  const { data: adminRole } = await supabase
-    .from("contact_roles")
-    .select("id")
-    .eq("contact_id", contactData?.id)
-    .eq("role", "ADMIN_USER")
-    .eq("is_active", true)
-    .maybeSingle();
+  // Check admin status from user metadata (set during login/token creation)
+  const roles = user.user_metadata?.roles;
+  const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+  const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
 
-  return { isAdmin: !!adminRole, contactId: contactData?.id };
+  return { isAdmin, user };
 }
 
 // GET - Get a single feature flag
@@ -28,15 +23,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase, user.id);
+    const { isAdmin } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -96,15 +86,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase, user.id);
+    const { isAdmin } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -159,15 +144,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase, user.id);
+    const { isAdmin } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(

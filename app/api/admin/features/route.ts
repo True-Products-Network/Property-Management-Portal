@@ -4,35 +4,26 @@ import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_FEATURE_FLAGS } from "@/lib/features/feature-flags";
 
-// Helper function to check if user is admin
-async function checkAdmin(supabase: any, userId: string) {
-  const { data: contactData } = await supabase
-    .from("contacts")
-    .select("id")
-    .eq("portal_user_id", userId)
-    .single();
+// Helper function to check if user is admin from JWT metadata
+async function checkAdmin(supabase: any) {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return { isAdmin: false, user: null };
+  }
 
-  const { data: adminRole } = await supabase
-    .from("contact_roles")
-    .select("id")
-    .eq("contact_id", contactData?.id)
-    .eq("role", "ADMIN_USER")
-    .eq("is_active", true)
-    .maybeSingle();
+  // Check admin status from user metadata (set during login/token creation)
+  const roles = user.user_metadata?.roles;
+  const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+  const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
 
-  return { isAdmin: !!adminRole, contactId: contactData?.id };
+  return { isAdmin, user };
 }
 
 // GET - List all feature flags
 export async function GET(request: NextRequest) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const supabase = await createClient();
-    const { isAdmin } = await checkAdmin(supabase, user.id);
+    const { isAdmin } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -63,13 +54,8 @@ export async function GET(request: NextRequest) {
 // POST - Create a new feature flag
 export async function POST(request: NextRequest) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const supabase = await createClient();
-    const { isAdmin, contactId } = await checkAdmin(supabase, user.id);
+    const { isAdmin, user } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -102,6 +88,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get contact ID for created_by
+    const { data: contactData } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", user?.id)
+      .single();
+
     const { data: flag, error } = await supabase
       .from("feature_flags")
       .insert({
@@ -116,7 +109,7 @@ export async function POST(request: NextRequest) {
         properties: body.properties || null,
         users: body.users || null,
         metadata: body.metadata || null,
-        created_by: contactId,
+        created_by: contactData?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -140,13 +133,8 @@ export async function POST(request: NextRequest) {
 // PUT - Initialize default feature flags
 export async function PUT(request: NextRequest) {
   try {
-    const user = await getSession();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
     const supabase = await createClient();
-    const { isAdmin, contactId } = await checkAdmin(supabase, user.id);
+    const { isAdmin, user } = await checkAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
@@ -155,11 +143,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Get contact ID for created_by
+    const { data: contactData } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", user?.id)
+      .single();
+
     // Check which default flags already exist
     const { data: existingFlags } = await supabase
       .from("feature_flags")
       .select("key")
-      .in("key", DEFAULT_FEATURE_FLAGS.map(f => f.key));
+      .in("key", DEFAULT_FEATURE_FLAGS.map((f: { key: string }) => f.key));
 
     const existingKeys = new Set(existingFlags?.map((f: { key: string }) => f.key) || []);
 
@@ -170,7 +165,7 @@ export async function PUT(request: NextRequest) {
         ...f,
         allowed_roles: f.allowedRoles,
         user_percentage: f.userPercentage,
-        created_by: contactId,
+        created_by: contactData?.id,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }));

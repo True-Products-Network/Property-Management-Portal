@@ -57,16 +57,20 @@ ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feature_flag_overrides ENABLE ROW LEVEL SECURITY;
 
 -- Create helper function to check if user is admin
+-- Checks user metadata for ADMIN_USER role (set during JWT token creation)
 CREATE OR REPLACE FUNCTION is_admin_user()
 RETURNS BOOLEAN AS $$
+DECLARE
+    user_roles JSONB;
+    is_admin BOOLEAN;
 BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM contact_roles cr
-        JOIN contacts c ON cr.contact_id = c.id
-        WHERE c.portal_user_id = auth.uid()
-        AND cr.role = 'ADMIN_USER'
-        AND cr.is_active = true
-    );
+    -- Get roles from user metadata
+    user_roles := auth.jwt() -> 'user_metadata' -> 'roles';
+    is_admin := (auth.jwt() -> 'user_metadata' ->> 'is_admin')::BOOLEAN;
+    
+    -- Check if user has ADMIN_USER role or is_admin flag
+    RETURN is_admin = true OR 
+           (user_roles IS NOT NULL AND user_roles @> '["ADMIN_USER"]'::JSONB);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
