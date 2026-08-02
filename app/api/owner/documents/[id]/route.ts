@@ -8,6 +8,13 @@ interface ContactRole {
   unit_id: string | null;
 }
 
+interface DocumentMessage {
+  id: string;
+  contact_id: string;
+  message: string;
+  created_at: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -157,7 +164,7 @@ export async function GET(
       description: document.description,
     };
 
-    const formattedMessages = (messages || []).map((msg) => ({
+    const formattedMessages = (messages || []).map((msg: DocumentMessage) => ({
       id: msg.id,
       sender: msg.contact_id === contactData.id ? "You" : "Management",
       message: msg.message,
