@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch units" }, { status: 500 });
     }
 
-    const unitIds = contactUnits?.map((cu) => cu.unit_id) || [];
+    const unitIds = contactUnits?.map((cu: { unit_id: string }) => cu.unit_id) || [];
 
     if (unitIds.length === 0) {
       return NextResponse.json({ success: true, data: [] });
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format the response
-    const formattedRequests = requests?.map((request) => ({
+    const formattedRequests = requests?.map((request: { id: string; title: string; description: string; status: string; urgency: string; category: string; units?: { unit_number: string }; created_at: string; updated_at: string; scheduled_date: string }) => ({
       id: request.id,
       title: request.title,
       description: request.description,
