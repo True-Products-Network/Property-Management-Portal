@@ -186,7 +186,6 @@ export async function GET(request: NextRequest) {
           startTime: a.start_time,
           appointmentType: a.appointment_type,
           isVirtual: a.is_virtual || false,
-          isVirtual: a.is_virtual,
         })),
         outstandingBalance,
       },
