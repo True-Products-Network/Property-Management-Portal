@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
 
     // Calculate outstanding balance
     const outstandingBalance = (payments || [])
-      .filter(p => p.status === "pending" || p.status === "invoiced")
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .filter((p: { status: string }) => p.status === "pending" || p.status === "invoiced")
+      .reduce((sum: number, p: { amount: number }) => sum + (p.amount || 0), 0);
 
     return NextResponse.json({
       success: true,
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         contactId,
         firstName: contactData.first_name,
         lastName: contactData.last_name,
-        properties: (properties || []).map(p => ({
+        properties: (properties || []).map((p: { id: string; name: string; address_street: string; address_city: string; address_state: string; type: string; association_id: string }) => ({
           id: p.id,
           name: p.name,
           addressStreet: p.address_street,
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
           type: p.type,
           associationName: associationMap.get(p.association_id),
         })),
-        units: (units || []).map(u => ({
+        units: (units || []).map((u: { id: string; unit_id: string; property_id: string; unit_number: string; display_name: string; type: string; status: string; occupancy_status: string }) => ({
           id: u.id,
           unitId: u.unit_id,
           propertyId: u.property_id,
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
           status: u.status,
           occupancyStatus: u.occupancy_status,
         })),
-        maintenanceRequests: (maintenanceRequests || []).map(m => ({
+        maintenanceRequests: (maintenanceRequests || []).map((m: { id: string; request_number: string; title: string; status: string; urgency: string; category: string; property_id: string; unit_id: string; created_at: string }) => ({
           id: m.id,
           requestNumber: m.request_number,
           title: m.title,
@@ -163,16 +163,16 @@ export async function GET(request: NextRequest) {
           unitId: m.unit_id,
           createdAt: m.created_at,
         })),
-        documents: (documents || []).map(d => ({
+        documents: (documents || []).map((d: { id: string; title: string; document_type: string; category: string; status: string; issue_date: string; requires_acknowledgment: boolean }) => ({
           id: d.id,
           title: d.title,
           documentType: d.document_type,
           category: d.category,
-          createdAt: d.created_at,
+          createdAt: d.issue_date,
           requiresAcknowledgment: d.requires_acknowledgment,
           acknowledged: false, // TODO: Check document_acknowledgments table
         })),
-        payments: (payments || []).map(p => ({
+        payments: (payments || []).map((p: { id: string; amount: number; status: string; payment_type: string; initiated_at: string; invoice_number: string }) => ({
           id: p.id,
           amount: p.amount,
           status: p.status,
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
           initiatedAt: p.initiated_at,
           invoiceNumber: p.invoice_number,
         })),
-        upcomingAppointments: (appointments || []).map(a => ({
+        upcomingAppointments: (appointments || []).map((a: { id: string; title: string; start_time: string; appointment_type: string }) => ({
           id: a.id,
           title: a.title,
           startTime: a.start_time,
