@@ -56,6 +56,20 @@ CREATE INDEX IF NOT EXISTS idx_feature_flag_overrides_property ON feature_flag_o
 ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feature_flag_overrides ENABLE ROW LEVEL SECURITY;
 
+-- Create helper function to check if user is admin
+CREATE OR REPLACE FUNCTION is_admin_user()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM contact_roles cr
+        JOIN contacts c ON cr.contact_id = c.id
+        WHERE c.portal_user_id = auth.uid()
+        AND cr.role = 'ADMIN_USER'
+        AND cr.is_active = true
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- RLS Policies for feature_flags
 CREATE POLICY "Feature flags are viewable by authenticated users"
     ON feature_flags FOR SELECT
@@ -65,20 +79,8 @@ CREATE POLICY "Feature flags are viewable by authenticated users"
 CREATE POLICY "Feature flags are manageable by admin users only"
     ON feature_flags FOR ALL
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM contacts
-            WHERE contacts.portal_user_id = auth.uid()
-            AND contacts.roles @> ARRAY['admin']
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM contacts
-            WHERE contacts.portal_user_id = auth.uid()
-            AND contacts.roles @> ARRAY['admin']
-        )
-    );
+    USING (is_admin_user())
+    WITH CHECK (is_admin_user());
 
 -- RLS Policies for feature_flag_overrides
 CREATE POLICY "Feature flag overrides are viewable by authenticated users"
@@ -89,20 +91,8 @@ CREATE POLICY "Feature flag overrides are viewable by authenticated users"
 CREATE POLICY "Feature flag overrides are manageable by admin users only"
     ON feature_flag_overrides FOR ALL
     TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM contacts
-            WHERE contacts.portal_user_id = auth.uid()
-            AND contacts.roles @> ARRAY['admin']
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM contacts
-            WHERE contacts.portal_user_id = auth.uid()
-            AND contacts.roles @> ARRAY['admin']
-        )
-    );
+    USING (is_admin_user())
+    WITH CHECK (is_admin_user());
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_feature_flags_updated_at()

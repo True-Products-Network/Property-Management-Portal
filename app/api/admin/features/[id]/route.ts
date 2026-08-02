@@ -3,6 +3,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+// Helper function to check if user is admin
+async function checkAdmin(supabase: any, userId: string) {
+  const { data: contactData } = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("portal_user_id", userId)
+    .single();
+
+  const { data: adminRole } = await supabase
+    .from("contact_roles")
+    .select("id")
+    .eq("contact_id", contactData?.id)
+    .eq("role", "ADMIN_USER")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return { isAdmin: !!adminRole, contactId: contactData?.id };
+}
+
 // GET - Get a single feature flag
 export async function GET(
   request: NextRequest,
@@ -17,14 +36,9 @@ export async function GET(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    // Check if user is admin
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -90,14 +104,9 @@ export async function PUT(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    // Check if user is admin
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -158,14 +167,9 @@ export async function DELETE(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    // Check if user is admin
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }

@@ -4,6 +4,25 @@ import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_FEATURE_FLAGS } from "@/lib/features/feature-flags";
 
+// Helper function to check if user is admin
+async function checkAdmin(supabase: any, userId: string) {
+  const { data: contactData } = await supabase
+    .from("contacts")
+    .select("id")
+    .eq("portal_user_id", userId)
+    .single();
+
+  const { data: adminRole } = await supabase
+    .from("contact_roles")
+    .select("id")
+    .eq("contact_id", contactData?.id)
+    .eq("role", "ADMIN_USER")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return { isAdmin: !!adminRole, contactId: contactData?.id };
+}
+
 // GET - List all feature flags
 export async function GET(request: NextRequest) {
   try {
@@ -12,15 +31,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const supabase = await createClient();
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -54,15 +68,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const supabase = await createClient();
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("id, roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin, contactId } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -107,7 +116,7 @@ export async function POST(request: NextRequest) {
         properties: body.properties || null,
         users: body.users || null,
         metadata: body.metadata || null,
-        created_by: contactData.id,
+        created_by: contactId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
@@ -136,15 +145,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
     const supabase = await createClient();
-    const { data: contactData } = await supabase
-      .from("contacts")
-      .select("id, roles")
-      .eq("portal_user_id", user.id)
-      .single();
+    const { isAdmin, contactId } = await checkAdmin(supabase, user.id);
 
-    if (!contactData?.roles?.includes("admin")) {
+    if (!isAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -166,7 +170,7 @@ export async function PUT(request: NextRequest) {
         ...f,
         allowed_roles: f.allowedRoles,
         user_percentage: f.userPercentage,
-        created_by: contactData.id,
+        created_by: contactId,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }));
