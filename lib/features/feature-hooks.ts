@@ -218,12 +218,8 @@ interface FeatureGateProps {
   loadingComponent?: React.ReactNode;
 }
 
-export function FeatureGate({
-  feature,
-  children,
-  fallback = null,
-  loadingComponent = null,
-}: FeatureGateProps): React.ReactElement | null {
+export function FeatureGate(props: FeatureGateProps): React.ReactElement | null {
+  const { feature, children, fallback = null, loadingComponent = null } = props;
   const { enabled, loading } = useFeature(feature);
 
   if (loading) {
