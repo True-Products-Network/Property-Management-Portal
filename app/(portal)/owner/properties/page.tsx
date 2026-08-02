@@ -177,35 +177,39 @@ export default function OwnerPropertiesPage() {
         <div className="lg:col-span-1 space-y-4">
           <h2 className="text-lg font-medium">Your Properties</h2>
           {data.properties.map((property) => (
-            <Card
+            <div
               key={property.id}
-              className={`cursor-pointer transition-all ${
-                selectedProperty === property.id
-                  ? "ring-2 ring-[var(--teal)] border-[var(--teal)]"
-                  : "hover:shadow-md"
-              }`}
               onClick={() => setSelectedProperty(property.id)}
+              className="cursor-pointer"
             >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-5 w-5 text-[var(--teal)]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{property.name}</p>
-                    <p className="text-sm text-[var(--secondary-text)] truncate">
-                      {property.addressStreet}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      {getStatusBadge(property.status)}
-                      <span className="text-xs text-[var(--secondary-text)]">
-                        {propertyUnits.length} unit{propertyUnits.length !== 1 ? "s" : ""}
-                      </span>
+              <Card
+                className={`transition-all ${
+                  selectedProperty === property.id
+                    ? "ring-2 ring-[var(--teal)] border-[var(--teal)]"
+                    : "hover:shadow-md"
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{property.name}</p>
+                      <p className="text-sm text-[var(--secondary-text)] truncate">
+                        {property.addressStreet}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        {getStatusBadge(property.status)}
+                        <span className="text-xs text-[var(--secondary-text)]">
+                          {propertyUnits.length} unit{propertyUnits.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
 
