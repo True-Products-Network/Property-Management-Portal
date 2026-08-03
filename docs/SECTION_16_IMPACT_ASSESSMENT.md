@@ -24,17 +24,17 @@ The Associos Property Management Portal has **significant foundational work alre
 
 | Component | Current State | Amendment Gap |
 |-----------|--------------|---------------|
-| `business_id` column | ✅ Exists on all major tables | Maps to `tenant_id` - acceptable |
-| `businesses` table | ✅ Exists | Needs rename to `tenants` or alias |
-| `business_users` junction | ✅ Exists | Needs expansion for Portfolio assignments |
-| Business isolation RLS | ✅ Implemented | Working foundation |
-| `get_current_business_id()` | ✅ JWT-based function | Compatible with amendment |
+| `business_id` column | ✅ Exists on all major tables | **Rename to `tenant_id`** per decision |
+| `businesses` table | ✅ Exists | Rename to `tenants` |
+| `business_users` junction | ✅ Exists | Rename to `tenant_users` |
+| Business isolation RLS | ✅ Implemented | Update function names |
+| `get_current_business_id()` | ✅ JWT-based function | Rename to `get_current_tenant_id()` |
 
 ### 1.2 Missing Multi-Tenant Components
 
 | Component | Status | Impact |
 |-----------|--------|--------|
-| **Portfolios table** | ❌ Does not exist | **CRITICAL** - Core amendment requirement |
+| **Portfolios table** | ❌ Does not exist | **CRITICAL** - One default Portfolio per tenant initially |
 | **Portfolio → Association relationship** | ❌ Associations link directly to business | Requires schema change |
 | **Association-level GHL connections** | ❌ Uses `ghl_credentials` table (global) | Must migrate to per-Association |
 | **Plans & entitlements tables** | ❌ Do not exist | **CRITICAL** - Subscription management |
@@ -96,7 +96,39 @@ export async function getAssociations(
 | `app/(portal)/owner/*` | No changes (already scoped to user) |
 | `app/(portal)/vendor/*` | No changes (already scoped to user) |
 
-### 2.3 Screen Inventory (Current: 120+ routes)
+### 2.3 Portfolio Layer Clarification
+
+Per Nigel's direction:
+
+- **Portfolio = organizational container and reporting level** (not a separate screen)
+- **MG-01 (Dashboard)** → Rename to **Portfolio Dashboard**
+- **MG-02 (Associations List)** → Rename to **Portfolio — Managed Associations**
+- Each business starts with **one default Portfolio**
+- Multiple Portfolios = Enterprise plan feature (future)
+- Portfolio Manager uses existing MG-02 screen to manage Associations within their Portfolio
+
+**Initial Associos Structure:**
+```
+Business/Tenant
+└── Portfolio (default, one per tenant initially)
+    ├── Association A
+    ├── Association B
+    └── Association C
+```
+
+**Portfolio Manager Permissions:**
+- ✅ Create, edit, remove Associations within their Portfolio
+- ✅ Complete Association onboarding checklist
+- ✅ Add Properties, Units, staff, board members
+- ✅ Assign Association and Property Managers
+- ✅ Configure Association settings
+- ✅ Start Association-level GHL and financial-system setup
+- ❌ Create Associations for another business
+- ❌ Exceed plan limits (shows upgrade message)
+- ❌ Change subscription plans or billing
+- ❌ Access Platform Console
+
+### 2.4 Screen Inventory (Current: 120+ routes)
 
 **Tenant-Facing Screens (Existing - Remain):**
 - Management Portal: ~45 screens
@@ -846,19 +878,21 @@ CREATE TABLE billing_events (
 
 | Decision | Options | Recommendation |
 |----------|---------|----------------|
-| **Physical tenant key name** | Keep `business_id` vs rename to `tenant_id` | Keep `business_id` - less migration risk |
-| **Plan names** | Basic/Growth/Premium/Enterprise vs custom | Use seed names, allow customization later |
+| **Physical tenant key name** | Keep `business_id` vs rename to `tenant_id` | **Rename to `tenant_id`** - cleaner alignment with amendment |
+| **Plan names** | **Starter/Professional/Growth/Enterprise** (3 tiers + Enterprise by request) |
 | **Default Portfolio naming** | "Default" vs "Main" vs company name | "Default Portfolio" with ability to rename |
-| **Portfolio Manager permissions** | Can they create Associations? | Yes, within their assigned Portfolios |
-| **Support session duration** | Fixed (1 hour) vs configurable | Configurable with 1 hour default |
-| **Billing grace period** | 3 days, 7 days, 14 days | 7 days default, tenant-specific override |
+| **Portfolio Manager permissions** | Can they create Associations? | **Yes**, within their assigned Portfolios, subject to plan limits |
+| **Support session duration** | **60 minutes default**, Platform Admin adjustable |
+| **Billing grace period** | **7 calendar days default**, Platform Admin adjustable |
 
 ### 12.3 Technical Debt Items
 
-1. **Role migration**: Existing `ADMIN_USER` roles need migration to `BUSINESS_ADMIN`
-2. **GHL credentials**: Need secure migration from global to Association-level
-3. **Feature flags**: Current system needs migration to new entitlement model
-4. **Test data**: Mock adapter needs Portfolio and tenant context
+1. **Column rename**: `business_id` → `tenant_id` across all tables
+2. **Role migration**: Existing `ADMIN_USER` roles need migration to `BUSINESS_ADMIN`
+3. **GHL credentials**: Need secure migration from global to Association-level
+4. **Feature flags**: Current system needs migration to new entitlement model
+5. **Test data**: Mock adapter needs Portfolio and tenant context
+6. **Screens to move to Platform Console**: Feature List, GHL Role Mapping, Workflow Settings (currently not loading correctly)
 
 ---
 
