@@ -67,32 +67,43 @@ export default async function EntitlementsPage({
   const featureFilter = searchParams.feature as string | undefined;
   const typeFilter = searchParams.type as string | undefined;
 
-  // Build query
-  let query = supabase
-    .from("tenant_entitlements")
-    .select(`
-      *,
-      tenants(id, name, code),
-      features(id, code, name, category)
-    `)
-    .order("created_at", { ascending: false });
+  // Fetch entitlements with error handling
+  let entitlements: Entitlement[] = [];
+  let fetchError = null;
+  
+  try {
+    let query = supabase
+      .from("tenant_entitlements")
+      .select(`
+        *,
+        tenants(id, name, code),
+        features(id, code, name, category)
+      `)
+      .order("created_at", { ascending: false });
 
-  if (tenantFilter) {
-    query = query.eq("tenant_id", tenantFilter);
-  }
+    if (tenantFilter) {
+      query = query.eq("tenant_id", tenantFilter);
+    }
 
-  if (featureFilter) {
-    query = query.eq("feature_id", featureFilter);
-  }
+    if (featureFilter) {
+      query = query.eq("feature_id", featureFilter);
+    }
 
-  if (typeFilter) {
-    query = query.eq("entitlement_type", typeFilter);
-  }
+    if (typeFilter) {
+      query = query.eq("entitlement_type", typeFilter);
+    }
 
-  const { data: entitlements, error } = await query;
-
-  if (error) {
-    console.error("Error fetching entitlements:", error);
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error fetching entitlements:", error);
+      fetchError = error;
+    } else {
+      entitlements = data || [];
+    }
+  } catch (e) {
+    console.error("Exception fetching entitlements:", e);
+    fetchError = e;
   }
 
   // Get tenants for filter
@@ -154,115 +165,103 @@ export default async function EntitlementsPage({
         </div>
         <Button asChild>
           <Link href="/platform/entitlements/new">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
             Add Entitlement
           </Link>
         </Button>
       </div>
 
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error loading entitlements. Please check database permissions.</p>
+          <p className="text-red-600 text-sm mt-1">{String(fetchError)}</p>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium">Filters:</span>
+        </div>
+        
+        {/* Tenant Filter */}
+        <select 
+          className="border rounded-md px-3 py-1 text-sm"
+          name="tenant"
+        >
+          <option value="">All Tenants</option>
+          {tenants?.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+
+        {/* Feature Filter */}
+        <select 
+          className="border rounded-md px-3 py-1 text-sm"
+          name="feature"
+        >
+          <option value="">All Features</option>
+          {features?.map((f: any) => (
+            <option key={f.id} value={f.id}>{f.name}</option>
+          ))}
+        </select>
+
+        {/* Type Filter */}
+        <select 
+          className="border rounded-md px-3 py-1 text-sm"
+          name="type"
+        >
+          <option value="">All Types</option>
+          <option value="addon">Add-on</option>
+          <option value="override">Override</option>
+          <option value="trial">Trial</option>
+        </select>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-500">Total Entitlements</p>
           <p className="text-2xl font-bold">{totalCount || 0}</p>
+          <p className="text-sm text-gray-500">Total Entitlements</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-2xl font-bold">{addonCount || 0}</p>
           <p className="text-sm text-gray-500">Add-ons</p>
-          <p className="text-2xl font-bold text-blue-600">{addonCount || 0}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-2xl font-bold">{overrideCount || 0}</p>
           <p className="text-sm text-gray-500">Overrides</p>
-          <p className="text-2xl font-bold text-purple-600">{overrideCount || 0}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
+          <p className="text-2xl font-bold">{trialCount || 0}</p>
           <p className="text-sm text-gray-500">Trials</p>
-          <p className="text-2xl font-bold text-orange-600">{trialCount || 0}</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium">Filters:</span>
-          </div>
-          
-          <select
-            className="border rounded-md px-3 py-1.5 text-sm"
-            defaultValue={tenantFilter || ""}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              if (e.target.value) {
-                url.searchParams.set("tenant", e.target.value);
-              } else {
-                url.searchParams.delete("tenant");
-              }
-              window.location.href = url.toString();
-            }}
-          >
-            <option value="">All Tenants</option>
-            {tenants?.map((t: { id: string; name: string }) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-
-          <select
-            className="border rounded-md px-3 py-1.5 text-sm"
-            defaultValue={featureFilter || ""}
-          >
-            <option value="">All Features</option>
-            {features?.map((f: { id: string; name: string }) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-
-          <select
-            className="border rounded-md px-3 py-1.5 text-sm"
-            defaultValue={typeFilter || ""}
-          >
-            <option value="">All Types</option>
-            <option value="addon">Add-on</option>
-            <option value="override">Override</option>
-            <option value="trial">Trial</option>
-          </select>
-
-          {(tenantFilter || featureFilter || typeFilter) && (
-            <Link
-              href="/platform/entitlements"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Clear filters
-            </Link>
-          )}
         </div>
       </div>
 
       {/* Entitlements Table */}
       <div className="bg-white rounded-lg shadow">
-        {(entitlements || []).length === 0 ? (
-          <div className="p-8 text-center">
-            <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No entitlements found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Add entitlements to grant features to tenants
-            </p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Tenant</TableHead>
+              <TableHead>Feature</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Limit</TableHead>
+              <TableHead>Dates</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entitlements.length === 0 ? (
               <TableRow>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Feature</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Limit</TableHead>
-                <TableHead>Effective</TableHead>
-                <TableHead>Expires</TableHead>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No entitlements found</p>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(entitlements || []).map((ent: Entitlement) => (
+            ) : (
+              entitlements.map((ent: Entitlement) => (
                 <TableRow key={ent.id}>
                   <TableCell>
                     <div>
@@ -279,25 +278,23 @@ export default async function EntitlementsPage({
                   <TableCell>{getTypeBadge(ent.entitlement_type)}</TableCell>
                   <TableCell>{getStatusBadge(ent.is_enabled)}</TableCell>
                   <TableCell>
-                    {ent.limit_value !== null ? ent.limit_value.toLocaleString() : "Unlimited"}
+                    {ent.limit_value !== null ? ent.limit_value : "Unlimited"}
                   </TableCell>
                   <TableCell>
-                    {new Date(ent.effective_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {ent.expiration_date ? (
-                      <span className={new Date(ent.expiration_date) < new Date() ? "text-red-600" : ""}>
-                        {new Date(ent.expiration_date).toLocaleDateString()}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">Never</span>
-                    )}
+                    <div className="text-sm">
+                      <p>From: {new Date(ent.effective_date).toLocaleDateString()}</p>
+                      {ent.expiration_date && (
+                        <p className="text-red-600">
+                          Until: {new Date(ent.expiration_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

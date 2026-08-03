@@ -62,51 +62,47 @@ export default async function AuditPage({
     redirect("/unauthorized");
   }
 
-  const actorFilter = searchParams.actor as string | undefined;
-  const actionFilter = searchParams.action as string | undefined;
   const categoryFilter = searchParams.category as string | undefined;
   const tenantFilter = searchParams.tenant as string | undefined;
-  const dateFrom = searchParams.from as string | undefined;
-  const dateTo = searchParams.to as string | undefined;
+  const actionFilter = searchParams.action as string | undefined;
 
-  // Build query
-  let query = supabase
-    .from("platform_audit_events")
-    .select(`
-      *,
-      tenants(id, name, code)
-    `)
-    .order("created_at", { ascending: false })
-    .limit(100);
+  // Fetch audit events with error handling
+  let events: AuditEvent[] = [];
+  let fetchError = null;
 
-  if (actorFilter) {
-    query = query.eq("actor_id", actorFilter);
-  }
+  try {
+    let query = supabase
+      .from("platform_audit_events")
+      .select(`
+        *,
+        tenants(id, name, code)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
-  if (actionFilter) {
-    query = query.eq("action", actionFilter);
-  }
+    if (categoryFilter) {
+      query = query.eq("action_category", categoryFilter);
+    }
 
-  if (categoryFilter) {
-    query = query.eq("action_category", categoryFilter);
-  }
+    if (tenantFilter) {
+      query = query.eq("tenant_id", tenantFilter);
+    }
 
-  if (tenantFilter) {
-    query = query.eq("tenant_id", tenantFilter);
-  }
+    if (actionFilter) {
+      query = query.eq("action", actionFilter);
+    }
 
-  if (dateFrom) {
-    query = query.gte("created_at", dateFrom);
-  }
+    const { data, error } = await query;
 
-  if (dateTo) {
-    query = query.lte("created_at", dateTo + "T23:59:59");
-  }
-
-  const { data: events, error } = await query;
-
-  if (error) {
-    console.error("Error fetching audit events:", error);
+    if (error) {
+      console.error("Error fetching audit events:", error);
+      fetchError = error;
+    } else {
+      events = data || [];
+    }
+  } catch (e) {
+    console.error("Exception fetching audit events:", e);
+    fetchError = e;
   }
 
   // Get tenants for filter
@@ -116,46 +112,28 @@ export default async function AuditPage({
     .order("name");
 
   // Get unique categories
-  const categories = [
-    { value: "tenant", label: "Tenant" },
-    { value: "plan", label: "Plan" },
-    { value: "entitlement", label: "Entitlement" },
-    { value: "support", label: "Support" },
-    { value: "integration", label: "Integration" },
-    { value: "security", label: "Security" },
-  ];
-
-  // Get counts by category
-  const { data: categoryCounts } = await supabase
-    .from("platform_audit_events")
-    .select("action_category", { count: "exact" })
-    .group("action_category");
+  const categories = ["tenant", "plan", "entitlement", "support", "integration", "security"];
 
   const getCategoryBadge = (category: string) => {
-    const colors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      tenant: "default",
-      plan: "secondary",
-      entitlement: "outline",
-      support: "default",
-      integration: "secondary",
-      security: "destructive",
+    const colors: Record<string, string> = {
+      tenant: "bg-blue-100 text-blue-800",
+      plan: "bg-green-100 text-green-800",
+      entitlement: "bg-purple-100 text-purple-800",
+      support: "bg-yellow-100 text-yellow-800",
+      integration: "bg-pink-100 text-pink-800",
+      security: "bg-red-100 text-red-800",
     };
-    return <Badge variant={colors[category] || "default"}>{category}</Badge>;
-  };
-
-  const getActorBadge = (actorType: string) => {
-    if (actorType === "platform_admin") {
-      return <Badge className="bg-red-600">Admin</Badge>;
-    }
-    if (actorType === "platform_support") {
-      return <Badge variant="secondary">Support</Badge>;
-    }
-    return <Badge variant="outline">System</Badge>;
+    return (
+      <Badge className={colors[category] || "bg-gray-100 text-gray-800"}>
+        {category}
+      </Badge>
+    );
   };
 
   const formatValue = (value: Record<string, unknown> | null) => {
-    if (!value) return null;
-    const entries = Object.entries(value).slice(0, 3);
+    if (!value) return "-";
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "-";
     return entries.map(([k, v]) => `${k}: ${String(v).substring(0, 30)}`).join(", ");
   };
 
@@ -167,218 +145,120 @@ export default async function AuditPage({
           <p className="text-gray-500">Review all platform activity and changes</p>
         </div>
         <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export Audit Data
+          <Download className="h-4 w-4 mr-2" />
+          Export
         </Button>
       </div>
 
-      {/* Category Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {categories.map((cat) => {
-          const count = (categoryCounts || []).find(
-            (c: { action_category: string }) => c.action_category === cat.value
-          );
-          return (
-            <div key={cat.value} className="bg-white rounded-lg shadow p-3">
-              <p className="text-xs text-gray-500 uppercase">{cat.label}</p>
-              <p className="text-xl font-bold">{count ? "1" : "0"}</p>
-            </div>
-          );
-        })}
-      </div>
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error loading audit log. Please check database permissions.</p>
+          <p className="text-red-600 text-sm mt-1">{String(fetchError)}</p>
+        </div>
+      )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap gap-4">
+        <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium">Filters</span>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Tenant</label>
-            <select
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={tenantFilter || ""}
-            >
-              <option value="">All Tenants</option>
-              {tenants?.map((t: { id: string; name: string }) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Category</label>
-            <select
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={categoryFilter || ""}
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Action</label>
-            <input
-              type="text"
-              placeholder="Filter by action..."
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={actionFilter || ""}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Actor ID</label>
-            <input
-              type="text"
-              placeholder="User ID..."
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={actorFilter || ""}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">From Date</label>
-            <input
-              type="date"
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={dateFrom || ""}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">To Date</label>
-            <input
-              type="date"
-              className="w-full border rounded-md px-3 py-1.5 text-sm"
-              defaultValue={dateTo || ""}
-            />
-          </div>
+          <span className="text-sm font-medium">Filters:</span>
         </div>
 
-        <div className="flex justify-between items-center mt-4">
-          <Button size="sm">Apply Filters</Button>
-          {(actorFilter || actionFilter || categoryFilter || tenantFilter || dateFrom || dateTo) && (
-            <Link
-              href="/platform/audit"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Clear all filters
-            </Link>
-          )}
-        </div>
+        {/* Category Filter */}
+        <select
+          className="border rounded-md px-3 py-1 text-sm"
+          name="category"
+        >
+          <option value="">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+
+        {/* Tenant Filter */}
+        <select
+          className="border rounded-md px-3 py-1 text-sm"
+          name="tenant"
+        >
+          <option value="">All Tenants</option>
+          {tenants?.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
       </div>
 
-      {/* Audit Table */}
+      {/* Audit Events Table */}
       <div className="bg-white rounded-lg shadow">
-        {(events || []).length === 0 ? (
-          <div className="p-8 text-center">
-            <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No audit events found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Try adjusting your filters or check back later
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Changes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(events || []).map((event: AuditEvent) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm">
-                        <Calendar className="h-3 w-3 text-gray-400" />
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Time</TableHead>
+              <TableHead>Actor</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Target</TableHead>
+              <TableHead>Details</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {events.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No audit events found</p>
+                </TableCell>
+              </TableRow>
+            ) : (
+              events.map((event: AuditEvent) => (
+                <TableRow key={event.id}>
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm">
                         {new Date(event.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium">{event.actor_type}</p>
+                        <p className="text-xs text-gray-500">{event.actor_id?.substring(0, 8)}...</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="h-3 w-3 text-gray-400" />
-                        {getActorBadge(event.actor_type)}
-                        {event.actor_id && (
-                          <span className="text-xs text-gray-500 font-mono">
-                            {event.actor_id.substring(0, 8)}...
-                          </span>
-                        )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{getCategoryBadge(event.action_category)}</TableCell>
+                  <TableCell>
+                    <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                      {event.action}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    {event.target_type && (
+                      <div>
+                        <p className="text-sm">{event.target_type}</p>
+                        <p className="text-xs text-gray-500">{event.target_id?.substring(0, 8)}...</p>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {getCategoryBadge(event.action_category)}
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {event.action}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      {event.tenants ? (
-                        <Link 
-                          href={`/platform/tenants/${event.tenant_id}`}
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          {event.tenants.name}
-                        </Link>
-                      ) : (
-                        <span className="text-gray-400">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-xs">
+                      {event.reason && (
+                        <p className="text-sm text-gray-600 mb-1">{event.reason}</p>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {event.target_type && event.target_id ? (
-                        <div className="text-xs">
-                          <span className="text-gray-500">{event.target_type}:</span>
-                          <br />
-                          <span className="font-mono">{event.target_id.substring(0, 16)}...</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
+                      {event.new_value && (
+                        <p className="text-xs text-gray-400 truncate">
+                          {formatValue(event.new_value)}
+                        </p>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-xs">
-                        {event.previous_value && (
-                          <div className="text-xs text-red-600 truncate" title={JSON.stringify(event.previous_value)}>
-                            - {formatValue(event.previous_value)}
-                          </div>
-                        )}
-                        {event.new_value && (
-                          <div className="text-xs text-green-600 truncate" title={JSON.stringify(event.new_value)}>
-                            + {formatValue(event.new_value)}
-                          </div>
-                        )}
-                        {event.reason && (
-                          <div className="text-xs text-gray-500 mt-1 italic">
-                            Reason: {event.reason}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex justify-between items-center text-sm text-gray-500">
-        <p>Showing last 100 events</p>
-        <p>For full export, use the Export button above</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
