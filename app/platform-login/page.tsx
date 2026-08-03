@@ -56,7 +56,7 @@ export default function PlatformLoginPage() {
       });
 
       // Redirect to platform dashboard
-      window.location.href = "/platform";
+      router.push("/platform");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
