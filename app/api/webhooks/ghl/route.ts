@@ -191,7 +191,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Store event for idempotency
-    await storeWebhookEvent(eventId, event, payload as Record<string, unknown>);
+    await storeWebhookEvent(eventId, event, payload as unknown as Record<string, unknown>);
 
     // Process event asynchronously (don't block response)
     processWebhookEvent(event, data).catch((error) => {
