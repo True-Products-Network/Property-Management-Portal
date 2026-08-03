@@ -587,7 +587,7 @@ export default function AdminIntegrationsPage() {
                       <div className="flex items-center justify-between w-full">
                         <span>{assoc.name}</span>
                         {assoc.ghlLocationId ? (
-                          <Badge variant="success" className="ml-2">Connected</Badge>
+                          <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-200">Connected</Badge>
                         ) : (
                           <Badge variant="secondary" className="ml-2">Not Connected</Badge>
                         )}
