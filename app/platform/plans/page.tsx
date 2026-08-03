@@ -178,33 +178,32 @@ export default async function PlansPage() {
                   </div>
                 </div>
 
-                {/* Features Preview */}
+                {/* Features Preview - Show all active features */}
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Key Features</p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {enabledFeatures.slice(0, 5).map((pf: { 
-                      is_enabled: boolean; 
-                      limit_value: number | null; 
-                      features: { 
-                        code: string; 
-                        name: string; 
+                  <p className="text-sm font-medium text-gray-700">Active Features ({enabledFeatures.length})</p>
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {enabledFeatures.map((pf: {
+                      is_enabled: boolean;
+                      limit_value: number | null;
+                      features: {
+                        code: string;
+                        name: string;
                         category: string;
-                      } 
+                      }
                     }) => (
                       <div key={pf.features.code} className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">{pf.features.name}</span>
-                        {pf.limit_value !== null && pf.limit_value !== undefined && (
+                        {pf.limit_value !== null && pf.limit_value !== undefined ? (
                           <Badge variant="outline" className="text-xs">
                             {pf.limit_value === 0 ? "Unlimited" : `Max ${pf.limit_value}`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                            ✓
                           </Badge>
                         )}
                       </div>
                     ))}
-                    {enabledFeatures.length > 5 && (
-                      <p className="text-xs text-gray-500 text-center py-1">
-                        +{enabledFeatures.length - 5} more features
-                      </p>
-                    )}
                     {enabledFeatures.length === 0 && (
                       <p className="text-xs text-gray-400 text-center py-2">
                         No features enabled
