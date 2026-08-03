@@ -140,7 +140,7 @@ export default function AdminFeaturesPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch("/api/admin/features", {
+      const response = await fetch("/api/platform/features", {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -201,7 +201,7 @@ export default function AdminFeaturesPage() {
   const handleCreate = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/admin/features", {
+      const response = await fetch("/api/platform/features", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -227,7 +227,7 @@ export default function AdminFeaturesPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/admin/features/${selectedFlag.id}`, {
+      const response = await fetch(`/api/platform/features/${selectedFlag.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -253,7 +253,7 @@ export default function AdminFeaturesPage() {
     if (!confirm("Are you sure you want to delete this feature flag?")) return;
 
     try {
-      const response = await fetch(`/api/admin/features/${id}`, {
+      const response = await fetch(`/api/platform/features/${id}`, {
         method: "DELETE",
       });
       const result = await response.json();
@@ -270,7 +270,7 @@ export default function AdminFeaturesPage() {
 
   const handleToggle = async (flag: FeatureFlag) => {
     try {
-      const response = await fetch(`/api/admin/features/${flag.id}`, {
+      const response = await fetch(`/api/platform/features/${flag.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !flag.enabled }),
@@ -323,7 +323,7 @@ export default function AdminFeaturesPage() {
 
   const initializeDefaults = async () => {
     try {
-      const response = await fetch("/api/admin/features", {
+      const response = await fetch("/api/platform/features", {
         method: "PUT",
       });
       const result = await response.json();

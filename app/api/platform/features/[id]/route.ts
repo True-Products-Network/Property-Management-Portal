@@ -1,20 +1,19 @@
-// Admin Individual Feature Flag API
+// Platform Admin Individual Feature Flag API
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// Helper function to check if user is admin from JWT metadata
-async function checkAdmin(supabase: any) {
+// Helper function to check if user is platform admin
+async function checkPlatformAdmin(supabase: any) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return { isAdmin: false, user: null };
   }
 
-  // Check admin status from user metadata (set during login/token creation)
+  // Check for PLATFORM_ADMIN in user metadata
   const roles = user.user_metadata?.roles;
-  const hasAdminRole = Array.isArray(roles) && (roles.includes("ADMIN_USER") || roles.includes("PLATFORM_ADMIN"));
-  const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
+  const isPlatformAdmin = Array.isArray(roles) && roles.includes("PLATFORM_ADMIN");
 
-  return { isAdmin, user };
+  return { isAdmin: isPlatformAdmin, user };
 }
 
 // GET - Get a single feature flag
@@ -26,11 +25,11 @@ export async function GET(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase);
+    const { isAdmin } = await checkPlatformAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
-        { success: false, error: "Admin access required" },
+        { success: false, error: "Platform admin access required" },
         { status: 403 }
       );
     }
@@ -48,29 +47,7 @@ export async function GET(
       );
     }
 
-    // Get overrides for this flag
-    const { data: overrides } = await supabase
-      .from("feature_flag_overrides")
-      .select(`
-        id,
-        user_id,
-        association_id,
-        property_id,
-        enabled,
-        reason,
-        created_by,
-        created_at,
-        expires_at
-      `)
-      .eq("feature_flag_id", flagId);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...flag,
-        overrides: overrides || [],
-      },
-    });
+    return NextResponse.json({ success: true, data: flag });
   } catch (error) {
     console.error("Error fetching feature flag:", error);
     return NextResponse.json(
@@ -89,11 +66,11 @@ export async function PUT(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase);
+    const { isAdmin } = await checkPlatformAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
-        { success: false, error: "Admin access required" },
+        { success: false, error: "Platform admin access required" },
         { status: 403 }
       );
     }
@@ -147,20 +124,14 @@ export async function DELETE(
     const { id: flagId } = await params;
     const supabase = await createClient();
 
-    const { isAdmin } = await checkAdmin(supabase);
+    const { isAdmin } = await checkPlatformAdmin(supabase);
 
     if (!isAdmin) {
       return NextResponse.json(
-        { success: false, error: "Admin access required" },
+        { success: false, error: "Platform admin access required" },
         { status: 403 }
       );
     }
-
-    // Delete related overrides first
-    await supabase
-      .from("feature_flag_overrides")
-      .delete()
-      .eq("feature_flag_id", flagId);
 
     // Delete the feature flag
     const { error } = await supabase

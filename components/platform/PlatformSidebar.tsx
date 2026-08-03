@@ -17,6 +17,7 @@ import {
   Activity,
   Settings,
   Shield,
+  Flag,
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Business Accounts", href: "/platform/tenants", icon: Building2 },
   { name: "Plans & Features", href: "/platform/plans", icon: CreditCard },
   { name: "Entitlements", href: "/platform/entitlements", icon: Puzzle },
+  { name: "Feature Flags", href: "/platform/features", icon: Flag },
   { name: "Platform Users", href: "/platform/users", icon: Users },
   { name: "Integrations", href: "/platform/integrations", icon: Link2 },
   { name: "Audit Log", href: "/platform/audit", icon: ClipboardList },

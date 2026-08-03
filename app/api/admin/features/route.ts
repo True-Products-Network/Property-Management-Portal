@@ -13,7 +13,7 @@ async function checkAdmin(supabase: any) {
 
   // Check admin status from user metadata (set during login/token creation)
   const roles = user.user_metadata?.roles;
-  const hasAdminRole = Array.isArray(roles) && roles.includes("ADMIN_USER");
+  const hasAdminRole = Array.isArray(roles) && (roles.includes("ADMIN_USER") || roles.includes("PLATFORM_ADMIN"));
   const isAdmin = user.user_metadata?.is_admin === true || hasAdminRole;
 
   return { isAdmin, user };
