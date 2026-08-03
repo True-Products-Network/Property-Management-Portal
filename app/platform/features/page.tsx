@@ -148,7 +148,16 @@ export default function AdminFeaturesPage() {
       const result = await response.json();
 
       if (result.success && Array.isArray(result.data)) {
-        setFlags(result.data);
+        // Normalize data to ensure all fields exist
+        const normalizedFlags = result.data.map((flag: any) => ({
+          ...flag,
+          allowed_roles: Array.isArray(flag.allowed_roles) ? flag.allowed_roles : ["all"],
+          user_percentage: typeof flag.user_percentage === 'number' ? flag.user_percentage : 100,
+          associations: Array.isArray(flag.associations) ? flag.associations : [],
+          properties: Array.isArray(flag.properties) ? flag.properties : [],
+          users: Array.isArray(flag.users) ? flag.users : [],
+        }));
+        setFlags(normalizedFlags);
       } else {
         setFlags([]);
         setError(result.error || "Failed to load feature flags");
@@ -352,26 +361,33 @@ export default function AdminFeaturesPage() {
   };
 
   const getRolloutSummary = (flag: FeatureFlag) => {
+    if (!flag) return "All users";
+    
     const parts: string[] = [];
     
-    if (flag.user_percentage < 100) {
-      parts.push(`${flag.user_percentage}% of users`);
+    const userPercentage = typeof flag.user_percentage === 'number' ? flag.user_percentage : 100;
+    if (userPercentage < 100) {
+      parts.push(`${userPercentage}% of users`);
     }
     
-    if (flag.allowed_roles && !flag.allowed_roles.includes("all")) {
-      parts.push(`${flag.allowed_roles.length} roles`);
+    const allowedRoles = Array.isArray(flag.allowed_roles) ? flag.allowed_roles : ["all"];
+    if (!allowedRoles.includes("all")) {
+      parts.push(`${allowedRoles.length} roles`);
     }
     
-    if (flag.associations?.length > 0) {
-      parts.push(`${flag.associations.length} associations`);
+    const associations = Array.isArray(flag.associations) ? flag.associations : [];
+    if (associations.length > 0) {
+      parts.push(`${associations.length} associations`);
     }
     
-    if (flag.properties?.length > 0) {
-      parts.push(`${flag.properties.length} properties`);
+    const properties = Array.isArray(flag.properties) ? flag.properties : [];
+    if (properties.length > 0) {
+      parts.push(`${properties.length} properties`);
     }
     
-    if (flag.users?.length > 0) {
-      parts.push(`${flag.users.length} specific users`);
+    const users = Array.isArray(flag.users) ? flag.users : [];
+    if (users.length > 0) {
+      parts.push(`${users.length} specific users`);
     }
     
     return parts.length > 0 ? parts.join(", ") : "All users";
