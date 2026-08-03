@@ -1,7 +1,9 @@
 // Tenants Table Component
 // Displays list of tenants with status and actions
 
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   Table,
@@ -55,6 +57,8 @@ const getStatusBadge = (status: string) => {
 };
 
 export function TenantsTable({ tenants }: TenantsTableProps) {
+  const router = useRouter();
+  
   if (tenants.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow p-8 text-center">
@@ -119,17 +123,13 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/platform/tenants/${tenant.id}`}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Link>
+                      <DropdownMenuItem onClick={() => router.push(`/platform/tenants/${tenant.id}`)}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/platform/tenants/${tenant.id}/edit`}>
-                          <Settings className="mr-2 h-4 w-4" />
-                          Edit Settings
-                        </Link>
+                      <DropdownMenuItem onClick={() => router.push(`/platform/tenants/${tenant.id}/edit`)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Edit Settings
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
