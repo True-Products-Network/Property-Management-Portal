@@ -97,7 +97,7 @@ const OWNER_MENU_GROUPS = [
 const MANAGEMENT_MENU_GROUPS = [
   {
     id: "dashboard",
-    items: [{ label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" }],
+    items: [{ label: "Portfolio", href: "/management/overview", icon: "LayoutDashboard" }],
   },
   {
     id: "entities",

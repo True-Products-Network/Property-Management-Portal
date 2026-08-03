@@ -107,7 +107,7 @@ export async function pushToGHL(
       resultGhlId,
       await calculateHash(portalData),
       await calculateHash(ghlData),
-      portalData.updatedAt,
+      (portalData.updatedAt as string) || new Date().toISOString(),
       new Date().toISOString()
     );
 

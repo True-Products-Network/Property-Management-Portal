@@ -125,9 +125,9 @@ export default function AssociationsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Associations</h1>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Portfolio — Managed Associations</h1>
             <p className="text-[var(--secondary-text)] mt-1">
-              Manage homeowner associations and communities
+              Manage your portfolio of associations and communities
             </p>
           </div>
           <Link href="/management/associations/new">
