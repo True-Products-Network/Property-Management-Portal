@@ -104,7 +104,8 @@ export async function POST(request: NextRequest) {
           locationData = {
             id: data.id || data.location?.id,
             name: data.name || data.location?.name,
-            companyId: data.companyId || data.location?.companyId,\          };
+            companyId: data.companyId || data.location?.companyId,
+          };
           testSuccess = true;
         } else {
           testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
