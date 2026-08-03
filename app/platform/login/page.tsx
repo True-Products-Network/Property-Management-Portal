@@ -1,6 +1,4 @@
-// Platform Console Login
-// Separate login for True Products Network staff
-
+// Platform Console Login - Simplified
 "use client";
 
 import { useState } from "react";
@@ -26,7 +24,6 @@ export default function PlatformLoginPage() {
     setError("");
 
     try {
-      // Sign in
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -35,16 +32,15 @@ export default function PlatformLoginPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No user returned");
 
-      // Check if user has platform role
-      const { data: platformRole, error: roleError } = await supabase
+      // Check platform role
+      const { data: platformRole } = await supabase
         .from("platform_user_roles")
         .select("role")
         .eq("user_id", authData.user.id)
         .is("revoked_at", null)
         .single();
 
-      if (roleError || !platformRole) {
-        // Sign out and show error
+      if (!platformRole) {
         await supabase.auth.signOut();
         throw new Error("You do not have Platform Console access.");
       }
@@ -59,8 +55,8 @@ export default function PlatformLoginPage() {
         target_id: authData.user.id,
       });
 
-      router.push("/platform");
-      router.refresh();
+      // Redirect to platform dashboard
+      window.location.href = "/platform";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -77,13 +73,9 @@ export default function PlatformLoginPage() {
               <Shield className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            True Products Network
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">True Products Network</h1>
           <p className="text-gray-500">Platform Console</p>
-          <p className="text-sm text-gray-400">
-            Authorized personnel only
-          </p>
+          <p className="text-sm text-gray-400">Authorized personnel only</p>
         </div>
 
         {error && (
@@ -117,11 +109,7 @@ export default function PlatformLoginPage() {
             />
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In to Platform Console"}
           </Button>
         </form>
