@@ -58,11 +58,10 @@ import {
   Shield,
   Target,
   Percent,
+  AlertTriangle,
 } from "lucide-react";
-import { useFeatureFlags } from "@/lib/features/feature-hooks";
-import { FeatureFlagUserRole } from "@/lib/features/feature-flags";
 
-const AVAILABLE_ROLES: { value: FeatureFlagUserRole; label: string }[] = [
+const AVAILABLE_ROLES = [
   { value: "all", label: "All Users" },
   { value: "admin", label: "Admin" },
   { value: "manager", label: "Manager" },
@@ -78,13 +77,27 @@ const ENVIRONMENTS = [
   { value: "production", label: "Production" },
 ];
 
+interface FeatureFlag {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  environment: string;
+  allowed_roles: string[];
+  user_percentage: number;
+  associations: string[];
+  properties: string[];
+  users: string[];
+}
+
 interface FormData {
   key: string;
   name: string;
   description: string;
   enabled: boolean;
   environment: string;
-  allowedRoles: FeatureFlagUserRole[];
+  allowedRoles: string[];
   userPercentage: number;
   associations: string[];
   properties: string[];
@@ -92,11 +105,13 @@ interface FormData {
 }
 
 export default function AdminFeaturesPage() {
-  const { flags, loading, error, fetchFlags, updateFlag, createFlag, deleteFlag } = useFeatureFlags();
+  const [flags, setFlags] = useState<FeatureFlag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedFlag, setSelectedFlag] = useState<any>(null);
+  const [selectedFlag, setSelectedFlag] = useState<FeatureFlag | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [associations, setAssociations] = useState<{ id: string; name: string }[]>([]);
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
@@ -116,8 +131,44 @@ export default function AdminFeaturesPage() {
     users: [],
   });
 
+  // Fetch feature flags
+  const fetchFlags = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch("/api/admin/features", {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        setFlags(result.data);
+      } else {
+        setFlags([]);
+        setError(result.error || "Failed to load feature flags");
+      }
+    } catch (err) {
+      setFlags([]);
+      if (err instanceof Error && err.name === "AbortError") {
+        setError("Request timed out. Please try again.");
+      } else {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch associations and properties for targeting
   useEffect(() => {
+    fetchFlags();
+    
     async function fetchData() {
       try {
         const [assocRes, propRes] = await Promise.all([
@@ -125,7 +176,6 @@ export default function AdminFeaturesPage() {
           fetch("/api/properties"),
         ]);
         
-        // Handle non-OK responses gracefully
         if (assocRes.ok) {
           const assocData = await assocRes.json();
           if (assocData.success) setAssociations(assocData.data || []);
@@ -136,7 +186,6 @@ export default function AdminFeaturesPage() {
         }
       } catch (error) {
         console.error("Error fetching targeting data:", error);
-        // Don't set error state - just use empty arrays
       }
     }
     fetchData();
@@ -144,21 +193,32 @@ export default function AdminFeaturesPage() {
 
   const filteredFlags = flags.filter(
     (flag) =>
-      flag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      flag.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      flag.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      flag.key?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       flag.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCreate = async () => {
     setIsSubmitting(true);
-    const result = await createFlag(formData);
-    setIsSubmitting(false);
+    try {
+      const response = await fetch("/api/admin/features", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
 
-    if (result.success) {
-      setIsCreateDialogOpen(false);
-      resetForm();
-    } else {
-      alert(result.error);
+      if (result.success) {
+        setIsCreateDialogOpen(false);
+        resetForm();
+        fetchFlags();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert("Failed to create feature flag");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -166,35 +226,68 @@ export default function AdminFeaturesPage() {
     if (!selectedFlag) return;
 
     setIsSubmitting(true);
-    const result = await updateFlag(selectedFlag.id, formData);
-    setIsSubmitting(false);
+    try {
+      const response = await fetch(`/api/admin/features/${selectedFlag.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
 
-    if (result.success) {
-      setIsEditDialogOpen(false);
-      setSelectedFlag(null);
-      resetForm();
-    } else {
-      alert(result.error);
+      if (result.success) {
+        setIsEditDialogOpen(false);
+        setSelectedFlag(null);
+        resetForm();
+        fetchFlags();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert("Failed to update feature flag");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this feature flag?")) return;
 
-    const result = await deleteFlag(id);
-    if (!result.success) {
-      alert(result.error);
+    try {
+      const response = await fetch(`/api/admin/features/${id}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        fetchFlags();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert("Failed to delete feature flag");
     }
   };
 
-  const handleToggle = async (flag: any) => {
-    const result = await updateFlag(flag.id, { enabled: !flag.enabled });
-    if (!result.success) {
-      alert(result.error);
+  const handleToggle = async (flag: FeatureFlag) => {
+    try {
+      const response = await fetch(`/api/admin/features/${flag.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !flag.enabled }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        fetchFlags();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert("Failed to toggle feature flag");
     }
   };
 
-  const openEditDialog = (flag: any) => {
+  const openEditDialog = (flag: FeatureFlag) => {
     setSelectedFlag(flag);
     setFormData({
       key: flag.key,
@@ -246,21 +339,19 @@ export default function AdminFeaturesPage() {
     }
   };
 
-  const toggleRole = (role: FeatureFlagUserRole) => {
+  const toggleRole = (role: string) => {
     setFormData((prev) => {
       const currentRoles = prev.allowedRoles;
       if (currentRoles.includes(role)) {
-        // Remove role, but ensure at least one remains
         const newRoles = currentRoles.filter((r) => r !== role);
         return { ...prev, allowedRoles: newRoles.length > 0 ? newRoles : ["all"] };
       } else {
-        // Add role
         return { ...prev, allowedRoles: [...currentRoles, role] };
       }
     });
   };
 
-  const getRolloutSummary = (flag: any) => {
+  const getRolloutSummary = (flag: FeatureFlag) => {
     const parts: string[] = [];
     
     if (flag.user_percentage < 100) {
@@ -297,8 +388,10 @@ export default function AdminFeaturesPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
         <p className="text-red-500">{error}</p>
         <Button onClick={fetchFlags} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
           Retry
         </Button>
       </div>
@@ -364,7 +457,6 @@ export default function AdminFeaturesPage() {
 
       {/* Rollout Tab */}
       <TabsContent value="rollout" className="space-y-6">
-        {/* Percentage Rollout */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Percent className="h-5 w-5 text-[var(--teal)]" />
@@ -383,30 +475,23 @@ export default function AdminFeaturesPage() {
               onChange={(e) => setFormData({ ...formData, userPercentage: parseInt(e.target.value) })}
               className="w-full"
             />
-            <p className="text-xs text-[var(--secondary-text)]">
-              {formData.userPercentage === 0 && "Feature is disabled for all users"}
-              {formData.userPercentage === 100 && "Feature is enabled for all users"}
-              {formData.userPercentage > 0 && formData.userPercentage < 100 && 
-                `Feature is enabled for ${formData.userPercentage}% of users based on consistent hashing`}
-            </p>
           </div>
         </div>
 
-        {/* Role-based */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-[var(--teal)]" />
             <Label className="text-base font-medium">Role-based Access</Label>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             {AVAILABLE_ROLES.map((role) => (
               <div key={role.value} className="flex items-center space-x-2">
                 <Checkbox
                   id={`role-${role.value}`}
                   checked={formData.allowedRoles.includes(role.value)}
-                  onChange={() => toggleRole(role.value)}
+                  onCheckedChange={() => toggleRole(role.value)}
                 />
-                <Label htmlFor={`role-${role.value}`} className="text-sm cursor-pointer">
+                <Label htmlFor={`role-${role.value}`} className="text-sm">
                   {role.label}
                 </Label>
               </div>
@@ -416,114 +501,71 @@ export default function AdminFeaturesPage() {
       </TabsContent>
 
       {/* Targeting Tab */}
-      <TabsContent value="targeting" className="space-y-6">
-        {/* Association Targeting */}
-        <div className="space-y-4">
+      <TabsContent value="targeting" className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-[var(--teal)]" />
-            <Label className="text-base font-medium">Association Targeting</Label>
+            <Label>Association Targeting</Label>
           </div>
-          <p className="text-sm text-[var(--secondary-text)]">
-            Limit this feature to specific associations (HOAs). Leave empty for all.
-          </p>
-          <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-            {associations.length === 0 ? (
-              <p className="text-sm text-[var(--secondary-text)]">No associations found</p>
-            ) : (
-              <div className="space-y-2">
-                {associations.map((assoc) => (
-                  <div key={assoc.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`assoc-${assoc.id}`}
-                      checked={formData.associations.includes(assoc.id)}
-                      onChange={(e) => {
-                        const isChecked = (e.target as HTMLInputElement).checked;
-                        setFormData((prev) => ({
-                          ...prev,
-                          associations: isChecked
-                            ? [...prev.associations, assoc.id]
-                            : prev.associations.filter((id) => id !== assoc.id),
-                        }));
-                      }}
-                    />
-                    <Label htmlFor={`assoc-${assoc.id}`} className="text-sm cursor-pointer">
-                      {assoc.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {formData.associations.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFormData((prev) => ({ ...prev, associations: [] }))}
-            >
-              Clear Associations
-            </Button>
-          )}
+          <Select
+            value={formData.associations[0] || "all"}
+            onValueChange={(value) =>
+              setFormData({ ...formData, associations: value === "all" ? [] : [value] })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select associations" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Associations</SelectItem>
+              {associations.map((assoc) => (
+                <SelectItem key={assoc.id} value={assoc.id}>
+                  {assoc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Property Targeting */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-[var(--teal)]" />
-            <Label className="text-base font-medium">Property Targeting</Label>
+            <Label>Property Targeting</Label>
           </div>
-          <p className="text-sm text-[var(--secondary-text)]">
-            Limit this feature to specific properties. Leave empty for all.
-          </p>
-          <div className="border rounded-md p-3 max-h-40 overflow-y-auto">
-            {properties.length === 0 ? (
-              <p className="text-sm text-[var(--secondary-text)]">No properties found</p>
-            ) : (
-              <div className="space-y-2">
-                {properties.map((prop) => (
-                  <div key={prop.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`prop-${prop.id}`}
-                      checked={formData.properties.includes(prop.id)}
-                      onChange={(e) => {
-                        const isChecked = (e.target as HTMLInputElement).checked;
-                        setFormData((prev) => ({
-                          ...prev,
-                          properties: isChecked
-                            ? [...prev.properties, prop.id]
-                            : prev.properties.filter((id) => id !== prop.id),
-                        }));
-                      }}
-                    />
-                    <Label htmlFor={`prop-${prop.id}`} className="text-sm cursor-pointer">
-                      {prop.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {formData.properties.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFormData((prev) => ({ ...prev, properties: [] }))}
-            >
-              Clear Properties
-            </Button>
-          )}
+          <Select
+            value={formData.properties[0] || "all"}
+            onValueChange={(value) =>
+              setFormData({ ...formData, properties: value === "all" ? [] : [value] })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Properties</SelectItem>
+              {properties.map((prop) => (
+                <SelectItem key={prop.id} value={prop.id}>
+                  {prop.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </TabsContent>
 
       {/* Advanced Tab */}
       <TabsContent value="advanced" className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="environment">Environment</Label>
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-[var(--teal)]" />
+            <Label>Environment</Label>
+          </div>
           <Select
             value={formData.environment}
             onValueChange={(value) => setFormData({ ...formData, environment: value })}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select environment" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {ENVIRONMENTS.map((env) => (
@@ -533,34 +575,6 @@ export default function AdminFeaturesPage() {
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-[var(--secondary-text)]">
-            Limit this feature to specific environments
-          </p>
-        </div>
-
-        {/* User IDs */}
-        <div className="space-y-2">
-          <Label>Specific User IDs</Label>
-          <p className="text-sm text-[var(--secondary-text)]">
-            Enter user IDs (one per line) to enable for specific users only
-          </p>
-          <textarea
-            className="w-full min-h-[100px] p-3 border rounded-md text-sm font-mono"
-            placeholder="user-id-1&#10;user-id-2&#10;user-id-3"
-            value={formData.users.join("\n")}
-            onChange={(e) => {
-              const ids = e.target.value
-                .split("\n")
-                .map((id) => id.trim())
-                .filter((id) => id.length > 0);
-              setFormData((prev) => ({ ...prev, users: ids }));
-            }}
-          />
-          {formData.users.length > 0 && (
-            <p className="text-xs text-[var(--secondary-text)]">
-              {formData.users.length} user(s) specified
-            </p>
-          )}
         </div>
       </TabsContent>
     </Tabs>
@@ -643,6 +657,12 @@ export default function AdminFeaturesPage() {
                   <TableCell colSpan={5} className="text-center py-8">
                     <Flag className="h-12 w-12 mx-auto mb-3 text-[var(--secondary-text)]" />
                     <p className="text-[var(--secondary-text)]">No feature flags found</p>
+                    {flags.length === 0 && (
+                      <Button onClick={initializeDefaults} variant="outline" className="mt-4">
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Initialize Default Flags
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (

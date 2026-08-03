@@ -26,13 +26,13 @@ import {
 
 interface GhlRoleMapping {
   id: string;
-  ghlContactRole: string;
-  portalRole: string;
-  portalVersion: string;
-  defaultPermissions: string;
-  requiresMFA: boolean;
-  status: "active" | "inactive" | "unknown";
-  userCount: number;
+  ghl_contact_role: string;
+  portal_role: string;
+  portal_version: string;
+  default_permissions: string;
+  requires_mfa: boolean;
+  status: string;
+  user_count: number;
   description: string;
 }
 
@@ -41,27 +41,27 @@ interface FormData {
   portalRole: string;
   portalVersion: string;
   requiresMFA: boolean;
-  status: "active" | "inactive" | "unknown";
+  status: string;
   description: string;
 }
 
 const PORTAL_ROLES = [
-  { value: "admin", label: "Admin User" },
-  { value: "management", label: "Management Staff" },
-  { value: "board", label: "Board Member" },
-  { value: "board_approver", label: "Board Approver" },
-  { value: "owner", label: "Owner" },
-  { value: "resident", label: "Resident" },
-  { value: "vendor", label: "Vendor Contact" },
-  { value: "inspector", label: "Inspector" },
-  { value: "bookkeeper", label: "Restricted Finance" },
+  { value: "Admin User", label: "Admin User" },
+  { value: "Management Staff", label: "Management Staff" },
+  { value: "Board Member", label: "Board Member" },
+  { value: "Board Approver", label: "Board Approver" },
+  { value: "Owner", label: "Owner" },
+  { value: "Resident", label: "Resident" },
+  { value: "Vendor Contact", label: "Vendor Contact" },
+  { value: "Inspector", label: "Inspector" },
+  { value: "Restricted Finance", label: "Restricted Finance" },
 ];
 
 const PORTAL_VERSIONS = [
-  { value: "management", label: "Management" },
-  { value: "owner_resident", label: "Owner / Resident" },
-  { value: "board", label: "Board" },
-  { value: "vendor", label: "Vendor" },
+  { value: "Management", label: "Management" },
+  { value: "Owner / Resident", label: "Owner / Resident" },
+  { value: "Board", label: "Board" },
+  { value: "Vendor", label: "Vendor" },
 ];
 
 export default function GhlRoleMappingPage() {
@@ -71,6 +71,7 @@ export default function GhlRoleMappingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingMapping, setEditingMapping] = useState<GhlRoleMapping | null>(null);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState<FormData>({
     ghlContactRole: "",
     portalRole: "",
@@ -79,153 +80,45 @@ export default function GhlRoleMappingPage() {
     status: "active",
     description: "",
   });
-  const [unknownRoles, setUnknownRoles] = useState<string[]>([]);
 
   useEffect(() => {
     loadMappings();
-    loadUnknownRoles();
   }, []);
 
   async function loadMappings() {
     try {
+      setIsLoading(true);
+      setError("");
+      
       const response = await fetch("/api/admin/ghl-role-mappings");
+      
       if (response.ok) {
         const result = await response.json();
         if (result.success && Array.isArray(result.data)) {
           setMappings(result.data);
         } else {
-          setMappings(getDefaultMappings());
+          setMappings([]);
         }
       } else {
-        console.warn("API returned error, using defaults");
-        setMappings(getDefaultMappings());
+        setMappings([]);
       }
     } catch (error) {
       console.error("Error loading mappings:", error);
-      setMappings(getDefaultMappings());
+      setMappings([]);
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function loadUnknownRoles() {
-    // In a real implementation, this would fetch from the API
-    setUnknownRoles(["Former Board Member", "Temp Vendor"]);
-  }
-
-  function getDefaultMappings(): GhlRoleMapping[] {
-    return [
-      {
-        id: "1",
-        ghlContactRole: "Admin User",
-        portalRole: "Admin User",
-        portalVersion: "Management",
-        defaultPermissions: "Full portal administration",
-        requiresMFA: true,
-        status: "active",
-        userCount: 1,
-        description: "Full access to all portal features and administration",
-      },
-      {
-        id: "2",
-        ghlContactRole: "Property Manager",
-        portalRole: "Management Staff",
-        portalVersion: "Management",
-        defaultPermissions: "Assigned portfolio operations",
-        requiresMFA: true,
-        status: "active",
-        userCount: 3,
-        description: "Manage assigned properties, maintenance, and inspections",
-      },
-      {
-        id: "3",
-        ghlContactRole: "Board Member",
-        portalRole: "Board Member",
-        portalVersion: "Board",
-        defaultPermissions: "Assigned Association view",
-        requiresMFA: true,
-        status: "active",
-        userCount: 5,
-        description: "View association data and participate in approvals",
-      },
-      {
-        id: "4",
-        ghlContactRole: "Board Approver",
-        portalRole: "Board Approver",
-        portalVersion: "Board",
-        defaultPermissions: "Assigned approval actions",
-        requiresMFA: true,
-        status: "active",
-        userCount: 2,
-        description: "Specialized role for financial and policy approvals",
-      },
-      {
-        id: "5",
-        ghlContactRole: "Owner",
-        portalRole: "Owner",
-        portalVersion: "Owner / Resident",
-        defaultPermissions: "Own associated records",
-        requiresMFA: false,
-        status: "active",
-        userCount: 45,
-        description: "Access to own property, unit, and related records",
-      },
-      {
-        id: "6",
-        ghlContactRole: "Resident",
-        portalRole: "Resident",
-        portalVersion: "Owner / Resident",
-        defaultPermissions: "Own associated records",
-        requiresMFA: false,
-        status: "active",
-        userCount: 78,
-        description: "Access to own unit and related records",
-      },
-      {
-        id: "7",
-        ghlContactRole: "Vendor Contact",
-        portalRole: "Vendor Contact",
-        portalVersion: "Vendor",
-        defaultPermissions: "Assigned vendor jobs",
-        requiresMFA: false,
-        status: "active",
-        userCount: 12,
-        description: "Access to assigned maintenance and inspection jobs",
-      },
-      {
-        id: "8",
-        ghlContactRole: "Inspector",
-        portalRole: "Inspector",
-        portalVersion: "Vendor or Management",
-        defaultPermissions: "Assigned inspections",
-        requiresMFA: true,
-        status: "active",
-        userCount: 4,
-        description: "Access to assigned inspections and reports",
-      },
-      {
-        id: "9",
-        ghlContactRole: "Bookkeeper",
-        portalRole: "Restricted Finance",
-        portalVersion: "Management",
-        defaultPermissions: "Approved financial screens only",
-        requiresMFA: true,
-        status: "active",
-        userCount: 1,
-        description: "Limited access to financial reports and payment data",
-      },
-    ];
-  }
-
   function handleEdit(mapping: GhlRoleMapping) {
     setEditingMapping(mapping);
     setFormData({
-      ghlContactRole: mapping.ghlContactRole,
-      portalRole: mapping.portalRole,
-      portalVersion: mapping.portalVersion,
-      requiresMFA: mapping.requiresMFA,
+      ghlContactRole: mapping.ghl_contact_role,
+      portalRole: mapping.portal_role,
+      portalVersion: mapping.portal_version,
+      requiresMFA: mapping.requires_mfa,
       status: mapping.status,
-      description: mapping.description,
+      description: mapping.description || "",
     });
     setShowModal(true);
   }
@@ -253,7 +146,7 @@ export default function GhlRoleMappingPage() {
     try {
       const payload = {
         ...formData,
-        defaultPermissions: PORTAL_ROLES.find((r) => r.label === formData.portalRole)?.label || formData.portalRole,
+        defaultPermissions: formData.portalRole,
       };
 
       const url = editingMapping
@@ -305,9 +198,9 @@ export default function GhlRoleMappingPage() {
 
   const filteredMappings = mappings.filter(
     (mapping) =>
-      mapping.ghlContactRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mapping.portalRole.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mapping.description.toLowerCase().includes(searchQuery.toLowerCase())
+      mapping.ghl_contact_role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      mapping.portal_role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      mapping.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (isLoading) {
@@ -340,33 +233,6 @@ export default function GhlRoleMappingPage() {
         </Button>
       </div>
 
-      {/* Unknown Roles Alert */}
-      {unknownRoles.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-              <div>
-                <h3 className="font-medium text-red-800">Unknown GHL Contact Roles Detected</h3>
-                <p className="text-sm text-red-700 mt-1">
-                  The following GHL Contact Role values cannot be mapped to portal roles:
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {unknownRoles.map((role) => (
-                    <Badge key={role} className="bg-red-100 text-red-700">
-                      {role}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-sm text-red-600 mt-3">
-                  Contacts with these roles will have no portal access until mappings are created.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -378,133 +244,134 @@ export default function GhlRoleMappingPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-[var(--secondary-text)]">Active</p>
-            <p className="text-2xl font-semibold">{mappings.filter((m) => m.status === "active").length}</p>
+            <p className="text-2xl font-semibold text-green-600">
+              {mappings.filter((m) => m.status === "active").length}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-[var(--secondary-text)]">Require MFA</p>
-            <p className="text-2xl font-semibold">{mappings.filter((m) => m.requiresMFA).length}</p>
+            <p className="text-2xl font-semibold">
+              {mappings.filter((m) => m.requires_mfa).length}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm text-[var(--secondary-text)]">Mapped Users</p>
-            <p className="text-2xl font-semibold">{mappings.reduce((sum, m) => sum + m.userCount, 0)}</p>
+            <p className="text-sm text-[var(--secondary-text)]">Total Users</p>
+            <p className="text-2xl font-semibold">
+              {mappings.reduce((sum, m) => sum + (m.user_count || 0), 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Search */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
-          <Input
-            placeholder="Search mappings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Mappings Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Role Mappings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[var(--border-color)]">
-                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">GHL Contact Role</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Portal Role</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Version</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">MFA</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Users</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMappings.map((mapping) => (
-                <tr
-                  key={mapping.id}
-                  className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]"
-                >
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--teal)]/10 flex items-center justify-center">
-                        <Workflow className="h-4 w-4 text-[var(--teal)]" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-[var(--main-text)]">{mapping.ghlContactRole}</p>
-                        <p className="text-xs text-[var(--secondary-text)]">{mapping.description}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge variant="outline">{mapping.portalRole}</Badge>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="text-sm text-[var(--secondary-text)]">{mapping.portalVersion}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    {mapping.requiresMFA ? (
-                      <Badge className="bg-green-100 text-green-700">Required</Badge>
-                    ) : (
-                      <Badge className="bg-gray-100 text-gray-700">Optional</Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge variant="outline">{mapping.userCount} users</Badge>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(mapping)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(mapping.id)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
-
-      {/* Info Card */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-blue-800">About GHL Contact Role Mapping</h3>
-              <p className="text-sm text-blue-700 mt-1">
-                This mapping determines how GHL Contact Role values translate to portal access. When a user signs in,
-                their GHL Contact Role is matched to a portal role, which determines their permissions and available features.
-              </p>
-              <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li>Unknown or blank Contact Roles produce no portal access</li>
-                <li>Changes take effect on next user sign-in</li>
-                <li>Inactive mappings are ignored during role resolution</li>
-              </ul>
-            </div>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
+            <Input
+              placeholder="Search mappings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Mapping Modal */}
+      {/* Mappings Table */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[var(--page-background)] border-b border-[var(--border-color)]">
+                <tr>
+                  <th className="text-left p-4 font-medium">GHL Contact Role</th>
+                  <th className="text-left p-4 font-medium">Portal Role</th>
+                  <th className="text-left p-4 font-medium">Version</th>
+                  <th className="text-left p-4 font-medium">Status</th>
+                  <th className="text-left p-4 font-medium">Users</th>
+                  <th className="text-left p-4 font-medium w-[100px]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMappings.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8">
+                      <Workflow className="h-12 w-12 mx-auto mb-3 text-[var(--secondary-text)]" />
+                      <p className="text-[var(--secondary-text)]">No mappings found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMappings.map((mapping) => (
+                    <tr key={mapping.id} className="border-b border-[var(--border-color)] hover:bg-[var(--page-background)]">
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-[var(--teal)]" />
+                          <span className="font-medium">{mapping.ghl_contact_role}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">{mapping.portal_role}</td>
+                      <td className="p-4">
+                        <Badge variant="outline">{mapping.portal_version}</Badge>
+                      </td>
+                      <td className="p-4">
+                        {mapping.status === "active" ? (
+                          <Badge className="bg-green-100 text-green-700">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Inactive</Badge>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-[var(--secondary-text)]" />
+                          <span>{mapping.user_count || 0}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(mapping)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600"
+                            onClick={() => handleDelete(mapping.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-lg">
-            <div className="border-b border-[var(--border-color)] p-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{editingMapping ? "Edit Mapping" : "Create New Mapping"}</h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-[var(--border-color)]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {editingMapping ? "Edit Mapping" : "Add Mapping"}
+                </h2>
+                <Button variant="ghost" size="sm" onClick={() => setShowModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2">GHL Contact Role *</label>
@@ -523,7 +390,7 @@ export default function GhlRoleMappingPage() {
                 <select
                   value={formData.portalRole}
                   onChange={(e) => setFormData({ ...formData, portalRole: e.target.value })}
-                  className="input w-full"
+                  className="w-full border rounded-md px-3 py-2"
                 >
                   <option value="">Select portal role</option>
                   {PORTAL_ROLES.map((role) => (
@@ -539,7 +406,7 @@ export default function GhlRoleMappingPage() {
                 <select
                   value={formData.portalVersion}
                   onChange={(e) => setFormData({ ...formData, portalVersion: e.target.value })}
-                  className="input w-full"
+                  className="w-full border rounded-md px-3 py-2"
                 >
                   <option value="">Select version</option>
                   {PORTAL_VERSIONS.map((version) => (

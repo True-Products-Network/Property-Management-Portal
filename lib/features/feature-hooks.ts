@@ -242,17 +242,33 @@ export function useFeatureFlags() {
   const fetchFlags = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/features');
+      setError(null);
+      
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch('/api/admin/features', {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
       const result = await response.json();
 
-      if (result.success) {
+      if (result.success && Array.isArray(result.data)) {
         setFlags(result.data);
         setError(null);
       } else {
+        setFlags([]);
         setError(result.error || 'Failed to fetch feature flags');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setFlags([]);
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
     } finally {
       setLoading(false);
     }
