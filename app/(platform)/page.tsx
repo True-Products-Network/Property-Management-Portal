@@ -62,13 +62,13 @@ export default async function PlatformDashboardPage() {
       {/* Alerts */}
       {alerts && alerts.length > 0 && (
         <div className="space-y-2">
-          {alerts.map((alert) => (
+          {alerts.map((alertItem: any) => (
             <AlertBanner
-              key={alert.id}
+              key={alertItem.id}
               type="warning"
-              title={`${alert.tenants.name} - Past Due`}
-              message={`Grace period ends ${new Date(alert.grace_period_ends_at).toLocaleDateString()}`}
-              link={`/platform/tenants/${alert.tenant_id}`}
+              title={`${alertItem.tenants.name} - Past Due`}
+              message={`Grace period ends ${new Date(alertItem.grace_period_ends_at).toLocaleDateString()}`}
+              link={`/platform/tenants/${alertItem.tenant_id}`}
             />
           ))}
         </div>
