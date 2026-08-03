@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Palette,
   CheckSquare,
-  Flag,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,7 +32,6 @@ async function getAdminStats() {
       ghlStatusResult,
       portalRolesResult,
       ghlMappingsResult,
-      featureFlagsResult,
     ] = await Promise.all([
       supabase.from("contacts").select("id", { count: "exact" }),
       supabase.from("contact_roles").select("id", { count: "exact" }),
@@ -44,7 +42,6 @@ async function getAdminStats() {
       supabase.from("app_settings").select("value").eq("key", "ghl_location_id").single(),
       supabase.from("portal_roles").select("id", { count: "exact" }),
       supabase.from("ghl_role_mappings").select("id", { count: "exact" }),
-      supabase.from("feature_flags").select("id", { count: "exact" }),
     ]);
 
     // Count unique list types
@@ -67,7 +64,6 @@ async function getAdminStats() {
       ghlConnected: !!ghlStatusResult.data?.value,
       portalRoleCount: portalRolesResult.count || 0,
       ghlMappingCount: ghlMappingsResult.count || 0,
-      featureFlagCount: featureFlagsResult?.count || 0,
     };
   } catch (error) {
     console.error("Error fetching admin stats:", error);
@@ -159,13 +155,7 @@ export default async function AdminHomePage() {
       icon: FileText,
       count: `${stats.auditCount} events`,
     },
-    {
-      title: "Feature Flags",
-      description: "Manage feature toggles and gradual rollouts",
-      href: "/admin/features",
-      icon: Flag,
-      count: `${stats.featureFlagCount} flags`,
-    },
+
   ];
 
   return (
