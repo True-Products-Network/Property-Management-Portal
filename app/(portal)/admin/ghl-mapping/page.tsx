@@ -91,10 +91,13 @@ export default function GhlRoleMappingPage() {
       const response = await fetch("/api/admin/ghl-role-mappings");
       if (response.ok) {
         const result = await response.json();
-        if (result.success) {
-          setMappings(result.data || []);
+        if (result.success && Array.isArray(result.data)) {
+          setMappings(result.data);
+        } else {
+          setMappings(getDefaultMappings());
         }
       } else {
+        console.warn("API returned error, using defaults");
         setMappings(getDefaultMappings());
       }
     } catch (error) {

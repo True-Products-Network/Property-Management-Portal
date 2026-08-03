@@ -124,12 +124,19 @@ export default function AdminFeaturesPage() {
           fetch("/api/associations"),
           fetch("/api/properties"),
         ]);
-        const assocData = await assocRes.json();
-        const propData = await propRes.json();
-        if (assocData.success) setAssociations(assocData.data || []);
-        if (propData.success) setProperties(propData.data || []);
+        
+        // Handle non-OK responses gracefully
+        if (assocRes.ok) {
+          const assocData = await assocRes.json();
+          if (assocData.success) setAssociations(assocData.data || []);
+        }
+        if (propRes.ok) {
+          const propData = await propRes.json();
+          if (propData.success) setProperties(propData.data || []);
+        }
       } catch (error) {
         console.error("Error fetching targeting data:", error);
+        // Don't set error state - just use empty arrays
       }
     }
     fetchData();

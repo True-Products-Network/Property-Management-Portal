@@ -103,10 +103,13 @@ export default function WorkflowSettingsPage() {
       const response = await fetch("/api/admin/workflows");
       if (response.ok) {
         const result = await response.json();
-        if (result.success) {
-          setWorkflows(result.data || []);
+        if (result.success && Array.isArray(result.data)) {
+          setWorkflows(result.data);
+        } else {
+          setWorkflows(getDefaultWorkflows());
         }
       } else {
+        console.warn("API returned error, using defaults");
         setWorkflows(getDefaultWorkflows());
       }
     } catch (error) {
