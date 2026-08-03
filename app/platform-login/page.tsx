@@ -43,7 +43,7 @@ export default function PlatformLoginPage() {
       console.log("Role error:", roleError);
 
       // Filter out revoked roles client-side
-      const activeRole = platformRoles?.find(r => !r.revoked_at);
+      const activeRole = platformRoles?.find((r: any) => !r.revoked_at);
 
       if (!activeRole) {
         await supabase.auth.signOut();
