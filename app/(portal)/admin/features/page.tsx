@@ -489,7 +489,7 @@ export default function AdminFeaturesPage() {
                 <Checkbox
                   id={`role-${role.value}`}
                   checked={formData.allowedRoles.includes(role.value)}
-                  onCheckedChange={() => toggleRole(role.value)}
+                  onChange={() => toggleRole(role.value)}
                 />
                 <Label htmlFor={`role-${role.value}`} className="text-sm">
                   {role.label}
