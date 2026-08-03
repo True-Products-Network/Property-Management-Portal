@@ -33,16 +33,20 @@ export default function PlatformLoginPage() {
       if (!authData.user) throw new Error("No user returned");
 
       // Check platform role
-      const { data: platformRole } = await supabase
+      const { data: platformRole, error: roleError } = await supabase
         .from("platform_user_roles")
         .select("role")
         .eq("user_id", authData.user.id)
-        .is("revoked_at", null)
+        .or('revoked_at.is.null,revoked_at.gt.now()')
         .single();
+
+      if (roleError) {
+        console.error("Role check error:", roleError);
+      }
 
       if (!platformRole) {
         await supabase.auth.signOut();
-        throw new Error("You do not have Platform Console access.");
+        throw new Error("You do not have Platform Console access. Please contact your administrator.");
       }
 
       // Log the login
