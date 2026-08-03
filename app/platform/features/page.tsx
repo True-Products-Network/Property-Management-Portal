@@ -524,7 +524,7 @@ export default function AdminFeaturesPage() {
             <Label>Association Targeting</Label>
           </div>
           <Select
-            value={formData.associations[0] || "all"}
+            value={Array.isArray(formData.associations) && formData.associations.length > 0 ? formData.associations[0] : "all"}
             onValueChange={(value) =>
               setFormData({ ...formData, associations: value === "all" ? [] : [value] })
             }
@@ -534,7 +534,7 @@ export default function AdminFeaturesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Associations</SelectItem>
-              {associations.map((assoc) => (
+              {Array.isArray(associations) && associations.map((assoc) => (
                 <SelectItem key={assoc.id} value={assoc.id}>
                   {assoc.name}
                 </SelectItem>
@@ -549,7 +549,7 @@ export default function AdminFeaturesPage() {
             <Label>Property Targeting</Label>
           </div>
           <Select
-            value={formData.properties[0] || "all"}
+            value={Array.isArray(formData.properties) && formData.properties.length > 0 ? formData.properties[0] : "all"}
             onValueChange={(value) =>
               setFormData({ ...formData, properties: value === "all" ? [] : [value] })
             }
@@ -559,7 +559,7 @@ export default function AdminFeaturesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Properties</SelectItem>
-              {properties.map((prop) => (
+              {Array.isArray(properties) && properties.map((prop) => (
                 <SelectItem key={prop.id} value={prop.id}>
                   {prop.name}
                 </SelectItem>
@@ -722,11 +722,11 @@ export default function AdminFeaturesPage() {
                           <Users className="h-4 w-4 text-[var(--secondary-text)]" />
                           <span>{getRolloutSummary(flag)}</span>
                         </div>
-                        {flag.user_percentage < 100 && (
+                        {(typeof flag.user_percentage === 'number' ? flag.user_percentage : 100) < 100 && (
                           <div className="w-24 h-2 bg-gray-200 rounded-full mt-1">
                             <div
                               className="h-full bg-[var(--teal)] rounded-full"
-                              style={{ width: `${flag.user_percentage}%` }}
+                              style={{ width: `${typeof flag.user_percentage === 'number' ? flag.user_percentage : 100}%` }}
                             />
                           </div>
                         )}
