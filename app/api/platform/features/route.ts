@@ -12,9 +12,23 @@ async function checkPlatformAdmin(supabase: any) {
 
   // Check for PLATFORM_ADMIN in user metadata
   const roles = user.user_metadata?.roles;
-  const isPlatformAdmin = Array.isArray(roles) && roles.includes("PLATFORM_ADMIN");
+  if (Array.isArray(roles) && roles.includes("PLATFORM_ADMIN")) {
+    return { isAdmin: true, user };
+  }
 
-  return { isAdmin: isPlatformAdmin, user };
+  // Also check platform_user_roles table
+  const { data: platformRole } = await supabase
+    .from("platform_user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .is("revoked_at", null)
+    .single();
+
+  if (platformRole?.role === "PLATFORM_ADMIN" || platformRole?.role === "PLATFORM_SUPPORT") {
+    return { isAdmin: true, user };
+  }
+
+  return { isAdmin: false, user };
 }
 
 // GET - List all feature flags
