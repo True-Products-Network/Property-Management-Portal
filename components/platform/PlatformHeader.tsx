@@ -68,17 +68,13 @@ export function PlatformHeader({ user, role }: PlatformHeaderProps) {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/platform/profile">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
+              <DropdownMenuItem onClick={() => router.push('/platform/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/platform/settings">
-                  <Shield className="mr-2 h-4 w-4" />
-                  Platform Settings
-                </Link>
+              <DropdownMenuItem onClick={() => router.push('/platform/settings')}>
+                <Shield className="mr-2 h-4 w-4" />
+                Platform Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
