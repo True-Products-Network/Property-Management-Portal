@@ -121,11 +121,18 @@ export default async function AdminHomePage() {
       count: `${stats.activeWorkflowCount}/${stats.workflowCount} active`,
     },
     {
-      title: "Integrations",
-      description: "Manage GHL and payment processor connections",
-      href: "/admin/integrations",
+      title: "GHL Integration",
+      description: "Connect associations to GoHighLevel",
+      href: "/admin/ghl-integration",
       icon: Settings,
       count: stats.ghlConnected ? "GHL Connected" : "Not Connected",
+    },
+    {
+      title: "Integrations",
+      description: "Manage payment processors and other integrations",
+      href: "/admin/integrations",
+      icon: Settings,
+      count: "Settings",
     },
     {
       title: "Category Management",

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
-import { storeGhlCredentials } from "@/lib/ghl/credentials";
+import { createClient } from "@/lib/supabase/server";
+import { encrypt } from "@/lib/ghl/crypto";
 
-// POST /api/admin/ghl/connect - Connect to GHL with API Key or OAuth tokens
+// POST /api/admin/ghl/connect - Connect association to GHL
 export async function POST(request: NextRequest) {
   try {
     const user = await getSession();
@@ -16,11 +17,42 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type } = body;
+    const { associationId, credentials } = body;
+
+    if (!associationId) {
+      return NextResponse.json(
+        { error: "Association ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!credentials || !credentials.type) {
+      return NextResponse.json(
+        { error: "Credentials are required" },
+        { status: 400 }
+      );
+    }
+
+    const { type } = credentials;
+    const supabase = await createClient();
+
+    // Verify association exists
+    const { data: association, error: assocError } = await supabase
+      .from("associations")
+      .select("id, name")
+      .eq("id", associationId)
+      .single();
+
+    if (assocError || !association) {
+      return NextResponse.json(
+        { error: "Association not found" },
+        { status: 404 }
+      );
+    }
 
     if (type === "oauth") {
       // OAuth Token connection
-      const { accessToken, refreshToken, locationId: providedLocationId } = body;
+      const { accessToken, refreshToken, locationId: providedLocationId } = credentials;
 
       if (!accessToken || !refreshToken) {
         return NextResponse.json(
@@ -43,7 +75,6 @@ export async function POST(request: NextRequest) {
       let testError = "";
       
       try {
-        // Use the provided location ID for the test
         const testLocationId = providedLocationId || "me";
         
         // Try v2 API with specific location ID
@@ -70,12 +101,10 @@ export async function POST(request: NextRequest) {
 
         if (testResponse.ok) {
           const data = await testResponse.json();
-          // Handle different response formats
           locationData = {
             id: data.id || data.location?.id,
             name: data.name || data.location?.name,
-            companyId: data.companyId || data.location?.companyId,
-          };
+            companyId: data.companyId || data.location?.companyId,\          };
           testSuccess = true;
         } else {
           testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
@@ -86,21 +115,45 @@ export async function POST(request: NextRequest) {
         console.warn("GHL OAuth test failed (network error):", testError);
       }
 
-      // Calculate token expiry (GHL tokens typically expire in 24 hours)
+      // Calculate token expiry
       const tokenExpiry = new Date();
       tokenExpiry.setHours(tokenExpiry.getHours() + 24);
 
-      // Store credentials even if test failed
-      // Use provided locationId if API test failed
-      await storeGhlCredentials({
-        type: "oauth",
-        accessToken,
-        refreshToken,
-        tokenExpiry: tokenExpiry.toISOString(),
-        locationId: locationData.id || providedLocationId,
-        locationName: locationData.name,
-        companyId: locationData.companyId,
-      });
+      // Store credentials in association_ghl_credentials table
+      const { error: insertError } = await supabase
+        .from("association_ghl_credentials")
+        .upsert({
+          association_id: associationId,
+          type: "oauth",
+          access_token: encrypt(accessToken),
+          refresh_token: encrypt(refreshToken),
+          token_expiry: tokenExpiry.toISOString(),
+          location_id: locationData.id || providedLocationId,
+          location_name: locationData.name,
+          company_id: locationData.companyId,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "association_id",
+        });
+
+      if (insertError) {
+        console.error("Error storing credentials:", insertError);
+        return NextResponse.json(
+          { error: "Failed to store credentials" },
+          { status: 500 }
+        );
+      }
+
+      // Update association with GHL IDs
+      await supabase
+        .from("associations")
+        .update({
+          ghl_location_id: locationData.id || providedLocationId,
+          ghl_location_name: locationData.name,
+          ghl_company_id: locationData.companyId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", associationId);
 
       return NextResponse.json({
         success: true,
@@ -116,8 +169,8 @@ export async function POST(request: NextRequest) {
       });
 
     } else if (type === "api_key") {
-      // API Key connection (legacy)
-      const { apiKey, locationId: providedLocationId } = body;
+      // API Key connection
+      const { apiKey, locationId: providedLocationId } = credentials;
 
       if (!apiKey) {
         return NextResponse.json(
@@ -140,7 +193,6 @@ export async function POST(request: NextRequest) {
       let testError = "";
       
       try {
-        // Use the provided location ID for the test
         const testLocationId = providedLocationId || "me";
         
         const testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
@@ -163,14 +215,37 @@ export async function POST(request: NextRequest) {
         console.warn("GHL API key test failed (network error):", testError);
       }
 
-      // Store credentials
-      // Use provided locationId if API test failed
-      await storeGhlCredentials({
-        type: "api_key",
-        apiKey,
-        locationId: locationData.id || providedLocationId,
-        locationName: locationData.name,
-      });
+      // Store credentials in association_ghl_credentials table
+      const { error: insertError } = await supabase
+        .from("association_ghl_credentials")
+        .upsert({
+          association_id: associationId,
+          type: "api_key",
+          api_key: encrypt(apiKey),
+          location_id: locationData.id || providedLocationId,
+          location_name: locationData.name,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "association_id",
+        });
+
+      if (insertError) {
+        console.error("Error storing credentials:", insertError);
+        return NextResponse.json(
+          { error: "Failed to store credentials" },
+          { status: 500 }
+        );
+      }
+
+      // Update association with GHL IDs
+      await supabase
+        .from("associations")
+        .update({
+          ghl_location_id: locationData.id || providedLocationId,
+          ghl_location_name: locationData.name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", associationId);
 
       return NextResponse.json({
         success: true,
