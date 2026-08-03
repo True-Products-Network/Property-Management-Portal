@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, User, Mail, Phone, Save, Lock } from "lucide-react";
+import { Loader2, User, Mail, Phone, Save, Lock, CheckCircle2, XCircle } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -15,11 +15,38 @@ interface UserProfile {
   avatarUrl?: string;
 }
 
+// Format phone number to (XXX) XXX-XXXX
+function formatPhoneNumber(value: string): string {
+  // Remove all non-numeric characters
+  const cleaned = value.replace(/\D/g, "");
+  
+  // Limit to 10 digits
+  const limited = cleaned.slice(0, 10);
+  
+  // Format based on length
+  if (limited.length === 0) return "";
+  if (limited.length <= 3) return `(${limited}`;
+  if (limited.length <= 6) return `(${limited.slice(0, 3)}) ${limited.slice(3)}`;
+  return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`;
+}
+
+// Remove formatting for storage
+function unformatPhoneNumber(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -59,7 +86,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           firstName: profile.firstName,
           lastName: profile.lastName,
-          phone: profile.phone,
+          phone: unformatPhoneNumber(profile.phone || ""),
         }),
       });
 
@@ -74,6 +101,63 @@ export default function ProfilePage() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function updatePassword() {
+    // Validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage({ type: "error", text: "Please fill in all password fields" });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: "error", text: "New passwords do not match" });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: "error", text: "New password must be at least 8 characters" });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    setPasswordMessage(null);
+
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPasswordMessage({ type: "success", text: "Password updated successfully!" });
+        // Clear password fields
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setPasswordMessage({ 
+          type: "error", 
+          text: data.error || "Failed to update password. Please check your current password." 
+        });
+      }
+    } catch (error) {
+      console.error("Error updating password:", error);
+      setPasswordMessage({ type: "error", text: "An error occurred. Please try again." });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  }
+
+  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatPhoneNumber(e.target.value);
+    setProfile(prev => prev ? { ...prev, phone: formatted } : null);
   }
 
   if (isLoading) {
@@ -154,9 +238,31 @@ export default function ProfilePage() {
             <Input
               type="tel"
               value={profile.phone || ""}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              placeholder="Enter phone number"
+              onChange={handlePhoneChange}
+              placeholder="(555) 123-4567"
             />
+            <p className="text-xs text-gray-500 mt-1">Format: (XXX) XXX-XXXX</p>
+          </div>
+
+          {/* Save Changes Button - Moved under Personal Information */}
+          <div className="pt-4 border-t">
+            <Button
+              onClick={saveProfile}
+              disabled={isSaving}
+              className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -170,44 +276,67 @@ export default function ProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Password Message */}
+          {passwordMessage && (
+            <div className={`p-3 rounded-lg flex items-center gap-2 ${
+              passwordMessage.type === "success" 
+                ? "bg-green-50 border border-green-200 text-green-800" 
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}>
+              {passwordMessage.type === "success" ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-600" />
+              )}
+              <span className="text-sm">{passwordMessage.text}</span>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-2">Current Password</label>
-            <Input type="password" placeholder="Enter current password" />
+            <Input 
+              type="password" 
+              placeholder="Enter current password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">New Password</label>
-            <Input type="password" placeholder="Enter new password" />
+            <Input 
+              type="password" 
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Confirm New Password</label>
-            <Input type="password" placeholder="Confirm new password" />
+            <Input 
+              type="password" 
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
-          <Button variant="outline" className="w-full">
-            Update Password
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={updatePassword}
+            disabled={isUpdatingPassword}
+          >
+            {isUpdatingPassword ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Password"
+            )}
           </Button>
         </CardContent>
       </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={saveProfile}
-          disabled={isSaving}
-          className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 }
