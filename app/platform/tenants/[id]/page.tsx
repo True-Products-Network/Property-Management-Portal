@@ -243,8 +243,10 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
               ) : (
                 <div className="text-center py-6">
                   <p className="text-gray-500">No active subscription</p>
-                  <Button className="mt-3" size="sm">
-                    Add Subscription
+                  <Button className="mt-3" size="sm" asChild>
+                    <Link href={`/platform/tenants/${tenant.id}/subscription`}>
+                      Add Subscription
+                    </Link>
                   </Button>
                 </div>
               )}

@@ -56,6 +56,15 @@ async function logAuditEvent(
   });
 }
 
+// PUT /api/platform/tenants/[id] - Alias for PATCH
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // Forward to PATCH handler
+  return PATCH(request, { params });
+}
+
 // GET /api/platform/tenants/[id]
 export async function GET(
   request: NextRequest,

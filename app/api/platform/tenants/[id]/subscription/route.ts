@@ -54,6 +54,114 @@ async function logAuditEvent(
   });
 }
 
+// POST /api/platform/tenants/[id]/subscription - Create new subscription
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = await createClient();
+    
+    // Check platform support access
+    if (!await isPlatformSupport(supabase)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden - Platform access required" },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await params;
+
+    // Parse and validate body
+    const body = await request.json();
+    const validation = updateSubscriptionSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation failed",
+          details: validation.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!validation.data.planId) {
+      return NextResponse.json(
+        { success: false, error: "planId is required" },
+        { status: 400 }
+      );
+    }
+
+    // Check if subscription already exists
+    const { data: existingSubscription } = await supabase
+      .from("tenant_subscriptions")
+      .select("id")
+      .eq("tenant_id", id)
+      .maybeSingle();
+
+    if (existingSubscription) {
+      return NextResponse.json(
+        { success: false, error: "Subscription already exists for this tenant" },
+        { status: 409 }
+      );
+    }
+
+    // Create new subscription
+    const { data, error } = await supabase
+      .from("tenant_subscriptions")
+      .insert({
+        tenant_id: id,
+        plan_id: validation.data.planId,
+        status: validation.data.status || "active",
+        billing_reference: validation.data.billingReference,
+        billing_customer_id: validation.data.billingCustomerId,
+        effective_date: validation.data.effectiveDate || new Date().toISOString().split("T")[0],
+        cancellation_date: validation.data.cancellationDate,
+        trial_ends_at: validation.data.trialEndsAt,
+        grace_period_ends_at: validation.data.gracePeriodEndsAt,
+      })
+      .select("*, plans(*)")
+      .single();
+
+    if (error) {
+      console.error("Error creating subscription:", error);
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 400 }
+      );
+    }
+
+    // Log audit event
+    await logAuditEvent(supabase, {
+      action: "subscription_created",
+      actionCategory: "tenant",
+      tenantId: id,
+      targetType: "subscription",
+      targetId: data.id,
+      newValue: data,
+    });
+
+    return NextResponse.json({ success: true, data }, { status: 201 });
+  } catch (error) {
+    console.error("Error in POST /api/platform/tenants/[id]/subscription:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/platform/tenants/[id]/subscription - Alias for PATCH
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  // Forward to PATCH handler
+  return PATCH(request, { params });
+}
+
 // GET /api/platform/tenants/[id]/subscription
 export async function GET(
   request: NextRequest,
