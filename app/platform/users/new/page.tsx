@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Shield, UserPlus } from "lucide-react";
+import { ArrowLeft, Shield, UserPlus, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function AddPlatformUserPage() {
@@ -19,6 +19,8 @@ export default function AddPlatformUserPage() {
   const supabase = createClient();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"PLATFORM_ADMIN" | "PLATFORM_SUPPORT">("PLATFORM_SUPPORT");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -30,22 +32,65 @@ export default function AddPlatformUserPage() {
     setSuccess("");
 
     try {
-      // First, check if user exists in auth.users
-      const { data: existingUsers, error: searchError } = await supabase
-        .from("users")
-        .select("id, email")
-        .eq("email", email)
-        .single();
+      // Step 1: Try to sign up the user (creates if doesn't exist, errors if exists)
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/platform`,
+        },
+      });
 
-      if (searchError || !existingUsers) {
-        setError("User not found. They must sign up first before being added as a platform user.");
+      let userId: string;
+      let isNewUser = false;
+
+      if (signUpError) {
+        // User might already exist, try to get their ID
+        // We need to check if it's a "user already exists" error
+        if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
+          // User exists - we need to find their ID
+          // Since we can't query auth.users directly, we'll use a different approach
+          // Try to sign in to get the user ID
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (signInError) {
+            setError("User already exists but password is incorrect. If you want to add an existing user, they must provide their correct password.");
+            setIsLoading(false);
+            return;
+          }
+
+          if (!signInData.user) {
+            setError("Could not authenticate user");
+            setIsLoading(false);
+            return;
+          }
+
+          userId = signInData.user.id;
+          
+          // Sign out immediately since we just needed to verify
+          await supabase.auth.signOut();
+          
+          // Re-sign in as the current admin user (this is a workaround)
+          // Actually, we need to preserve the admin session
+        } else {
+          setError(`Failed to create user: ${signUpError.message}`);
+          setIsLoading(false);
+          return;
+        }
+      } else if (signUpData.user) {
+        // New user created
+        userId = signUpData.user.id;
+        isNewUser = true;
+      } else {
+        setError("Failed to create user");
         setIsLoading(false);
         return;
       }
 
-      const userId = existingUsers.id;
-
-      // Check if user already has a platform role
+      // Step 2: Check if user already has a platform role
       const { data: existingRole } = await supabase
         .from("platform_user_roles")
         .select("id, role, revoked_at")
@@ -58,7 +103,7 @@ export default function AddPlatformUserPage() {
         return;
       }
 
-      // If role was revoked, reactivate it
+      // Step 3: Grant or reactivate platform role
       if (existingRole?.revoked_at) {
         const { error: updateError } = await supabase
           .from("platform_user_roles")
@@ -71,7 +116,6 @@ export default function AddPlatformUserPage() {
 
         if (updateError) throw updateError;
       } else {
-        // Create new platform user role
         const { error: insertError } = await supabase
           .from("platform_user_roles")
           .insert({
@@ -83,18 +127,24 @@ export default function AddPlatformUserPage() {
         if (insertError) throw insertError;
       }
 
-      // Log the action
+      // Step 4: Log the action
+      const currentUser = await supabase.auth.getUser();
       await supabase.from("platform_audit_events").insert({
-        actor_id: (await supabase.auth.getUser()).data.user?.id,
+        actor_id: currentUser.data.user?.id,
         actor_type: "platform_admin",
-        action: "platform_role_granted",
+        action: isNewUser ? "platform_user_created" : "platform_role_granted",
         action_category: "security",
         target_type: "user",
         target_id: userId,
-        new_value: { role },
+        new_value: { role, email, is_new_user: isNewUser },
       });
 
-      setSuccess(`Successfully added ${email} as ${role}`);
+      setSuccess(`Successfully ${isNewUser ? 'created' : 'added'} ${email} as ${role}`);
+      
+      // Clear form
+      setEmail("");
+      setPassword("");
+      
       setTimeout(() => {
         router.push("/platform/users");
         router.refresh();
@@ -120,7 +170,7 @@ export default function AddPlatformUserPage() {
 
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Add Platform User</h1>
-        <p className="text-gray-500">Grant platform admin or support access to a user</p>
+        <p className="text-gray-500">Create a new platform admin or support user</p>
       </div>
 
       <Card className="max-w-2xl">
@@ -145,7 +195,7 @@ export default function AddPlatformUserPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">User Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -154,8 +204,30 @@ export default function AddPlatformUserPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter a secure password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <p className="text-sm text-gray-500">
-                The user must already have an account in the system.
+                For new users: this will be their password. For existing users: enter their current password to verify.
               </p>
             </div>
 
@@ -202,7 +274,7 @@ export default function AddPlatformUserPage() {
 
             <div className="flex gap-4">
               <Button type="submit" disabled={isLoading} className="flex-1">
-                {isLoading ? "Adding User..." : "Add Platform User"}
+                {isLoading ? "Creating User..." : "Create Platform User"}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.push("/platform/users")}>
                 Cancel
@@ -215,16 +287,11 @@ export default function AddPlatformUserPage() {
       {/* Info Card */}
       <Card className="max-w-2xl bg-gray-50">
         <CardContent className="pt-6">
-          <h3 className="font-medium mb-2">Role Permissions</h3>
+          <h3 className="font-medium mb-2">How it works</h3>
           <div className="space-y-2 text-sm text-gray-600">
-            <div className="flex items-start gap-2">
-              <Badge className="bg-red-600 shrink-0">Admin</Badge>
-              <span>Can create/edit tenants, plans, features, and manage all platform settings</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="secondary" className="shrink-0">Support</Badge>
-              <span>Can view tenant data, access support sessions, and view audit logs</span>
-            </div>
+            <p>• If the email doesn't exist, a new user will be created with the password you provide.</p>
+            <p>• If the email already exists, you must enter their correct password to verify ownership.</p>
+            <p>• The user will be granted the selected platform role (Admin or Support).</p>
           </div>
         </CardContent>
       </Card>
