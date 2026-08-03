@@ -31,7 +31,7 @@ export function PlatformHeader({ user, role }: PlatformHeaderProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/platform/login");
+    router.push("/platform-login");
     router.refresh();
   };
 
