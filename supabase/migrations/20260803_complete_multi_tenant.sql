@@ -482,7 +482,7 @@ BEGIN
 END $$;
 
 -- ============================================
--- PHASE 5: Add tenant_id to existing tables
+-- PHASE 5: Add tenant_id to existing tables (only if tables exist)
 -- ============================================
 
 DO $$
@@ -492,55 +492,121 @@ BEGIN
     SELECT id INTO default_tenant_id FROM tenants WHERE code = 'exemplary-services';
     
     IF default_tenant_id IS NOT NULL THEN
-        -- Add tenant_id columns
-        ALTER TABLE associations ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE associations ADD COLUMN IF NOT EXISTS portfolio_id UUID REFERENCES portfolios(id);
+        -- associations (should exist)
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'associations') THEN
+            ALTER TABLE associations ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            ALTER TABLE associations ADD COLUMN IF NOT EXISTS portfolio_id UUID REFERENCES portfolios(id);
+            UPDATE associations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+            UPDATE associations SET portfolio_id = (SELECT id FROM portfolios WHERE tenant_id = default_tenant_id AND is_default = true LIMIT 1) WHERE portfolio_id IS NULL;
+        END IF;
         
-        -- Backfill data
-        UPDATE associations SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE associations SET portfolio_id = (SELECT id FROM portfolios WHERE tenant_id = default_tenant_id AND is_default = true LIMIT 1) WHERE portfolio_id IS NULL;
+        -- contacts
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'contacts') THEN
+            ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE contacts SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
         
-        -- Add other tables
-        ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE properties ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE units ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE vendors ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE inspections ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE documents ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE approvals ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE payments ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE communications ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
-        ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+        -- properties
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'properties') THEN
+            ALTER TABLE properties ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE properties SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
         
-        -- Backfill all
-        UPDATE contacts SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE properties SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE units SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE vendors SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE maintenance_requests SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE inspections SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE documents SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE approvals SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE payments SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE communications SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
-        UPDATE appointments SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        -- units
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'units') THEN
+            ALTER TABLE units ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE units SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- vendors
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'vendors') THEN
+            ALTER TABLE vendors ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE vendors SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- maintenance_requests
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'maintenance_requests') THEN
+            ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE maintenance_requests SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- inspections
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inspections') THEN
+            ALTER TABLE inspections ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE inspections SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- documents
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'documents') THEN
+            ALTER TABLE documents ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE documents SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- approvals
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'approvals') THEN
+            ALTER TABLE approvals ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE approvals SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- payments (may not exist yet)
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'payments') THEN
+            ALTER TABLE payments ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE payments SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- communications
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'communications') THEN
+            ALTER TABLE communications ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE communications SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
+        
+        -- appointments
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'appointments') THEN
+            ALTER TABLE appointments ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id);
+            UPDATE appointments SET tenant_id = default_tenant_id WHERE tenant_id IS NULL;
+        END IF;
     END IF;
 END $$;
 
 -- ============================================
--- PHASE 6: Create Indexes
+-- PHASE 6: Create Indexes (only for tables that exist)
 -- ============================================
 
-CREATE INDEX IF NOT EXISTS idx_associations_tenant ON associations(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_associations_portfolio ON associations(portfolio_id);
-CREATE INDEX IF NOT EXISTS idx_contacts_tenant ON contacts(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_properties_tenant ON properties(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_units_tenant ON units(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_vendors_tenant ON vendors(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tenant ON maintenance_requests(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_inspections_tenant ON inspections(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'associations') THEN
+        CREATE INDEX IF NOT EXISTS idx_associations_tenant ON associations(tenant_id);
+        CREATE INDEX IF NOT EXISTS idx_associations_portfolio ON associations(portfolio_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'contacts') THEN
+        CREATE INDEX IF NOT EXISTS idx_contacts_tenant ON contacts(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'properties') THEN
+        CREATE INDEX IF NOT EXISTS idx_properties_tenant ON properties(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'units') THEN
+        CREATE INDEX IF NOT EXISTS idx_units_tenant ON units(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'vendors') THEN
+        CREATE INDEX IF NOT EXISTS idx_vendors_tenant ON vendors(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'maintenance_requests') THEN
+        CREATE INDEX IF NOT EXISTS idx_maintenance_tenant ON maintenance_requests(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inspections') THEN
+        CREATE INDEX IF NOT EXISTS idx_inspections_tenant ON inspections(tenant_id);
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'documents') THEN
+        CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id);
+    END IF;
+END $$;
 
 -- ============================================
 -- PHASE 7: Log Completion
