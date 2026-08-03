@@ -32,19 +32,20 @@ export default function PlatformLoginPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No user returned");
 
-      // Check platform role
-      const { data: platformRole, error: roleError } = await supabase
+      // Check platform role - try without .single() first
+      const { data: platformRoles, error: roleError } = await supabase
         .from("platform_user_roles")
         .select("role")
-        .eq("user_id", authData.user.id)
-        .or('revoked_at.is.null,revoked_at.gt.now()')
-        .single();
+        .eq("user_id", authData.user.id);
 
-      if (roleError) {
-        console.error("Role check error:", roleError);
-      }
+      console.log("User ID:", authData.user.id);
+      console.log("Platform roles found:", platformRoles);
+      console.log("Role error:", roleError);
 
-      if (!platformRole) {
+      // Filter out revoked roles client-side
+      const activeRole = platformRoles?.find(r => !r.revoked_at);
+
+      if (!activeRole) {
         await supabase.auth.signOut();
         throw new Error("You do not have Platform Console access. Please contact your administrator.");
       }
@@ -52,7 +53,7 @@ export default function PlatformLoginPage() {
       // Log the login
       await supabase.from("platform_audit_events").insert({
         actor_id: authData.user.id,
-        actor_type: platformRole.role === 'PLATFORM_ADMIN' ? 'platform_admin' : 'platform_support',
+        actor_type: activeRole.role === 'PLATFORM_ADMIN' ? 'platform_admin' : 'platform_support',
         action: "platform_login",
         action_category: "security",
         target_type: "user",
