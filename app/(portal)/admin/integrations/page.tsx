@@ -6,6 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/Label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
 import {
   Database,
   CheckCircle2,
@@ -34,6 +42,15 @@ import {
   XSquare,
 } from "lucide-react";
 import Link from "next/link";
+
+interface Association {
+  id: string;
+  name: string;
+  legalName?: string;
+  ghlLocationId?: string;
+  ghlLocationName?: string;
+  ghlCompanyId?: string;
+}
 
 interface GhlConnectionStatus {
   connected: boolean;
@@ -86,11 +103,17 @@ export default function AdminIntegrationsPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showConnectForm, setShowConnectForm] = useState(false);
   
+  // Association selection
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [selectedAssociationId, setSelectedAssociationId] = useState<string>("");
+  
   // Form fields
   const [locationId, setLocationId] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
   const [showTokens, setShowTokens] = useState(false);
+  const [connectionType, setConnectionType] = useState<"api_key" | "oauth">("api_key");
   
   // Calendar settings
   const [calendarSettings, setCalendarSettings] = useState<CalendarSettings>({
@@ -131,24 +154,48 @@ export default function AdminIntegrationsPage() {
     return tab === "payment" ? "payment" : "ghl";
   });
 
-  // Fetch GHL connection status and calendar settings
+  // Fetch associations on load
   useEffect(() => {
-    fetchGhlStatus();
+    fetchAssociations();
     fetchCalendarSettings();
     fetchPaymentSettings();
   }, []);
 
-  async function fetchGhlStatus() {
+  // Fetch GHL status when association changes
+  useEffect(() => {
+    if (selectedAssociationId) {
+      fetchGhlStatus(selectedAssociationId);
+    }
+  }, [selectedAssociationId]);
+
+  async function fetchAssociations() {
     try {
-      const response = await fetch("/api/admin/ghl/status");
+      const response = await fetch("/api/associations");
+      if (response.ok) {
+        const data = await response.json();
+        setAssociations(data);
+        // Auto-select first association if none selected
+        if (data.length > 0 && !selectedAssociationId) {
+          setSelectedAssociationId(data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching associations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function fetchGhlStatus(associationId?: string) {
+    if (!associationId) return;
+    try {
+      const response = await fetch(`/api/admin/ghl/status?associationId=${associationId}`);
       if (response.ok) {
         const data = await response.json();
         setGhlStatus(data);
       }
     } catch (error) {
       console.error("Error fetching GHL status:", error);
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -226,31 +273,54 @@ export default function AdminIntegrationsPage() {
   }
 
   async function handleConnect() {
-    if (!locationId || !accessToken || !refreshToken) {
-      alert("Please fill in all fields: Location ID, Access Token, and Refresh Token");
+    if (!selectedAssociationId) {
+      alert("Please select an association first");
       return;
+    }
+
+    if (connectionType === "oauth") {
+      if (!locationId || !accessToken || !refreshToken) {
+        alert("Please fill in all fields: Location ID, Access Token, and Refresh Token");
+        return;
+      }
+    } else {
+      if (!locationId || !apiKey) {
+        alert("Please fill in all fields: Location ID and API Key");
+        return;
+      }
     }
 
     setIsConnecting(true);
     try {
+      const credentials: Record<string, string> = {
+        type: connectionType,
+        locationId,
+      };
+
+      if (connectionType === "oauth") {
+        credentials.accessToken = accessToken;
+        credentials.refreshToken = refreshToken;
+      } else {
+        credentials.apiKey = apiKey;
+      }
+
       const response = await fetch("/api/admin/ghl/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "oauth",
-          locationId,
-          accessToken,
-          refreshToken,
+          associationId: selectedAssociationId,
+          credentials,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        await fetchGhlStatus();
+        await fetchGhlStatus(selectedAssociationId);
         setShowConnectForm(false);
         setAccessToken("");
         setRefreshToken("");
+        setApiKey("");
         setLocationId("");
         
         if (data.testSuccess) {
@@ -269,17 +339,24 @@ export default function AdminIntegrationsPage() {
   }
 
   async function handleDisconnect() {
-    if (!confirm("Are you sure you want to disconnect from GHL?\n\nThis will remove all stored credentials.")) {
+    if (!selectedAssociationId) {
+      alert("Please select an association first");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to disconnect this association from GHL?\n\nThis will remove all stored credentials.")) {
       return;
     }
 
     try {
       const response = await fetch("/api/admin/ghl/disconnect", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ associationId: selectedAssociationId }),
       });
 
       if (response.ok) {
-        await fetchGhlStatus();
+        await fetchGhlStatus(selectedAssociationId);
         setShowConnectForm(false);
         alert("Disconnected successfully");
       }
@@ -289,17 +366,24 @@ export default function AdminIntegrationsPage() {
   }
 
   async function handleTestConnection() {
+    if (!selectedAssociationId) {
+      alert("Please select an association first");
+      return;
+    }
+
     setIsConnecting(true);
     try {
       const response = await fetch("/api/admin/ghl/test", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ associationId: selectedAssociationId }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         alert(`✅ Connection test successful!\n\nLocation: ${data.locationName}\nType: ${data.connectionType}`);
-        await fetchGhlStatus();
+        await fetchGhlStatus(selectedAssociationId);
       } else {
         alert(`❌ Connection test failed:\n${data.error || "Unknown error"}`);
       }
@@ -478,6 +562,65 @@ export default function AdminIntegrationsPage() {
       {/* GHL & Calendar Tab */}
       {activeTab === "ghl" && (
         <>
+          {/* Association Selector */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Select Association
+              </CardTitle>
+              <CardDescription>
+                Choose which association to connect to GHL
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={selectedAssociationId}
+                onValueChange={setSelectedAssociationId}
+              >
+                <SelectTrigger className="w-full md:w-[400px]">
+                  <SelectValue placeholder="Select an association..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {associations.map((assoc) => (
+                    <SelectItem key={assoc.id} value={assoc.id}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{assoc.name}</span>
+                        {assoc.ghlLocationId ? (
+                          <Badge variant="success" className="ml-2">Connected</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="ml-2">Not Connected</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {associations.length === 0 && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">
+                        No Associations Found
+                      </p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Create an association first before connecting to GHL.
+                      </p>
+                      <Link
+                        href="/management/associations/new"
+                        className="text-sm text-amber-800 underline mt-2 inline-block"
+                      >
+                        Create Association →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* GHL Integration Card */}
       <Card>
         <CardHeader>
@@ -489,7 +632,9 @@ export default function AdminIntegrationsPage() {
               <div>
                 <CardTitle>GoHighLevel (GHL)</CardTitle>
                 <CardDescription>
-                  Connect to your GHL location for data synchronization
+                  {selectedAssociationId 
+                    ? "Connect this association to your GHL location"
+                    : "Select an association above to configure GHL connection"}
                 </CardDescription>
               </div>
             </div>
@@ -675,6 +820,33 @@ export default function AdminIntegrationsPage() {
                     </div>
                   </div>
 
+                  {/* Connection Type Selector */}
+                  <div>
+                    <Label className="block text-sm font-medium mb-2">Connection Type</Label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          value="api_key"
+                          checked={connectionType === "api_key"}
+                          onChange={(e) => setConnectionType(e.target.value as "api_key")}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">API Key</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          value="oauth"
+                          checked={connectionType === "oauth"}
+                          onChange={(e) => setConnectionType(e.target.value as "oauth")}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">OAuth Tokens</span>
+                      </label>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Location ID <span className="text-red-500">*</span>
@@ -690,58 +862,86 @@ export default function AdminIntegrationsPage() {
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Access Token <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type={showTokens ? "text" : "password"}
-                        value={accessToken}
-                        onChange={(e) => setAccessToken(e.target.value)}
-                        placeholder="Enter your GHL Access Token"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowTokens(!showTokens)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
+                  {connectionType === "api_key" ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        API Key <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type={showTokens ? "text" : "password"}
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          placeholder="Enter your GHL API Key"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTokens(!showTokens)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Generate in GHL Settings → API Keys
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Short-lived token (expires in ~24 hours)
-                    </p>
-                  </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Access Token <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Input
+                            type={showTokens ? "text" : "password"}
+                            value={accessToken}
+                            onChange={(e) => setAccessToken(e.target.value)}
+                            placeholder="Enter your GHL Access Token"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowTokens(!showTokens)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Short-lived token (expires in ~24 hours)
+                        </p>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Refresh Token <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type={showTokens ? "text" : "password"}
-                        value={refreshToken}
-                        onChange={(e) => setRefreshToken(e.target.value)}
-                        placeholder="Enter your GHL Refresh Token"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowTokens(!showTokens)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Long-lived token used to refresh access token automatically
-                    </p>
-                  </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Refresh Token <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Input
+                            type={showTokens ? "text" : "password"}
+                            value={refreshToken}
+                            onChange={(e) => setRefreshToken(e.target.value)}
+                            placeholder="Enter your GHL Refresh Token"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowTokens(!showTokens)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            {showTokens ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Long-lived token used to refresh access token automatically
+                        </p>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     <Button
                       onClick={handleConnect}
-                      disabled={isConnecting || !locationId || !accessToken || !refreshToken}
+                      disabled={isConnecting || !locationId || (connectionType === "api_key" ? !apiKey : (!accessToken || !refreshToken))}
                       className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
                     >
                       {isConnecting ? (
