@@ -109,7 +109,7 @@ export default function EditPlanPage() {
   };
 
   // Prepare initial data
-  const initialData: Partial<PlanFormData> = plan
+  const initialData: Partial<PlanFormData> | undefined = plan
     ? {
         code: plan.code,
         name: plan.name,
