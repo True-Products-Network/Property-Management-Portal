@@ -19,7 +19,7 @@ export default async function EditTenantPage({ params }: EditTenantPageProps) {
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/platform/login");
+    redirect("/platform-login");
   }
 
   // Check if user is platform admin (only admins can edit tenants)
