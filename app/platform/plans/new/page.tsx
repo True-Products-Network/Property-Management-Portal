@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PlanForm, PlanFormData } from "@/components/platform/PlanForm";
@@ -18,7 +18,7 @@ export default function NewPlanPage() {
   const [features, setFeatures] = useState([]);
 
   // Fetch features on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchFeatures = async () => {
       const { data } = await supabase
         .from("features")
