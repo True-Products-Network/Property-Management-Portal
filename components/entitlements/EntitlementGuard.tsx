@@ -2,7 +2,8 @@
 // Wraps forms/features to check if user has access
 
 import { ReactNode } from "react";
-import { useEntitlement, FeatureKey } from "@/lib/entitlements/use-entitlements";
+import { useEntitlement } from "@/lib/entitlements/use-entitlements";
+import { FeatureKey } from "@/lib/entitlements/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";

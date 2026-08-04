@@ -1,31 +1,13 @@
-// Entitlement checking hook for forms and features
+"use client";
+
+// Client-side entitlement checking hook
 // Checks if the current tenant has access to specific features
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { FeatureKey, EntitlementCheck } from "./types";
 
-export type FeatureKey = 
-  | "maintenance_requests"
-  | "inspections"
-  | "payments"
-  | "compliance"
-  | "approvals"
-  | "communications"
-  | "documents"
-  | "vendors"
-  | "workflows"
-  | "advanced_reporting"
-  | "api_access"
-  | "bulk_operations";
-
-interface EntitlementCheck {
-  enabled: boolean;
-  isLoading: boolean;
-  error: string | null;
-  limit?: number;
-  currentUsage?: number;
-  hasReachedLimit: boolean;
-}
+export type { FeatureKey, EntitlementCheck } from "./types";
 
 /**
  * Check if a feature is entitled for the current tenant
@@ -192,77 +174,4 @@ export function useEntitlements(featureKeys: FeatureKey[]): Record<FeatureKey, E
   }
 
   return results;
-}
-
-/**
- * Server-side entitlement check for API routes
- */
-export async function checkEntitlementServer(
-  tenantId: string,
-  featureKey: FeatureKey
-): Promise<{ enabled: boolean; limit?: number; currentUsage?: number }> {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-
-  // Check tenant entitlements
-  const { data: entitlement, error } = await supabase
-    .from("tenant_entitlements")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .eq("feature_key", featureKey)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    throw error;
-  }
-
-  if (entitlement) {
-    return {
-      enabled: entitlement.enabled,
-      limit: entitlement.usage_limit || undefined,
-      currentUsage: entitlement.current_usage || 0,
-    };
-  }
-
-  // Check plan features
-  const { data: planFeature } = await supabase
-    .from("plan_features")
-    .select("*")
-    .eq("feature_key", featureKey)
-    .eq("plans.tenant_subscriptions.tenant_id", tenantId)
-    .single();
-
-  return {
-    enabled: !!planFeature,
-  };
-}
-
-/**
- * Increment usage for a metered entitlement
- */
-export async function incrementEntitlementUsage(
-  tenantId: string,
-  featureKey: FeatureKey,
-  incrementBy: number = 1
-): Promise<void> {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-
-  const { data: entitlement } = await supabase
-    .from("tenant_entitlements")
-    .select("current_usage")
-    .eq("tenant_id", tenantId)
-    .eq("feature_key", featureKey)
-    .single();
-
-  if (entitlement) {
-    await supabase
-      .from("tenant_entitlements")
-      .update({ 
-        current_usage: (entitlement.current_usage || 0) + incrementBy,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("tenant_id", tenantId)
-      .eq("feature_key", featureKey);
-  }
 }

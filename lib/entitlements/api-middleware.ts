@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { FeatureKey, checkEntitlementServer, incrementEntitlementUsage } from "./use-entitlements";
+import { FeatureKey } from "./types";
+import { checkEntitlementServer, incrementEntitlementUsage } from "./server";
 
 interface EntitlementMiddlewareOptions {
   featureKey: FeatureKey;
@@ -162,3 +163,5 @@ export async function checkRouteEntitlement(
     return { allowed: false, error: "Internal server error" };
   }
 }
+
+export { incrementEntitlementUsage } from "./server";
