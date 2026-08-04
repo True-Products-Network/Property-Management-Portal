@@ -8,6 +8,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { z } from "zod";
 
 // Validation schema for inviting a user
+// Note: Database only supports 'admin' and 'member' roles currently
+// The detailed roles are stored in user_metadata for now
 const inviteUserSchema = z.object({
   email: z.string().email("Valid email is required"),
   firstName: z.string().min(1, "First name is required"),
@@ -181,6 +183,7 @@ export async function POST(
           last_name: validation.data.lastName,
           full_name: `${validation.data.firstName} ${validation.data.lastName}`,
           phone: validation.data.phone,
+          portal_role: validation.data.role,
         },
       });
 
@@ -236,13 +239,17 @@ export async function POST(
     }
 
     // Create tenant user relationship
+    // Map detailed roles to database roles (admin/member)
+    const dbRole = validation.data.role === "admin_user" ? "admin" : "member";
+    
     const { error: tenantUserError } = await supabase
       .from("tenant_users")
       .insert({
         tenant_id: tenantId,
         user_id: userId,
-        role: validation.data.role,
-        is_active: true,
+        role: dbRole,
+        is_primary_admin: validation.data.role === "admin_user",
+        invited_at: new Date().toISOString(),
       });
 
     if (tenantUserError) {
