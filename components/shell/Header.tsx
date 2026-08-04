@@ -20,6 +20,7 @@ import {
   CheckSquare,
   Palette,
 } from "lucide-react";
+import { AssociationSelector } from "./AssociationSelector";
 
 interface HeaderProps {
   userName: string;
@@ -60,8 +61,13 @@ export function Header({
   }
 
   return (
-    <header className="h-16 bg-white border-b border-[var(--border-color)] flex items-center justify-end px-6 sticky top-0 z-10">
-      {/* Actions */}
+    <header className="h-16 bg-white border-b border-[var(--border-color)] flex items-center justify-between px-6 sticky top-0 z-10">
+      {/* Association Selector - Left Side */}
+      <div className="flex items-center">
+        <AssociationSelector />
+      </div>
+
+      {/* Actions - Right Side */}
       <div className="flex items-center gap-3">
         {/* Quick Action Buttons */}
         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-[var(--border-color)]">
