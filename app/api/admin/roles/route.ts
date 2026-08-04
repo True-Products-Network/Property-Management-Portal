@@ -12,28 +12,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin (from user_metadata) or tenant admin
+    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tenantUser) {
+    // If not platform admin and no tenant, deny access
+    if (!isPlatformAdmin && !tenantUser) {
       return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
-    // Check if user is admin (role = 'admin' in tenant_users)
-    if (tenantUser.role !== 'admin') {
+    // Check if user is admin (role = 'admin' in tenant_users) or platform admin
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    if (!isPlatformAdmin && !isTenantAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
+
+    // Use tenant_id from tenantUser or a default for platform admins
+    const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
 
     // Fetch system roles (tenant_id IS NULL) and tenant-specific roles
     const { data: roles, error: rolesError } = await supabase
       .from("roles")
       .select("*")
-      .or(`tenant_id.is.null,tenant_id.eq.${tenantUser.tenant_id}`)
+      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
       .order("is_system_role", { ascending: false })
       .order("name");
 
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest) {
           .from("user_roles")
           .select("*", { count: "exact", head: true })
           .eq("role_id", role.id)
-          .eq("tenant_id", tenantUser.tenant_id);
+          .eq("tenant_id", tenantId);
 
         return {
           id: role.id,
@@ -98,22 +106,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin (from user_metadata) or tenant admin
+    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tenantUser) {
+    // If not platform admin and no tenant, deny access
+    if (!isPlatformAdmin && !tenantUser) {
       return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
-    // Check if user is admin
-    if (tenantUser.role !== 'admin') {
+    // Check if user is admin (role = 'admin' in tenant_users) or platform admin
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    if (!isPlatformAdmin && !isTenantAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
+
+    // Use tenant_id from tenantUser or a default for platform admins
+    const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
 
     const body = await request.json();
     const { name, description, permissions, is_active } = body;
@@ -127,7 +143,7 @@ export async function POST(request: NextRequest) {
       .from("roles")
       .select("id")
       .eq("name", name.trim())
-      .eq("tenant_id", tenantUser.tenant_id)
+      .eq("tenant_id", tenantId)
       .limit(1)
       .single();
 
@@ -141,7 +157,7 @@ export async function POST(request: NextRequest) {
       .insert({
         name: name.trim(),
         description: description?.trim() || "",
-        tenant_id: tenantUser.tenant_id,
+        tenant_id: tenantId,
         is_system_role: false,
         is_active: is_active !== false,
         created_by: user.id,
@@ -172,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
-      tenant_id: tenantUser.tenant_id,
+      tenant_id: tenantId,
       event_type: "ROLE_CREATED",
       entity_type: "role",
       entity_id: role.id,
