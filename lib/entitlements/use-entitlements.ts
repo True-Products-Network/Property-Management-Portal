@@ -141,7 +141,7 @@ export function useEntitlements(featureKeys: FeatureKey[]): Record<FeatureKey, E
       if (error) throw error;
 
       const resultsMap = featureKeys.reduce((acc, key) => {
-        const entitlement = entitlements?.find(e => e.feature_key === key);
+        const entitlement = entitlements?.find((e: { feature_key: string }) => e.feature_key === key);
         acc[key] = {
           enabled: entitlement?.enabled ?? false,
           isLoading: false,
