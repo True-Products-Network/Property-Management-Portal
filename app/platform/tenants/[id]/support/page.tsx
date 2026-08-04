@@ -128,7 +128,7 @@ export default function SupportAccessPage() {
           started_at: now.toISOString(),
           expires_at: expiresAt.toISOString(),
           is_active: true,
-          access_reason: "Platform support session",
+          reason: "Platform support session",
         })
         .select()
         .single();
