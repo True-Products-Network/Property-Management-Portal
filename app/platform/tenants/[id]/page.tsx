@@ -101,7 +101,7 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
   // Fetch recent audit events
   const { data: auditEvents } = await supabase
     .from("platform_audit_events")
-    .select("*")
+    .select("*, previous_value, new_value")
     .eq("tenant_id", id)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -460,10 +460,25 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
             <CardContent>
               {auditEvents && auditEvents.length > 0 ? (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {auditEvents.map((event: { id: string; action: string; action_category: string; created_at: string }) => (
+                  {auditEvents.map((event: { id: string; action: string; action_category: string; created_at: string; previous_value?: { name?: string; id?: string }; new_value?: { name?: string; id?: string } }) => (
                     <div key={event.id} className="text-sm border-l-2 border-gray-200 pl-3 py-1">
                       <p className="font-medium">{event.action}</p>
                       <p className="text-gray-500 text-xs">{event.action_category}</p>
+                      {event.action === 'tenant_deleted' && event.previous_value && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          Deleted: {event.previous_value.name} (ID: {event.previous_value.id?.slice(0, 8)}...)
+                        </p>
+                      )}
+                      {event.action === 'tenant_created' && event.new_value && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          Created: {event.new_value.name}
+                        </p>
+                      )}
+                      {event.action === 'tenant_updated' && event.previous_value && event.new_value && (
+                        <p className="text-gray-600 text-xs mt-1">
+                          Updated: {event.new_value.name || event.previous_value.name}
+                        </p>
+                      )}
                       <p className="text-gray-400 text-xs mt-1">
                         {format(new Date(event.created_at), "MMM d, h:mm a")}
                       </p>
