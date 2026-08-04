@@ -56,7 +56,7 @@ BEGIN
     IF prof_id IS NOT NULL THEN
         -- Core entities with limits
         INSERT INTO plan_features (plan_id, feature_id, is_enabled, limit_value)
-        SELECT prof_id, true, 
+        SELECT prof_id, f.id, true, 
             CASE f.code 
                 WHEN 'core.associations' THEN 3
                 WHEN 'core.properties' THEN 15
