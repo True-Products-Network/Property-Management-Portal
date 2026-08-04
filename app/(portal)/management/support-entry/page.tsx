@@ -47,6 +47,10 @@ export default function SupportEntryPage() {
       // Set active association for the support session
       localStorage.setItem("active_association_id", supportTenantId);
 
+      // Set support session cookie for server-side validation
+      document.cookie = `support_session_id=${supportSessionId}; path=/; max-age=14400`; // 4 hours
+      document.cookie = `support_tenant_id=${supportTenantId}; path=/; max-age=14400`;
+
       // Redirect to management dashboard
       router.push("/management");
     } catch (err) {
