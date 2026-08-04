@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, CreditCard, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Association {
   id: string;
@@ -50,7 +51,7 @@ const PROCESSORS = [
   { value: "paypal", label: "PayPal" },
 ];
 
-export default function NewPaymentPage() {
+function PaymentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const paymentId = searchParams.get("id");
@@ -407,5 +408,14 @@ export default function NewPaymentPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function PaymentFormWrapper() {
+  return (
+    <EntitlementGuard featureKey="payments">
+      <PaymentForm />
+    </EntitlementGuard>
   );
 }
