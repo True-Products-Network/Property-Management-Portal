@@ -29,14 +29,13 @@ interface PlatformUser {
   granted_by: string | null;
   revoked_at: string | null;
   user_id: string;
-  users?: {
-    email: string;
-    raw_user_meta_data?: {
-      full_name?: string;
-    };
-  };
-  grantedByUser?: {
-    email: string;
+}
+
+interface UserDetails {
+  id: string;
+  email: string;
+  raw_user_meta_data?: {
+    full_name?: string;
   };
 }
 
@@ -61,17 +60,30 @@ export default async function PlatformUsersPage() {
     redirect("/unauthorized");
   }
 
-  // Get all platform users with their auth details
+  // Get all platform users
   const { data: platformUsers, error } = await supabase
     .from("platform_user_roles")
-    .select(`
-      *,
-      users:user_id(email, raw_user_meta_data)
-    `)
+    .select("*")
     .order("granted_at", { ascending: false });
 
   if (error) {
     console.error("Error fetching platform users:", error);
+  }
+
+  // Get user details separately via the users view/table
+  const userIds = platformUsers?.map(u => u.user_id) || [];
+  let userDetails: Record<string, UserDetails> = {};
+  
+  if (userIds.length > 0) {
+    // Try to get user details from the users view
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("id, email, raw_user_meta_data")
+      .in("id", userIds);
+    
+    usersData?.forEach((u: UserDetails) => {
+      userDetails[u.id] = u;
+    });
   }
 
   // Get counts
@@ -112,6 +124,14 @@ export default async function PlatformUsersPage() {
 
   const activeUsers = (platformUsers || []).filter((u: PlatformUser) => !u.revoked_at);
   const revokedUsers = (platformUsers || []).filter((u: PlatformUser) => u.revoked_at);
+
+  const getUserDisplay = (userId: string) => {
+    const details = userDetails[userId];
+    return {
+      name: details?.raw_user_meta_data?.full_name || details?.email || "Unknown",
+      email: details?.email || "No email",
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -171,7 +191,7 @@ export default async function PlatformUsersPage() {
       {/* Active Users */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Active Users</h2>
+          <h2 className="text-lg font-semibold">Active Users ({activeUsers.length})</h2>
         </div>
         {activeUsers.length === 0 ? (
           <div className="p-8 text-center">
@@ -190,50 +210,51 @@ export default async function PlatformUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeUsers.map((platformUser: PlatformUser) => (
-                <TableRow key={platformUser.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {platformUser.users?.raw_user_meta_data?.full_name || platformUser.users?.email || "Unknown"}
-                      </p>
-                      <p className="text-sm text-gray-500">{platformUser.users?.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getRoleBadge(platformUser.role)}</TableCell>
-                  <TableCell>
-                    <div>
-                      <p>{new Date(platformUser.granted_at).toLocaleDateString()}</p>
-                      {platformUser.granted_by && (
-                        <p className="text-xs text-gray-500">
-                          by {platformUser.grantedByUser?.email || "System"}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(platformUser.revoked_at)}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => window.location.href = `/platform/users/${platformUser.id}`}>
-                          View Details
-                        </DropdownMenuItem>
-                        {platformUser.user_id !== user.id && (
-                          <DropdownMenuItem className="text-red-600">
-                            <UserX className="mr-2 h-4 w-4" />
-                            Revoke Access
-                          </DropdownMenuItem>
+              {activeUsers.map((platformUser: PlatformUser) => {
+                const userDisplay = getUserDisplay(platformUser.user_id);
+                return (
+                  <TableRow key={platformUser.id}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{userDisplay.name}</p>
+                        <p className="text-sm text-gray-500">{userDisplay.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getRoleBadge(platformUser.role)}</TableCell>
+                    <TableCell>
+                      <div>
+                        <p>{new Date(platformUser.granted_at).toLocaleDateString()}</p>
+                        {platformUser.granted_by && (
+                          <p className="text-xs text-gray-500">
+                            by {userDetails[platformUser.granted_by]?.email || "System"}
+                          </p>
                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(platformUser.revoked_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => window.location.href = `/platform/users/${platformUser.id}`}>
+                            View Details
+                          </DropdownMenuItem>
+                          {platformUser.user_id !== user.id && (
+                            <DropdownMenuItem className="text-red-600">
+                              <UserX className="mr-2 h-4 w-4" />
+                              Revoke Access
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -243,7 +264,7 @@ export default async function PlatformUsersPage() {
       {revokedUsers.length > 0 && (
         <div className="bg-white rounded-lg shadow">
           <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-600">Revoked Access</h2>
+            <h2 className="text-lg font-semibold text-gray-600">Revoked Access ({revokedUsers.length})</h2>
           </div>
           <Table>
             <TableHeader>
@@ -255,29 +276,30 @@ export default async function PlatformUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {revokedUsers.map((platformUser: PlatformUser) => (
-                <TableRow key={platformUser.id} className="opacity-60">
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {platformUser.users?.raw_user_meta_data?.full_name || platformUser.users?.email || "Unknown"}
-                      </p>
-                      <p className="text-sm text-gray-500">{platformUser.users?.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getRoleBadge(platformUser.role)}</TableCell>
-                  <TableCell>
-                    {new Date(platformUser.granted_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    {platformUser.revoked_at && (
-                      <span className="text-red-600">
-                        {new Date(platformUser.revoked_at).toLocaleDateString()}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {revokedUsers.map((platformUser: PlatformUser) => {
+                const userDisplay = getUserDisplay(platformUser.user_id);
+                return (
+                  <TableRow key={platformUser.id} className="opacity-60">
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{userDisplay.name}</p>
+                        <p className="text-sm text-gray-500">{userDisplay.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getRoleBadge(platformUser.role)}</TableCell>
+                    <TableCell>
+                      {new Date(platformUser.granted_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {platformUser.revoked_at && (
+                        <span className="text-red-600">
+                          {new Date(platformUser.revoked_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
