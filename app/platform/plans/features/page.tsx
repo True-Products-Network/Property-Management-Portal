@@ -182,7 +182,12 @@ export default async function FeaturesPage() {
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="font-medium text-gray-900">{feature.name}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900">{feature.name}</p>
+                              <Badge className={`text-xs ${getCategoryColor(category)}`}>
+                                {category}
+                              </Badge>
+                            </div>
                             <p className="text-xs text-gray-500 font-mono">{feature.code}</p>
                           </div>
                           <div className="flex items-center gap-1">
