@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Shield, UserX, Users } from "lucide-react";
 import Link from "next/link";
+import { UserActions } from "./UserActions";
 
 interface PlatformUser {
   id: string;
@@ -238,20 +239,11 @@ export default async function PlatformUsersPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(platformUser.revoked_at)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/platform/users/${platformUser.id}`}>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
-                        </Link>
-                        {platformUser.user_id !== user.id && (
-                          <form action={`/api/platform/users/${platformUser.id}/revoke`} method="POST">
-                            <Button type="submit" variant="ghost" size="sm" className="text-red-600">
-                              <UserX className="h-4 w-4" />
-                            </Button>
-                          </form>
-                        )}
-                      </div>
+                      <UserActions
+                        userId={platformUser.user_id}
+                        platformUserId={platformUser.id}
+                        currentUserId={user.id}
+                      />
                     </TableCell>
                   </TableRow>
                 );
