@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getProperties, createProperty } from "@/lib/api/properties";
+import { checkRouteEntityLimit } from "@/lib/entitlements/entity-limits";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -45,6 +46,18 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    // Check entity limits
+    const limitCheck = await checkRouteEntityLimit(request, "properties");
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ 
+        success: false, 
+        error: limitCheck.error || "Property limit reached",
+        code: "LIMIT_REACHED",
+        current: limitCheck.remaining !== undefined ? limitCheck.remaining + 1 : undefined,
+        limit: limitCheck.remaining !== undefined ? limitCheck.remaining : undefined,
+      }, { status: 403 });
+    }
 
     const body = await request.json();
     const validation = createSchema.safeParse(body);

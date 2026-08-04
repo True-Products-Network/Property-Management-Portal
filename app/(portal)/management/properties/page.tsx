@@ -16,6 +16,7 @@ import {
   Loader2,
   Filter,
 } from "lucide-react";
+import { useEntityLimit } from "@/lib/entitlements/use-entity-limits";
 
 interface Property {
   id: string;
