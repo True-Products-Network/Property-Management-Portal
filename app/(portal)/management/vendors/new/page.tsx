@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Truck, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface FormData {
   companyName: string;
@@ -43,7 +44,7 @@ const VENDOR_CATEGORIES = [
   { value: "snow_removal", label: "Snow Removal" },
 ];
 
-export default function NewVendorPage() {
+function NewVendorFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vendorId = searchParams.get("id");
@@ -473,5 +474,14 @@ export default function NewVendorPage() {
       </form>
       )}
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function NewVendorWrapper() {
+  return (
+    <EntitlementGuard featureKey="vendors">
+      <NewVendorForm />
+    </EntitlementGuard>
   );
 }

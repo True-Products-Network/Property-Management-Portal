@@ -86,7 +86,7 @@ const CATEGORIES = [
 
 type UploadMethod = "file" | "url";
 
-export default function NewDocumentPage() {
+function NewDocumentFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const documentId = searchParams.get("id");
@@ -697,5 +697,14 @@ export default function NewDocumentPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function NewDocumentWrapper() {
+  return (
+    <EntitlementGuard featureKey="documents">
+      <NewDocumentForm />
+    </EntitlementGuard>
   );
 }

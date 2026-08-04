@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getComplianceMatters, createComplianceMatter } from "@/lib/api/compliance";
+import { checkRouteEntitlement, incrementEntitlementUsage } from "@/lib/entitlements/api-middleware";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -49,6 +50,16 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getSession();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+
+    // Check entitlements
+    const entitlementCheck = await checkRouteEntitlement(request, "compliance");
+    if (!entitlementCheck.allowed) {
+      return NextResponse.json({ 
+        success: false, 
+        error: entitlementCheck.error || "Feature not available",
+        code: "NOT_ENTITLED"
+      }, { status: 403 });
+    }
 
     const body = await request.json();
     const validation = createSchema.safeParse(body);

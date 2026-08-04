@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, CheckSquare, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Association {
   id: string;
@@ -44,7 +45,7 @@ const APPROVAL_TYPES = [
   { value: "special_assessment", label: "Special Assessment" },
 ];
 
-export default function NewApprovalPage() {
+function NewApprovalFormPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const approvalId = searchParams.get("id");
@@ -384,5 +385,14 @@ export default function NewApprovalPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function NewApprovalWrapper() {
+  return (
+    <EntitlementGuard featureKey="approvals">
+      <NewApprovalForm />
+    </EntitlementGuard>
   );
 }

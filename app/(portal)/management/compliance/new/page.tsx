@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Shield, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Association {
   id: string;
@@ -606,7 +607,7 @@ function ComplianceFormContent() {
   );
 }
 
-export default function NewCompliancePage() {
+function NewComplianceFormPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-64">
@@ -615,5 +616,14 @@ export default function NewCompliancePage() {
     }>
       <ComplianceFormContent />
     </Suspense>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function NewComplianceWrapper() {
+  return (
+    <EntitlementGuard featureKey="compliance">
+      <NewComplianceForm />
+    </EntitlementGuard>
   );
 }

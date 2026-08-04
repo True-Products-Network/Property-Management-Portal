@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Megaphone, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Association {
   id: string;
@@ -377,5 +378,14 @@ export default function NewAnnouncementPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function AnnouncementFormWrapper() {
+  return (
+    <EntitlementGuard featureKey="communications">
+      <AnnouncementFormForm />
+    </EntitlementGuard>
   );
 }
