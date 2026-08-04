@@ -401,7 +401,7 @@ async function getPortalEntity(
     throw error;
   }
 
-  return data;
+  return data as Record<string, unknown>;
 }
 
 async function createPortalEntity(
@@ -501,14 +501,19 @@ async function createGhlEntity(
   data: Record<string, unknown>
 ): Promise<{ id: string }> {
   switch (entityType) {
-    case "contact":
-      return createContact(data as Parameters<typeof createContact>[0]);
-    case "association":
-      return createCompany(data as Parameters<typeof createCompany>[0]);
+    case "contact": {
+      const result = await createContact(data as unknown as Parameters<typeof createContact>[0]);
+      return { id: result.id! };
+    }
+    case "association": {
+      const result = await createCompany(data as unknown as Parameters<typeof createCompany>[0]);
+      return { id: result.id! };
+    }
     default: {
       const objectKey = getGhlObjectKey(entityType);
       if (!objectKey) throw new Error(`No object key for ${entityType}`);
-      return createCustomObject(objectKey, data.properties as Record<string, unknown>);
+      const result = await createCustomObject(objectKey, data.properties as Record<string, unknown>);
+      return { id: result.id! };
     }
   }
 }
@@ -520,10 +525,10 @@ async function updateGhlEntity(
 ): Promise<void> {
   switch (entityType) {
     case "contact":
-      await updateContact(ghlId, data as Parameters<typeof updateContact>[1]);
+      await updateContact(ghlId, data as unknown as Parameters<typeof updateContact>[1]);
       break;
     case "association":
-      await updateCompany(ghlId, data as Parameters<typeof updateCompany>[1]);
+      await updateCompany(ghlId, data as unknown as Parameters<typeof updateCompany>[1]);
       break;
     default: {
       const objectKey = getGhlObjectKey(entityType);
@@ -543,13 +548,13 @@ function mapToGhl(
 ): Record<string, unknown> {
   switch (entityType) {
     case "contact":
-      return mapPortalContactToGhl(portalData as unknown as PortalContact);
+      return mapPortalContactToGhl(portalData as unknown as PortalContact) as unknown as Record<string, unknown>;
     case "association":
-      return mapPortalAssociationToGhl(portalData as unknown as PortalAssociation);
+      return mapPortalAssociationToGhl(portalData as unknown as PortalAssociation) as unknown as Record<string, unknown>;
     case "property":
-      return mapPortalPropertyToGhl(portalData as unknown as PortalProperty);
+      return mapPortalPropertyToGhl(portalData as unknown as PortalProperty) as unknown as Record<string, unknown>;
     case "unit":
-      return mapPortalUnitToGhl(portalData as unknown as PortalUnit);
+      return mapPortalUnitToGhl(portalData as unknown as PortalUnit) as unknown as Record<string, unknown>;
     default:
       throw new Error(`Unknown entity type: ${entityType}`);
   }
@@ -561,17 +566,13 @@ function mapFromGhl(
 ): Record<string, unknown> {
   switch (entityType) {
     case "contact":
-      return mapGhlContactToPortal(ghlData as Awaited<ReturnType<typeof getContact>>);
+      return mapGhlContactToPortal(ghlData as unknown as Awaited<ReturnType<typeof getContact>>) as Record<string, unknown>;
     case "association":
-      return mapGhlCompanyToPortal(ghlData as Awaited<ReturnType<typeof getCompany>>);
-    case "property": {
-      const obj = ghlData as Awaited<ReturnType<typeof getCustomObject>>;
-      return mapGhlPropertyToPortal(obj);
-    }
-    case "unit": {
-      const obj = ghlData as Awaited<ReturnType<typeof getCustomObject>>;
-      return mapGhlUnitToPortal(obj);
-    }
+      return mapGhlCompanyToPortal(ghlData as unknown as Awaited<ReturnType<typeof getCompany>>) as Record<string, unknown>;
+    case "property":
+      return mapGhlPropertyToPortal(ghlData as unknown as Awaited<ReturnType<typeof getCustomObject>>) as Record<string, unknown>;
+    case "unit":
+      return mapGhlUnitToPortal(ghlData as unknown as Awaited<ReturnType<typeof getCustomObject>>) as Record<string, unknown>;
     default:
       throw new Error(`Unknown entity type: ${entityType}`);
   }
@@ -595,7 +596,7 @@ async function getExistingGhlId(
     .single();
 
   if (error || !data) return null;
-  return data.ghl_id;
+  return data.ghl_id as string;
 }
 
 async function getExistingPortalId(
@@ -612,7 +613,7 @@ async function getExistingPortalId(
     .single();
 
   if (error || !data) return null;
-  return data.entity_id;
+  return data.entity_id as string;
 }
 
 async function storeGhlId(
