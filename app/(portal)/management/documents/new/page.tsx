@@ -260,7 +260,7 @@ function NewDocumentForm() {
       }
 
       const result = await response.json();
-      return result.url || result.filePath;
+      return result.data?.publicUrl || result.data?.filePath || null;
     } catch (error) {
       console.error("Error uploading file:", error);
       alert("Failed to upload file. Please try again.");
