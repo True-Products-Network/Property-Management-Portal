@@ -81,7 +81,7 @@ const PRIORITIES = [
   { value: "critical", label: "Critical" },
 ];
 
-function ComplianceFormContent() {
+function NewComplianceForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const complianceId = searchParams.get("id");
