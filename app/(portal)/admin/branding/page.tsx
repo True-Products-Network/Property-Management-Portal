@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare, ArrowLeft } from "lucide-react";
+import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare, ArrowLeft, Code, Globe } from "lucide-react";
 import Link from "next/link";
 
 interface BrandSettings {
@@ -19,6 +19,8 @@ interface BrandSettings {
   support_email: string;
   support_phone: string;
   website_url: string;
+  ghl_chat_widget_code: string;
+  enable_live_chat: boolean;
 }
 
 export default function BrandingPage() {
@@ -34,6 +36,8 @@ export default function BrandingPage() {
     support_email: "",
     support_phone: "",
     website_url: "",
+    ghl_chat_widget_code: "",
+    enable_live_chat: false,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -245,6 +249,35 @@ export default function BrandingPage() {
                 PNG, SVG, or JPEG (max 2MB)
               </p>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                <Code className="h-4 w-4 inline mr-1" />
+                Logo SVG Code (Optional)
+              </label>
+              <textarea
+                value={settings.brand_logo_svg}
+                onChange={(e) => setSettings(prev => ({ ...prev, brand_logo_svg: e.target.value }))}
+                placeholder="<svg>...</svg>"
+                className="w-full min-h-[100px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--teal)] font-mono"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Paste SVG code for vector logo (overrides image URL)
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                <Globe className="h-4 w-4 inline mr-1" />
+                Favicon URL
+              </label>
+              <Input
+                value={settings.brand_favicon_url}
+                onChange={(e) => setSettings(prev => ({ ...prev, brand_favicon_url: e.target.value }))}
+                placeholder="https://your-cdn.com/favicon.ico"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Browser tab icon (recommended: 32x32px .ico or .png)
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -361,6 +394,48 @@ export default function BrandingPage() {
                 onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
                 placeholder="https://www.yourcompany.com"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Chat Widget */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-[var(--teal)]" />
+              Live Chat Widget
+            </CardTitle>
+            <CardDescription>
+              Enable live chat support on your portal
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="enable_live_chat"
+                checked={settings.enable_live_chat}
+                onChange={(e) => setSettings(prev => ({ ...prev, enable_live_chat: e.target.checked }))}
+                className="h-4 w-4 text-[var(--teal)] rounded border-gray-300 focus:ring-[var(--teal)]"
+              />
+              <label htmlFor="enable_live_chat" className="text-sm font-medium">
+                Enable Live Chat Widget
+              </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Chat Widget Code
+              </label>
+              <textarea
+                value={settings.ghl_chat_widget_code}
+                onChange={(e) => setSettings(prev => ({ ...prev, ghl_chat_widget_code: e.target.value }))}
+                placeholder="<!-- Paste your chat widget code here -->"
+                className="w-full min-h-[150px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--teal)] font-mono"
+                disabled={!settings.enable_live_chat}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Paste your GHL, Intercom, Zendesk, or other chat widget code here
+              </p>
             </div>
           </CardContent>
         </Card>

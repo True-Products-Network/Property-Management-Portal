@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           support_email: "",
           support_phone: "",
           website_url: "",
+          ghl_chat_widget_code: "",
+          enable_live_chat: false,
         },
       });
     }
@@ -86,6 +88,8 @@ export async function GET(request: NextRequest) {
         support_email: branding.support_email,
         support_phone: branding.support_phone,
         website_url: branding.website_url,
+        ghl_chat_widget_code: branding.ghl_chat_widget_code,
+        enable_live_chat: branding.enable_live_chat,
       },
     });
   } catch (error) {
@@ -148,6 +152,8 @@ export async function PUT(request: NextRequest) {
         support_email: body.support_email,
         support_phone: body.support_phone,
         website_url: body.website_url,
+        ghl_chat_widget_code: body.ghl_chat_widget_code,
+        enable_live_chat: body.enable_live_chat,
         updated_by: user.id,
         updated_at: new Date().toISOString(),
       }, {
@@ -178,6 +184,8 @@ export async function PUT(request: NextRequest) {
         support_email: branding.support_email,
         support_phone: branding.support_phone,
         website_url: branding.website_url,
+        ghl_chat_widget_code: branding.ghl_chat_widget_code,
+        enable_live_chat: branding.enable_live_chat,
       },
     });
   } catch (error) {
