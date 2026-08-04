@@ -164,7 +164,7 @@ export default function SignUpPage() {
               <Building2 className="h-7 w-7 text-white" />
             </div>
             <div className="text-white">
-              <h1 className="text-xl font-semibold">Exemplary</h1>
+              <h1 className="text-xl font-semibold">Associos</h1>
               <p className="text-sm text-white/60">Property Management</p>
             </div>
           </div>

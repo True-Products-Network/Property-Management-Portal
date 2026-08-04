@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Exemplary Property Management Portal",
+  title: "Associos Property Management Portal",
   description: "Property management portal for associations, owners, board members, and vendors",
 };
 

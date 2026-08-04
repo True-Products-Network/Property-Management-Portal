@@ -23,7 +23,7 @@ export default function BrandingPage() {
   const [settings, setSettings] = useState<BrandSettings>({
     brand_logo_url: "",
     brand_logo_svg: "",
-    brand_name_line1: "Exemplary",
+    brand_name_line1: "Associos",
     brand_name_line2: "Property Management",
     brand_primary_color: "#0d3b66",
     brand_secondary_color: "#f4d35e",
@@ -200,7 +200,7 @@ export default function BrandingPage() {
               <Input
                 value={settings.brand_name_line1}
                 onChange={(e) => setSettings(prev => ({ ...prev, brand_name_line1: e.target.value }))}
-                placeholder="e.g., Exemplary"
+                placeholder="e.g., Associos"
               />
             </div>
             <div>
