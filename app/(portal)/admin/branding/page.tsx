@@ -8,28 +8,32 @@ import { Loader2, Palette, Image, Type, Save, Building2, MessageSquare, ArrowLef
 import Link from "next/link";
 
 interface BrandSettings {
+  brand_name: string;
+  brand_name_line2: string;
   brand_logo_url: string;
   brand_logo_svg: string;
-  brand_name_line1: string;
-  brand_name_line2: string;
+  brand_favicon_url: string;
   brand_primary_color: string;
   brand_secondary_color: string;
-  brand_favicon_url: string;
-  ghl_chat_widget_code: string;
-  enable_live_chat: string;
+  brand_accent_color: string;
+  support_email: string;
+  support_phone: string;
+  website_url: string;
 }
 
 export default function BrandingPage() {
   const [settings, setSettings] = useState<BrandSettings>({
+    brand_name: "Associos",
+    brand_name_line2: "Property Management",
     brand_logo_url: "",
     brand_logo_svg: "",
-    brand_name_line1: "Associos",
-    brand_name_line2: "Property Management",
+    brand_favicon_url: "",
     brand_primary_color: "#0d3b66",
     brand_secondary_color: "#f4d35e",
-    brand_favicon_url: "",
-    ghl_chat_widget_code: "",
-    enable_live_chat: "false",
+    brand_accent_color: "#f4d35e",
+    support_email: "",
+    support_phone: "",
+    website_url: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,17 +45,13 @@ export default function BrandingPage() {
 
   async function loadSettings() {
     try {
-      const response = await fetch("/api/admin/settings?category=branding");
+      const response = await fetch("/api/admin/branding");
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
-          const loadedSettings: Partial<BrandSettings> = {};
-          result.data.forEach((setting: { key: keyof BrandSettings; value: string }) => {
-            loadedSettings[setting.key] = setting.value;
-          });
-          setSettings(prev => ({ ...prev, ...loadedSettings }));
-          if (loadedSettings.brand_logo_url) {
-            setPreviewLogo(loadedSettings.brand_logo_url);
+        if (result.success && result.branding) {
+          setSettings(prev => ({ ...prev, ...result.branding }));
+          if (result.branding.brand_logo_url) {
+            setPreviewLogo(result.branding.brand_logo_url);
           }
         }
       }
@@ -65,27 +65,18 @@ export default function BrandingPage() {
   async function saveSettings() {
     setIsSaving(true);
     try {
-      const settingsToSave = [
-        { key: "brand_logo_url", value: settings.brand_logo_url },
-        { key: "brand_logo_svg", value: settings.brand_logo_svg },
-        { key: "brand_name_line1", value: settings.brand_name_line1 },
-        { key: "brand_name_line2", value: settings.brand_name_line2 },
-        { key: "brand_primary_color", value: settings.brand_primary_color },
-        { key: "brand_secondary_color", value: settings.brand_secondary_color },
-        { key: "brand_favicon_url", value: settings.brand_favicon_url },
-        { key: "ghl_chat_widget_code", value: settings.ghl_chat_widget_code },
-        { key: "enable_live_chat", value: settings.enable_live_chat },
-      ];
+      const response = await fetch("/api/admin/branding", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
 
-      for (const setting of settingsToSave) {
-        await fetch("/api/admin/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(setting),
-        });
+      if (response.ok) {
+        alert("Brand settings saved successfully! Changes will take effect immediately.");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to save brand settings");
       }
-
-      alert("Brand settings saved successfully! Changes will take effect on next page load.");
     } catch (error) {
       console.error("Error saving brand settings:", error);
       alert("Failed to save brand settings");
@@ -97,8 +88,8 @@ export default function BrandingPage() {
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real implementation, upload to storage and get URL
-      // For now, we'll use a data URL for preview
+      // For now, create a data URL for preview
+      // In production, upload to storage and get URL
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
@@ -111,42 +102,43 @@ export default function BrandingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/admin">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-bold text-gray-900">Brand Customization</h1>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Admin
+            Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Brand Customization</h1>
-          <p className="text-[var(--secondary-text)] mt-1">
-            Customize the appearance of your property management portal
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Brand Customization</h1>
+          <p className="text-gray-500">Customize the look and feel of your portal</p>
         </div>
       </div>
 
       {/* Preview Card */}
-      <Card className="bg-gradient-to-br from-[var(--primary-navy)] to-[var(--primary-navy)]/90">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            Live Preview
-          </CardTitle>
-          <CardDescription className="text-white/70">
-            This is how your brand will appear in the sidebar
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <Card className="bg-gradient-to-br from-[var(--primary-navy)] to-[var(--primary-navy)]/90 border-0">
+        <CardContent className="py-6">
+          <p className="text-sm text-white/60 mb-4">Live Preview</p>
           <div className="flex items-center gap-3 p-4 bg-white/10 rounded-lg">
             {previewLogo ? (
               <img 
@@ -164,16 +156,12 @@ export default function BrandingPage() {
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: settings.brand_primary_color }}
               >
-                {settings.brand_name_line1.charAt(0)}
+                {settings.brand_name.charAt(0)}
               </div>
             )}
             <div className="flex flex-col">
-              <span className="font-semibold text-white text-sm">
-                {settings.brand_name_line1}
-              </span>
-              <span className="text-xs text-white/60">
-                {settings.brand_name_line2}
-              </span>
+              <span className="font-semibold text-white text-sm">{settings.brand_name}</span>
+              <span className="text-xs text-white/60">{settings.brand_name_line2}</span>
             </div>
           </div>
         </CardContent>
@@ -195,17 +183,17 @@ export default function BrandingPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Primary Name (Line 1)
+                Primary Name
               </label>
               <Input
-                value={settings.brand_name_line1}
-                onChange={(e) => setSettings(prev => ({ ...prev, brand_name_line1: e.target.value }))}
+                value={settings.brand_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, brand_name: e.target.value }))}
                 placeholder="e.g., Associos"
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Secondary Name / Tagline (Line 2)
+                Secondary Name / Tagline
               </label>
               <Input
                 value={settings.brand_name_line2}
@@ -250,23 +238,11 @@ export default function BrandingPage() {
               </label>
               <Input
                 type="file"
-                accept="image/*,.svg"
+                accept="image/png,image/svg+xml,image/jpeg"
                 onChange={handleLogoUpload}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                SVG Logo Code (Optional)
-              </label>
-              <textarea
-                value={settings.brand_logo_svg}
-                onChange={(e) => setSettings(prev => ({ ...prev, brand_logo_svg: e.target.value }))}
-                placeholder="<svg>...</svg>"
-                rows={3}
-                className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white font-mono text-sm"
-              />
               <p className="text-xs text-gray-500 mt-1">
-                Paste SVG code for crisp rendering at any size
+                PNG, SVG, or JPEG (max 2MB)
               </p>
             </div>
           </CardContent>
@@ -280,151 +256,118 @@ export default function BrandingPage() {
               Brand Colors
             </CardTitle>
             <CardDescription>
-              Customize the primary and secondary colors
+              Customize the primary colors used throughout the portal
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2">
-                  Primary Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={settings.brand_primary_color}
-                    onChange={(e) => setSettings(prev => ({ ...prev, brand_primary_color: e.target.value }))}
-                    className="h-10 w-20 rounded border border-[var(--border-color)]"
-                  />
-                  <Input
-                    value={settings.brand_primary_color}
-                    onChange={(e) => setSettings(prev => ({ ...prev, brand_primary_color: e.target.value }))}
-                    placeholder="#0d3b66"
-                    className="flex-1"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Primary Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={settings.brand_primary_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_primary_color: e.target.value }))}
+                  className="w-16 h-10 p-1"
+                />
+                <Input
+                  value={settings.brand_primary_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_primary_color: e.target.value }))}
+                  placeholder="#0d3b66"
+                />
               </div>
-              <div 
-                className="w-16 h-16 rounded-lg shadow-inner"
-                style={{ backgroundColor: settings.brand_primary_color }}
-              />
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium mb-2">
-                  Secondary Color
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={settings.brand_secondary_color}
-                    onChange={(e) => setSettings(prev => ({ ...prev, brand_secondary_color: e.target.value }))}
-                    className="h-10 w-20 rounded border border-[var(--border-color)]"
-                  />
-                  <Input
-                    value={settings.brand_secondary_color}
-                    onChange={(e) => setSettings(prev => ({ ...prev, brand_secondary_color: e.target.value }))}
-                    placeholder="#f4d35e"
-                    className="flex-1"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Secondary Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={settings.brand_secondary_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_secondary_color: e.target.value }))}
+                  className="w-16 h-10 p-1"
+                />
+                <Input
+                  value={settings.brand_secondary_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_secondary_color: e.target.value }))}
+                  placeholder="#f4d35e"
+                />
               </div>
-              <div 
-                className="w-16 h-16 rounded-lg shadow-inner"
-                style={{ backgroundColor: settings.brand_secondary_color }}
-              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Accent Color
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={settings.brand_accent_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_accent_color: e.target.value }))}
+                  className="w-16 h-10 p-1"
+                />
+                <Input
+                  value={settings.brand_accent_color}
+                  onChange={(e) => setSettings(prev => ({ ...prev, brand_accent_color: e.target.value }))}
+                  placeholder="#f4d35e"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Favicon */}
+        {/* Contact Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5 text-[var(--teal)]" />
-              Favicon
+              Contact Information
             </CardTitle>
             <CardDescription>
-              Browser tab icon (recommended: 32x32px)
+              Displayed in emails and support materials
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
-                Favicon URL
+                Support Email
               </label>
               <Input
-                value={settings.brand_favicon_url}
-                onChange={(e) => setSettings(prev => ({ ...prev, brand_favicon_url: e.target.value }))}
-                placeholder="https://your-cdn.com/favicon.ico"
+                type="email"
+                value={settings.support_email}
+                onChange={(e) => setSettings(prev => ({ ...prev, support_email: e.target.value }))}
+                placeholder="support@yourcompany.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Support Phone
+              </label>
+              <Input
+                type="tel"
+                value={settings.support_phone}
+                onChange={(e) => setSettings(prev => ({ ...prev, support_phone: e.target.value }))}
+                placeholder="+1 (555) 123-4567"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Website URL
+              </label>
+              <Input
+                type="url"
+                value={settings.website_url}
+                onChange={(e) => setSettings(prev => ({ ...prev, website_url: e.target.value }))}
+                placeholder="https://www.yourcompany.com"
               />
             </div>
           </CardContent>
         </Card>
-
-        {/* Live Chat Widget */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-[var(--teal)]" />
-              Live Chat Widget
-            </CardTitle>
-            <CardDescription>
-              Add GHL or other chat widget code for customer support
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg">
-              <div>
-                <p className="font-medium">Enable Live Chat</p>
-                <p className="text-sm text-gray-500">
-                  Show chat widget on help page
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.enable_live_chat === "true"}
-                  onChange={(e) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      enable_live_chat: e.target.checked ? "true" : "false",
-                    }))
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--teal)]"></div>
-              </label>
-            </div>
-
-            {settings.enable_live_chat === "true" && (
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Chat Widget Code
-                </label>
-                <textarea
-                  value={settings.ghl_chat_widget_code}
-                  onChange={(e) => setSettings(prev => ({ ...prev, ghl_chat_widget_code: e.target.value }))}
-                  placeholder="<script src='...'></script>"
-                  rows={6}
-                  className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md bg-white font-mono text-sm"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Paste your GHL or other chat provider embed code here
-                </p>
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-xs text-blue-700">
-                    <strong>GHL Instructions:</strong> Go to GHL → Settings → Chat Widget → Copy the embed code and paste it above.
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
+      {/* Actions */}
+      <div className="flex justify-end gap-4">
         <Button
           onClick={saveSettings}
           disabled={isSaving}
@@ -438,7 +381,7 @@ export default function BrandingPage() {
           ) : (
             <>
               <Save className="h-4 w-4 mr-2" />
-              Save Brand Settings
+              Save Changes
             </>
           )}
         </Button>
