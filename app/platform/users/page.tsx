@@ -16,6 +16,7 @@ import {
 import { Plus, Shield, UserX, Users } from "lucide-react";
 import Link from "next/link";
 import { UserActions } from "./UserActions";
+import { createServiceClient } from "@/lib/supabase/service";
 
 interface PlatformUser {
   id: string;
@@ -31,21 +32,30 @@ interface UserDetails {
   full_name?: string;
 }
 
-async function getUserDetails(): Promise<Record<string, UserDetails>> {
+async function getUserDetails(userIds: string[]): Promise<Record<string, UserDetails>> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/platform/users/details`, {
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      console.error('Failed to fetch user details');
+    const serviceClient = createServiceClient();
+    const { data: usersData, error } = await serviceClient.auth.admin.listUsers();
+
+    if (error) {
+      console.error("Error fetching users:", error);
       return {};
     }
+
+    const userDetails: Record<string, UserDetails> = {};
     
-    const data = await response.json();
-    return data.users || {};
+    usersData.users.forEach((u: { id: string; email?: string; user_metadata?: { full_name?: string } }) => {
+      if (userIds.includes(u.id)) {
+        userDetails[u.id] = {
+          email: u.email || "",
+          full_name: u.user_metadata?.full_name,
+        };
+      }
+    });
+
+    return userDetails;
   } catch (error) {
-    console.error('Error fetching user details:', error);
+    console.error("Error fetching user details:", error);
     return {};
   }
 }
@@ -81,8 +91,9 @@ export default async function PlatformUsersPage() {
     console.error("Error fetching platform users:", error);
   }
 
-  // Fetch user details from API
-  const userDetails = await getUserDetails();
+  // Get user IDs and fetch details using service client
+  const userIds = platformUsers?.map((u: PlatformUser) => u.user_id) || [];
+  const userDetails = await getUserDetails(userIds);
 
   // Get counts
   const { count: totalCount } = await supabase
