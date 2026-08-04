@@ -41,7 +41,7 @@ interface GhlConnection {
   associations: {
     id: string;
     name: string;
-    code: string;
+    association_id: string;
     tenant_id: string;
     tenants: {
       id: string;
@@ -108,7 +108,7 @@ export default function IntegrationsPage() {
         .from("association_ghl_connections")
         .select(`
           *,
-          associations(id, name, code, tenant_id, tenants(id, name))
+          associations(id, name, association_id, tenant_id, tenants(id, name))
         `)
         .order("connected_at", { ascending: false });
 
@@ -350,7 +350,7 @@ export default function IntegrationsPage() {
                   <TableCell>
                     <div>
                       <p className="font-medium">{connection.associations?.name}</p>
-                      <p className="text-sm text-gray-500">{connection.associations?.code}</p>
+                      <p className="text-sm text-gray-500">{connection.associations?.association_id}</p>
                     </div>
                   </TableCell>
                   <TableCell>
