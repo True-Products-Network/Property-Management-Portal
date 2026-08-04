@@ -71,7 +71,7 @@ export default async function PlatformUsersPage() {
   }
 
   // Get user details separately via the users view/table
-  const userIds = platformUsers?.map(u => u.user_id) || [];
+  const userIds = platformUsers?.map((u: PlatformUser) => u.user_id) || [];
   let userDetails: Record<string, UserDetails> = {};
   
   if (userIds.length > 0) {
