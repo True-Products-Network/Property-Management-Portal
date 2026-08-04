@@ -223,7 +223,7 @@ export async function POST(
         primary_phone: validation.data.phone,
         user_id: userId,
         contact_type: "staff",
-        is_primary_contact: validation.data.role === "admin",
+        is_primary_contact: validation.data.role === "admin_user",
         created_by: currentUser?.id,
         updated_by: currentUser?.id,
       })
