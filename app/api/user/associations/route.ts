@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           .eq("contact_id", contact.id);
 
         if (contactAssociations && contactAssociations.length > 0) {
-          const associationIds = contactAssociations.map(ca => ca.association_id);
+          const associationIds = contactAssociations.map((ca: { association_id: string }) => ca.association_id);
           
           const { data, error } = await supabase
             .from("associations")
