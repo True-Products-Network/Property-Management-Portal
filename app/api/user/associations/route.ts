@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           .eq("contact_id", contact.id);
 
         if (contactProperties && contactProperties.length > 0) {
-          const propertyIds = contactProperties.map(cp => cp.property_id);
+          const propertyIds = contactProperties.map((cp: { property_id: string }) => cp.property_id);
           
           const { data: properties } = await supabase
             .from("properties")
