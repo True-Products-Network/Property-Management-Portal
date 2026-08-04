@@ -32,16 +32,6 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     UNIQUE(role_id, permission_code)
 );
 
--- Create user_roles table (extends tenant_users with custom roles)
-CREATE TABLE IF NOT EXISTS user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_user_id UUID NOT NULL REFERENCES tenant_users(id) ON DELETE CASCADE,
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    assigned_at TIMESTAMPTZ DEFAULT NOW(),
-    assigned_by UUID REFERENCES auth.users(id),
-    UNIQUE(tenant_user_id, role_id)
-);
-
 -- Insert default permissions
 INSERT INTO permissions (code, name, description, module) VALUES
 -- Dashboard
@@ -156,14 +146,11 @@ CREATE INDEX IF NOT EXISTS idx_roles_tenant ON roles(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_roles_system ON roles(is_system_role);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_perm ON role_permissions(permission_code);
-CREATE INDEX IF NOT EXISTS idx_user_roles_tenant_user ON user_roles(tenant_user_id);
-CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
 
 -- Enable RLS
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 CREATE POLICY roles_tenant_isolation ON roles
@@ -185,49 +172,25 @@ CREATE POLICY role_permissions_tenant_isolation ON role_permissions
         )
     );
 
-CREATE POLICY user_roles_tenant_isolation ON user_roles
-    FOR ALL USING (
-        tenant_user_id IN (
-            SELECT id FROM tenant_users WHERE tenant_id IN (
-                SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
-            )
-        )
-    );
-
--- Function to get user permissions
-CREATE OR REPLACE FUNCTION get_user_permissions(p_user_id UUID, p_tenant_id UUID)
-RETURNS TABLE(permission_code TEXT) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT rp.permission_code
-    FROM user_roles ur
-    JOIN tenant_users tu ON ur.tenant_user_id = tu.id
-    JOIN role_permissions rp ON ur.role_id = rp.role_id
-    WHERE tu.user_id = p_user_id
-    AND tu.tenant_id = p_tenant_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Alternative function that works with the default role from tenant_users
+-- Simple function to get user permissions based on tenant_users role
 CREATE OR REPLACE FUNCTION get_user_effective_permissions(p_user_id UUID, p_tenant_id UUID)
 RETURNS TABLE(permission_code TEXT) AS $$
 DECLARE
     v_role TEXT;
 BEGIN
     -- Get the user's role from tenant_users
-    SELECT role INTO v_role
-    FROM tenant_users
-    WHERE user_id = p_user_id
-    AND tenant_id = p_tenant_id
+    SELECT tu.role INTO v_role
+    FROM tenant_users tu
+    WHERE tu.user_id = p_user_id
+    AND tu.tenant_id = p_tenant_id
     LIMIT 1;
     
     -- Map basic roles to permissions
-    -- This is a simplified version - in production you'd query role_permissions
     IF v_role = 'admin' THEN
-        RETURN QUERY SELECT code FROM permissions WHERE module != 'admin';
+        RETURN QUERY SELECT p.code FROM permissions p WHERE p.module != 'admin';
     ELSE
-        RETURN QUERY SELECT code FROM permissions 
-        WHERE module IN ('dashboard', 'maintenance', 'documents', 'communications');
+        RETURN QUERY SELECT p.code FROM permissions p 
+        WHERE p.module IN ('dashboard', 'maintenance', 'documents', 'communications');
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
