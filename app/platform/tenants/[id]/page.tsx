@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { DeleteTenantButton } from "@/components/platform/DeleteTenantButton";
 
 interface TenantDetailPageProps {
   params: Promise<{ id: string }>;
@@ -162,6 +163,7 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
               Edit Settings
             </Link>
           </Button>
+          <DeleteTenantButton tenantId={id} tenantName={tenant.name} />
         </div>
       </div>
 

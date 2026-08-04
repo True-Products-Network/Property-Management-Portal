@@ -20,10 +20,13 @@ const updateTenantSchema = z.object({
   settings: z.record(z.string(), z.any()).optional(),
 });
 
-// Check if user has platform support access
-async function isPlatformSupport(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_platform_support");
-  return !!data && !error;
+// Check if user has platform admin or support access
+async function isPlatformAdminOrSupport(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
+  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
+  if (isAdmin) return true;
+  
+  const { data: isSupport } = await supabase.rpc("is_platform_support");
+  return !!isSupport;
 }
 
 // Log audit event
@@ -73,8 +76,8 @@ export async function GET(
   try {
     const supabase = await createClient();
     
-    // Check platform support access
-    if (!await isPlatformSupport(supabase)) {
+    // Check platform admin or support access
+    if (!await isPlatformAdminOrSupport(supabase)) {
       return NextResponse.json(
         { success: false, error: "Forbidden - Platform access required" },
         { status: 403 }
@@ -143,8 +146,8 @@ export async function PATCH(
   try {
     const supabase = await createClient();
     
-    // Check platform support access
-    if (!await isPlatformSupport(supabase)) {
+    // Check platform admin or support access
+    if (!await isPlatformAdminOrSupport(supabase)) {
       return NextResponse.json(
         { success: false, error: "Forbidden - Platform access required" },
         { status: 403 }
@@ -247,8 +250,8 @@ export async function DELETE(
   try {
     const supabase = await createClient();
     
-    // Check platform support access
-    if (!await isPlatformSupport(supabase)) {
+    // Check platform admin or support access
+    if (!await isPlatformAdminOrSupport(supabase)) {
       return NextResponse.json(
         { success: false, error: "Forbidden - Platform access required" },
         { status: 403 }
