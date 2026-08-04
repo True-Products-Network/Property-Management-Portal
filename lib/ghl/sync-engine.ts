@@ -194,7 +194,7 @@ export async function pullFromGHL(
             ghlId,
             currentPortalData,
             portalData as Record<string, unknown>,
-            currentPortalData.updatedAt || new Date().toISOString(),
+            (currentPortalData.updatedAt as string) || new Date().toISOString(),
             new Date().toISOString()
           );
 
