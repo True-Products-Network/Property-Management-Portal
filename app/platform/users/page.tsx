@@ -13,13 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Plus, Shield, UserX, MoreHorizontal, Users } from "lucide-react";
+import { Plus, Shield, UserX, Users } from "lucide-react";
 import Link from "next/link";
 
 interface PlatformUser {
@@ -244,24 +238,20 @@ export default async function PlatformUsersPage() {
                     </TableCell>
                     <TableCell>{getStatusBadge(platformUser.revoked_at)}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/platform/users/${platformUser.id}`}>
                           <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
+                            View
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.location.href = `/platform/users/${platformUser.id}`}>
-                            View Details
-                          </DropdownMenuItem>
-                          {platformUser.user_id !== user.id && (
-                            <DropdownMenuItem className="text-red-600">
-                              <UserX className="mr-2 h-4 w-4" />
-                              Revoke Access
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </Link>
+                        {platformUser.user_id !== user.id && (
+                          <form action={`/api/platform/users/${platformUser.id}/revoke`} method="POST">
+                            <Button type="submit" variant="ghost" size="sm" className="text-red-600">
+                              <UserX className="h-4 w-4" />
+                            </Button>
+                          </form>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
