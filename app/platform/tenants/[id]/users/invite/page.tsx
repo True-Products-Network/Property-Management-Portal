@@ -183,15 +183,16 @@ export default function InviteUserPage() {
                 onChange={(e) => handleChange("role", e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="admin_user">Admin User - Full access to tenant</option>
-                <option value="portfolio_manager">Portfolio Manager - Portfolio Dashboard Overview</option>
-                <option value="association_manager">Association Manager - Assigns Associations and Properties</option>
-                <option value="property_manager">Property Manager - Assigns Units, People, and Vendors</option>
-                <option value="board_member">Board Member - Board Dashboard</option>
-                <option value="vendor">Vendor - Vendor Dashboard</option>
-                <option value="resident_owner">Resident/Owner - Resident/Owner Dashboard</option>
+                <option value="admin_user">Admin User - Full portal administrative access</option>
+                <option value="portfolio_manager">Portfolio Manager - Assigned Portfolio Operations and Management</option>
+                <option value="association_manager">Association Manager - Assigned Association Management</option>
+                <option value="property_manager">Property Manager - Assigned Property Management</option>
+                <option value="board_member">Board Member - Assigned Board view and approvals</option>
+                <option value="vendor_contractor">Vendor Contractor - Assigned Vendor Jobs</option>
+                <option value="resident">Resident - Own associated records</option>
+                <option value="owner">Owner - Own associated records</option>
                 <option value="staff">Staff - Standard User Access</option>
-                <option value="accountant">Accountant - Financial Access Only</option>
+                <option value="finance_user">Finance User - Financial Access Only</option>
               </select>
             </div>
 
