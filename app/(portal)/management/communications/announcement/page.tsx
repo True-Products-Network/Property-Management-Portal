@@ -38,7 +38,7 @@ const COMMUNICATION_TYPES = [
   { value: "urgent", label: "Urgent" },
 ];
 
-export default function NewAnnouncementPage() {
+function AnnouncementForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -385,7 +385,7 @@ export default function NewAnnouncementPage() {
 export default function AnnouncementFormWrapper() {
   return (
     <EntitlementGuard featureKey="communications">
-      <AnnouncementFormForm />
+      <AnnouncementForm />
     </EntitlementGuard>
   );
 }
