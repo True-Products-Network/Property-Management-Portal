@@ -130,57 +130,101 @@ const priorityConfig: Record<string, { label: string; color: string }> = {
   emergency: { label: "Emergency", color: "bg-red-100 text-red-700" },
 };
 
-// Process tracker steps
+// Process tracker steps with dynamic labels based on status
 const processSteps = [
-  { id: "new", label: "Created", icon: CheckCircle2 },
-  { id: "triaged", label: "Triaged", icon: CheckCircle2 },
-  { id: "vendor_assigned", label: "Vendor Assigned", icon: CheckCircle2 },
-  { id: "scheduled", label: "Scheduled", icon: CheckCircle2 },
-  { id: "in_progress", label: "In Progress", icon: Clock },
-  { id: "completed", label: "Completed", icon: CheckCircle2 },
+  { id: "new", label: "Submitted", getLabel: () => "Submitted" },
+  { id: "triaged", label: "Triaged", getLabel: () => "Triaged" },
+  { id: "approved", label: "Approved", getLabel: (status: string) => 
+    status === "pending_approval" ? "Pending" : "Approved" },
+  { id: "vendor_assigned", label: "Assigned", getLabel: () => "Assigned" },
+  { id: "scheduled", label: "Scheduled", getLabel: (status: string) => {
+    if (status === "in_progress") return "In Progress";
+    if (status === "on_hold") return "On-hold";
+    return "Scheduled";
+  }},
+  { id: "completed", label: "Completed", getLabel: () => "Completed" },
+  { id: "closed", label: "Closed", getLabel: (status: string) => 
+    status === "cancelled" ? "Cancelled" : "Closed" },
 ];
 
+// Status to step index mapping
+const getStatusIndex = (status: string): number => {
+  switch (status) {
+    case "new": return 0;
+    case "triaged": return 1;
+    case "pending_approval": return 2;
+    case "approved": return 2;
+    case "vendor_assigned": return 3;
+    case "scheduled": return 4;
+    case "in_progress": return 4;
+    case "on_hold": return 4;
+    case "completed": return 5;
+    case "closed": return 6;
+    case "cancelled": return 6;
+    default: return 0;
+  }
+};
+
 function ProcessTracker({ currentStep }: { currentStep: string }) {
-  const currentIndex = processSteps.findIndex((s) => s.id === currentStep);
+  const currentIndex = getStatusIndex(currentStep);
 
   return (
     <div className="w-full py-6">
       <div className="flex items-center justify-between relative">
         {processSteps.map((step, index) => {
-          const Icon = step.icon;
-          const isCompleted = index <= currentIndex;
+          const isCompleted = index < currentIndex;
           const isCurrent = index === currentIndex;
+          const isPending = index > currentIndex;
+          
+          // Determine colors based on state
+          const getCircleColor = () => {
+            if (isCompleted) return "bg-green-500 border-green-500 text-white";
+            if (isCurrent) return "bg-amber-500 border-amber-500 text-white";
+            return "bg-white border-gray-300 text-gray-400";
+          };
+          
+          const getLineColor = () => {
+            if (index < currentIndex) return "bg-green-500";
+            return "bg-gray-200";
+          };
 
           return (
             <div key={step.id} className="flex flex-col items-center flex-1 relative">
+              {/* Circle with icon */}
               <div
                 className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors z-10",
-                  isCompleted
-                    ? "bg-[var(--teal)] border-[var(--teal)] text-white"
-                    : "bg-white border-[var(--border-color)] text-[var(--secondary-text)]",
-                  isCurrent && "ring-4 ring-[var(--teal)]/20"
+                  getCircleColor(),
+                  isCurrent && "ring-4 ring-amber-200"
                 )}
               >
-                <Icon className="w-5 h-5" />
+                {isCompleted ? (
+                  <CheckCircle2 className="w-5 h-5" />
+                ) : isCurrent ? (
+                  <Clock className="w-5 h-5" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-gray-300" />
+                )}
               </div>
+              
+              {/* Label */}
               <span
                 className={cn(
                   "text-xs mt-2 font-medium text-center",
-                  isCompleted
-                    ? "text-[var(--main-text)]"
-                    : "text-[var(--secondary-text)]"
+                  isCompleted && "text-green-600",
+                  isCurrent && "text-amber-600",
+                  isPending && "text-gray-400"
                 )}
               >
-                {step.label}
+                {step.getLabel(currentStep)}
               </span>
+              
+              {/* Connecting line */}
               {index < processSteps.length - 1 && (
                 <div
                   className={cn(
-                    "absolute h-0.5 top-5 left-1/2 w-full",
-                    index < currentIndex
-                      ? "bg-[var(--teal)]"
-                      : "bg-[var(--border-color)]"
+                    "absolute h-0.5 top-5 left-1/2 w-full -z-0",
+                    getLineColor()
                   )}
                 />
               )}
