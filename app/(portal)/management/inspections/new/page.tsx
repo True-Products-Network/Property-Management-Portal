@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, ClipboardCheck, Loader2, Pencil, Calendar } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Property {
   id: string;
@@ -62,7 +63,7 @@ const OVERALL_RATINGS = [
   { value: "poor", label: "Poor" },
 ];
 
-export default function NewInspectionPage() {
+function InspectionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inspectionId = searchParams.get("id");
@@ -599,5 +600,14 @@ export default function NewInspectionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap with EntitlementGuard
+export default function InspectionFormWrapper() {
+  return (
+    <EntitlementGuard featureKey="inspections">
+      <InspectionForm />
+    </EntitlementGuard>
   );
 }
