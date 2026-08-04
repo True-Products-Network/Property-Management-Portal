@@ -88,7 +88,7 @@ export default function EditPlatformUserPage({ params }: PageProps) {
         throw new Error(result.error || "Failed to update user");
       }
 
-      router.push(`/platform/users/${params.id}`);
+      router.push(`/platform/users/${id}`);
       router.refresh();
     } catch (err) {
       console.error("Error updating user:", err);
