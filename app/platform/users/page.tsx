@@ -27,11 +27,27 @@ interface PlatformUser {
 }
 
 interface UserDetails {
-  id: string;
   email: string;
-  raw_user_meta_data?: {
-    full_name?: string;
-  };
+  full_name?: string;
+}
+
+async function getUserDetails(): Promise<Record<string, UserDetails>> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/platform/users/details`, {
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to fetch user details');
+      return {};
+    }
+    
+    const data = await response.json();
+    return data.users || {};
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return {};
+  }
 }
 
 export default async function PlatformUsersPage() {
@@ -65,32 +81,8 @@ export default async function PlatformUsersPage() {
     console.error("Error fetching platform users:", error);
   }
 
-  // Get user details - since we can't query auth.users directly,
-  // we'll use the session user's info and fetch other details via API if needed
-  // For now, we'll show what we can from the platform_user_roles table
-  // and use a separate API call to get user details
-  const userIds = platformUsers?.map((u: PlatformUser) => u.user_id) || [];
-  let userDetails: Record<string, UserDetails> = {};
-  
-  // Add current user to details
-  if (user) {
-    userDetails[user.id] = {
-      id: user.id,
-      email: user.email || "",
-      raw_user_meta_data: user.user_metadata as { full_name?: string },
-    };
-  }
-  
-  // For other users, we'll need to fetch via an API route since we can't access auth.users directly
-  // For now, we'll show the user_id as a fallback
-  platformUsers?.forEach((pu: PlatformUser) => {
-    if (!userDetails[pu.user_id]) {
-      userDetails[pu.user_id] = {
-        id: pu.user_id,
-        email: `User ID: ${pu.user_id.substring(0, 8)}...`,
-      };
-    }
-  });
+  // Fetch user details from API
+  const userDetails = await getUserDetails();
 
   // Get counts
   const { count: totalCount } = await supabase
@@ -134,7 +126,7 @@ export default async function PlatformUsersPage() {
   const getUserDisplay = (userId: string) => {
     const details = userDetails[userId];
     return {
-      name: details?.raw_user_meta_data?.full_name || details?.email || "Unknown",
+      name: details?.full_name || details?.email || "Unknown",
       email: details?.email || "No email",
     };
   };
@@ -232,7 +224,7 @@ export default async function PlatformUsersPage() {
                         <p>{new Date(platformUser.granted_at).toLocaleDateString()}</p>
                         {platformUser.granted_by && (
                           <p className="text-xs text-gray-500">
-                            by {userDetails[platformUser.granted_by]?.email || "System"}
+                            by {userDetails[platformUser.granted_by]?.full_name || userDetails[platformUser.granted_by]?.email || "System"}
                           </p>
                         )}
                       </div>
