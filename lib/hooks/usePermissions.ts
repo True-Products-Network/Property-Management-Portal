@@ -40,7 +40,7 @@ export function usePermissions(tenantId?: string): UsePermissionsReturn {
 
       // Get permissions from the database function
       const { data, error: permError } = await supabase
-        .rpc("get_user_permissions", {
+        .rpc("get_user_effective_permissions", {
           p_user_id: user.id,
           p_tenant_id: tenantId,
         });

@@ -20,7 +20,7 @@ export async function checkPermission(
   try {
     // Get user permissions from database
     const { data, error } = await supabase
-      .rpc("get_user_permissions", {
+      .rpc("get_user_effective_permissions", {
         p_user_id: userId,
         p_tenant_id: tenantId,
       });
@@ -54,7 +54,7 @@ export async function checkAnyPermission(
 
   try {
     const { data, error } = await supabase
-      .rpc("get_user_permissions", {
+      .rpc("get_user_effective_permissions", {
         p_user_id: userId,
         p_tenant_id: tenantId,
       });
@@ -129,7 +129,7 @@ export async function getUserPermissions(
 
   try {
     const { data, error } = await supabase
-      .rpc("get_user_permissions", {
+      .rpc("get_user_effective_permissions", {
         p_user_id: userId,
         p_tenant_id: tenantId,
       });

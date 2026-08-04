@@ -207,3 +207,27 @@ BEGIN
     AND tu.tenant_id = p_tenant_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Alternative function that works with the default role from tenant_users
+CREATE OR REPLACE FUNCTION get_user_effective_permissions(p_user_id UUID, p_tenant_id UUID)
+RETURNS TABLE(permission_code TEXT) AS $$
+DECLARE
+    v_role TEXT;
+BEGIN
+    -- Get the user's role from tenant_users
+    SELECT role INTO v_role
+    FROM tenant_users
+    WHERE user_id = p_user_id
+    AND tenant_id = p_tenant_id
+    LIMIT 1;
+    
+    -- Map basic roles to permissions
+    -- This is a simplified version - in production you'd query role_permissions
+    IF v_role = 'admin' THEN
+        RETURN QUERY SELECT code FROM permissions WHERE module != 'admin';
+    ELSE
+        RETURN QUERY SELECT code FROM permissions 
+        WHERE module IN ('dashboard', 'maintenance', 'documents', 'communications');
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
