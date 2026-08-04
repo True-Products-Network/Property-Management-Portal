@@ -51,8 +51,8 @@ export default function SupportEntryPage() {
       document.cookie = `support_session_id=${supportSessionId}; path=/; max-age=14400`; // 4 hours
       document.cookie = `support_tenant_id=${supportTenantId}; path=/; max-age=14400`;
 
-      // Redirect to management dashboard
-      router.push("/management");
+      // Redirect to management overview
+      router.push("/management/overview");
     } catch (err) {
       console.error("Error entering support session:", err);
       setError("Failed to enter support session");
