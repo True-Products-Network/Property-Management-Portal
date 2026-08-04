@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Group permissions by module
-    const groupedPermissions = (permissions || []).reduce((acc: Record<string, any[]>, perm) => {
+    const groupedPermissions = (permissions || []).reduce((acc: Record<string, Array<{ code: string; name: string; description: string }>>, perm: { module: string; code: string; name: string; description: string }) => {
       if (!acc[perm.module]) {
         acc[perm.module] = [];
       }
