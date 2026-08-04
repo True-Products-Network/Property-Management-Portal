@@ -200,11 +200,11 @@ export default function SupportAccessPage() {
   };
 
   const enterTenant = () => {
-    // Store session info and redirect to tenant
+    // Store session info and redirect to support entry
     if (activeSession) {
       localStorage.setItem("support_session_id", activeSession.id);
       localStorage.setItem("support_tenant_id", tenantId);
-      router.push(`/management?support_session=${activeSession.id}`);
+      router.push("/management/support-entry");
     }
   };
 
