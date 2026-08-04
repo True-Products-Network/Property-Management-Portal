@@ -12,7 +12,7 @@ import { ArrowLeft, Shield, UserPlus, Save, Loader2, AlertTriangle } from "lucid
 import Link from "next/link";
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function EditPlatformUserPage({ params }: PageProps) {
@@ -21,6 +21,7 @@ export default function EditPlatformUserPage({ params }: PageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [id, setId] = useState<string>("");
   
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
@@ -29,14 +30,23 @@ export default function EditPlatformUserPage({ params }: PageProps) {
   const [userId, setUserId] = useState("");
 
   useEffect(() => {
-    loadUser();
-  }, [params.id]);
+    params.then(p => {
+      setId(p.id);
+    });
+  }, [params]);
+
+  useEffect(() => {
+    if (id) {
+      loadUser();
+    }
+  }, [id]);
 
   const loadUser = async () => {
     try {
-      const response = await fetch(`/api/platform/users/${params.id}`);
+      const response = await fetch(`/api/platform/users/${id}`);
       if (!response.ok) {
-        throw new Error("Failed to load user");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to load user: ${response.status}`);
       }
       
       const data = await response.json();
@@ -47,7 +57,8 @@ export default function EditPlatformUserPage({ params }: PageProps) {
       setUserId(data.platformUser.user_id);
       setIsLoading(false);
     } catch (err) {
-      setError("Failed to load user details");
+      console.error("Error loading user:", err);
+      setError(err instanceof Error ? err.message : "Failed to load user details");
       setIsLoading(false);
     }
   };
@@ -58,7 +69,7 @@ export default function EditPlatformUserPage({ params }: PageProps) {
     setError("");
 
     try {
-      const response = await fetch(`/api/platform/users/${params.id}`, {
+      const response = await fetch(`/api/platform/users/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -98,7 +109,7 @@ export default function EditPlatformUserPage({ params }: PageProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Link href={`/platform/users/${params.id}`}>
+        <Link href={`/platform/users/${id}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to User
@@ -241,7 +252,7 @@ export default function EditPlatformUserPage({ params }: PageProps) {
                   </>
                 )}
               </Button>
-              <Button type="button" variant="outline" onClick={() => router.push(`/platform/users/${params.id}`)}>
+              <Button type="button" variant="outline" onClick={() => router.push(`/platform/users/${id}`)}>
                 Cancel
               </Button>
             </div>
