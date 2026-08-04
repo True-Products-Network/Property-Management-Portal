@@ -133,6 +133,38 @@ FROM tenant_subscriptions ts
 JOIN plans p ON ts.plan_id = p.id
 ON CONFLICT (tenant_id, entity_type) DO NOTHING;
 
+-- Associations limit
+INSERT INTO tenant_entity_limits (tenant_id, entity_type, limit_count, current_count)
+SELECT 
+  ts.tenant_id,
+  'associations' as entity_type,
+  CASE 
+    WHEN p.code = 'starter' THEN 1
+    WHEN p.code = 'growth' THEN 5
+    WHEN p.code = 'enterprise' THEN 999999
+    ELSE 1
+  END as limit_count,
+  0 as current_count
+FROM tenant_subscriptions ts
+JOIN plans p ON ts.plan_id = p.id
+ON CONFLICT (tenant_id, entity_type) DO NOTHING;
+
+-- Portfolios limit (only Enterprise can have multiple)
+INSERT INTO tenant_entity_limits (tenant_id, entity_type, limit_count, current_count)
+SELECT 
+  ts.tenant_id,
+  'portfolios' as entity_type,
+  CASE 
+    WHEN p.code = 'starter' THEN 1
+    WHEN p.code = 'growth' THEN 1
+    WHEN p.code = 'enterprise' THEN 999999
+    ELSE 1
+  END as limit_count,
+  0 as current_count
+FROM tenant_subscriptions ts
+JOIN plans p ON ts.plan_id = p.id
+ON CONFLICT (tenant_id, entity_type) DO NOTHING;
+
 -- ============================================
 -- Function to check entity limits
 -- ============================================
@@ -160,6 +192,8 @@ BEGIN
       SELECT COUNT(*) INTO v_current FROM contacts WHERE tenant_id = p_tenant_id;
     WHEN 'associations' THEN
       SELECT COUNT(*) INTO v_current FROM associations WHERE tenant_id = p_tenant_id;
+    WHEN 'portfolios' THEN
+      SELECT COUNT(*) INTO v_current FROM portfolios WHERE tenant_id = p_tenant_id;
     ELSE
       v_current := 0;
   END CASE;

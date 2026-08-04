@@ -9,6 +9,7 @@ import {
   getAssociations,
   createAssociation,
 } from "@/lib/api/associations";
+import { checkRouteEntityLimit } from "@/lib/entitlements/entity-limits";
 import { z } from "zod";
 
 // Validation schema
@@ -94,6 +95,18 @@ export async function POST(request: NextRequest) {
         { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
       );
+    }
+
+    // Check entity limits
+    const limitCheck = await checkRouteEntityLimit(request, "associations");
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ 
+        success: false, 
+        error: limitCheck.error || "Association limit reached",
+        code: "LIMIT_REACHED",
+        current: limitCheck.remaining !== undefined ? limitCheck.remaining + 1 : undefined,
+        limit: limitCheck.remaining !== undefined ? limitCheck.remaining : undefined,
+      }, { status: 403 });
     }
 
     // Parse and validate body
