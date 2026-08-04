@@ -31,7 +31,7 @@ interface PlatformUser {
   user_id: string;
   users?: {
     email: string;
-    user_metadata?: {
+    raw_user_meta_data?: {
       full_name?: string;
     };
   };
@@ -66,7 +66,7 @@ export default async function PlatformUsersPage() {
     .from("platform_user_roles")
     .select(`
       *,
-      users:user_id(email, user_metadata)
+      users:user_id(email, raw_user_meta_data)
     `)
     .order("granted_at", { ascending: false });
 
@@ -195,7 +195,7 @@ export default async function PlatformUsersPage() {
                   <TableCell>
                     <div>
                       <p className="font-medium">
-                        {platformUser.users?.user_metadata?.full_name || "Unknown"}
+                        {platformUser.users?.raw_user_meta_data?.full_name || platformUser.users?.email || "Unknown"}
                       </p>
                       <p className="text-sm text-gray-500">{platformUser.users?.email}</p>
                     </div>
@@ -260,7 +260,7 @@ export default async function PlatformUsersPage() {
                   <TableCell>
                     <div>
                       <p className="font-medium">
-                        {platformUser.users?.user_metadata?.full_name || "Unknown"}
+                        {platformUser.users?.raw_user_meta_data?.full_name || platformUser.users?.email || "Unknown"}
                       </p>
                       <p className="text-sm text-gray-500">{platformUser.users?.email}</p>
                     </div>
