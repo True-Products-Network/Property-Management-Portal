@@ -45,7 +45,7 @@ const APPROVAL_TYPES = [
   { value: "special_assessment", label: "Special Assessment" },
 ];
 
-function NewApprovalFormPage() {
+function NewApprovalForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const approvalId = searchParams.get("id");
