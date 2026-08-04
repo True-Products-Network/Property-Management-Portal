@@ -44,7 +44,7 @@ const VENDOR_CATEGORIES = [
   { value: "snow_removal", label: "Snow Removal" },
 ];
 
-function NewVendorFormPage() {
+function NewVendorForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const vendorId = searchParams.get("id");

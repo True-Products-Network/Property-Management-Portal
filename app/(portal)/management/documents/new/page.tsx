@@ -86,7 +86,7 @@ const CATEGORIES = [
 
 type UploadMethod = "file" | "url";
 
-function NewDocumentFormPage() {
+function NewDocumentForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const documentId = searchParams.get("id");
