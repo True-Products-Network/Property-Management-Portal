@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
           if (properties) {
             const propertyAssociationIds = properties
-              .map(p => p.association_id)
+              .map((p: { association_id: string | null }) => p.association_id)
               .filter((id): id is string => !!id);
             
             const { data: propAssociations } = await supabase
