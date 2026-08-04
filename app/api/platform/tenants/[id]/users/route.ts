@@ -12,7 +12,17 @@ const inviteUserSchema = z.object({
   email: z.string().email("Valid email is required"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum(["admin", "manager", "staff", "board_member", "accountant"]).default("staff"),
+  role: z.enum([
+    "admin_user",
+    "portfolio_manager", 
+    "association_manager",
+    "property_manager",
+    "board_member",
+    "vendor",
+    "resident_owner",
+    "staff",
+    "accountant"
+  ]).default("staff"),
   phone: z.string().optional(),
   sendInviteEmail: z.boolean().default(true),
 });
@@ -233,8 +243,6 @@ export async function POST(
         user_id: userId,
         role: validation.data.role,
         is_active: true,
-        created_by: currentUser?.id,
-        updated_by: currentUser?.id,
       });
 
     if (tenantUserError) {
