@@ -3,6 +3,7 @@
 
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,12 +73,28 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
   // Fetch tenant users
   const { data: tenantUsers } = await supabase
     .from("tenant_users")
-    .select(`
-      *,
-      user:user_id(id, email, raw_user_meta_data)
-    `)
+    .select("*")
     .eq("tenant_id", id)
     .order("joined_at", { ascending: false });
+
+  // Fetch user details separately using service role
+  let userDetails: Record<string, { email?: string; full_name?: string }> = {};
+  if (tenantUsers && tenantUsers.length > 0) {
+    const userIds = tenantUsers.map((tu: { user_id: string }) => tu.user_id);
+    const serviceClient = createServiceClient();
+    
+    const { data: usersData } = await serviceClient.auth.admin.listUsers();
+    if (usersData?.users) {
+      usersData.users.forEach((u: { id: string; email?: string; user_metadata?: { full_name?: string } }) => {
+        if (userIds.includes(u.id)) {
+          userDetails[u.id] = {
+            email: u.email,
+            full_name: u.user_metadata?.full_name,
+          };
+        }
+      });
+    }
+  }
 
   // Fetch portfolios
   const { data: portfolios } = await supabase
@@ -313,24 +330,30 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
             <CardContent>
               {tenantUsers && tenantUsers.length > 0 ? (
                 <div className="space-y-3">
-                  {tenantUsers.map((tu: { id: string; role: string; is_primary_admin: boolean; user?: { email?: string; raw_user_meta_data?: { full_name?: string } } }) => (
-                    <div key={tu.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">
-                          {tu.user?.raw_user_meta_data?.full_name || tu.user?.email}
-                        </p>
-                        <p className="text-sm text-gray-500">{tu.user?.email}</p>
+                  {tenantUsers.map((tu: { id: string; user_id: string; role: string; is_primary_admin: boolean; invited_at?: string }) => {
+                    const userDetail = userDetails[tu.user_id];
+                    return (
+                      <div key={tu.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">
+                            {userDetail?.full_name || userDetail?.email || "Unknown User"}
+                          </p>
+                          <p className="text-sm text-gray-500">{userDetail?.email || tu.user_id}</p>
+                          {tu.invited_at && !userDetail?.email && (
+                            <p className="text-xs text-amber-600">Pending invitation</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={tu.role === "admin" ? "default" : "secondary"}>
+                            {tu.role}
+                          </Badge>
+                          {tu.is_primary_admin && (
+                            <Badge variant="outline" className="text-blue-600">Primary</Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={tu.role === "admin" ? "default" : "secondary"}>
-                          {tu.role}
-                        </Badge>
-                        {tu.is_primary_admin && (
-                          <Badge variant="outline" className="text-blue-600">Primary</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-6">No users assigned</p>
