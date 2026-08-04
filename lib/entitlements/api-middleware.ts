@@ -1,0 +1,164 @@
+// API Middleware for entitlement checking
+// Use in API routes to protect form submissions
+
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { FeatureKey, checkEntitlementServer, incrementEntitlementUsage } from "./use-entitlements";
+
+interface EntitlementMiddlewareOptions {
+  featureKey: FeatureKey;
+  incrementUsage?: boolean;
+  requireEnabled?: boolean;
+}
+
+/**
+ * Middleware to check entitlements for API routes
+ * Usage: wrap your API handler with this function
+ */
+export function withEntitlement(
+  options: EntitlementMiddlewareOptions,
+  handler: (req: NextRequest, user: { id: string; tenantId?: string }) => Promise<NextResponse>
+) {
+  return async (req: NextRequest): Promise<NextResponse> => {
+    try {
+      const supabase = await createClient();
+      
+      // Get current user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+
+      // Get tenant ID from user metadata
+      const tenantId = user.user_metadata?.tenant_id;
+      
+      // Platform admins bypass entitlement checks
+      const isPlatformAdmin = user.user_metadata?.roles?.includes("PLATFORM_ADMIN");
+      if (isPlatformAdmin) {
+        return handler(req, { id: user.id, tenantId });
+      }
+
+      // If no tenant ID, check if this is a business user
+      if (!tenantId) {
+        // For users without tenant, allow if not requiring specific feature
+        if (!options.requireEnabled) {
+          return handler(req, { id: user.id });
+        }
+        return NextResponse.json(
+          { error: "No tenant assigned. Please contact support." },
+          { status: 403 }
+        );
+      }
+
+      // Check entitlement
+      const entitlement = await checkEntitlementServer(tenantId, options.featureKey);
+
+      if (!entitlement.enabled) {
+        return NextResponse.json(
+          { 
+            error: "Feature not available", 
+            message: `This feature is not included in your current plan. Please upgrade to access ${options.featureKey}.`,
+            code: "FEATURE_NOT_ENTITLED"
+          },
+          { status: 403 }
+        );
+      }
+
+      // Check if limit reached
+      if (entitlement.limit !== undefined && entitlement.currentUsage !== undefined) {
+        if (entitlement.currentUsage >= entitlement.limit) {
+          return NextResponse.json(
+            { 
+              error: "Usage limit reached", 
+              message: `You've reached your monthly limit of ${entitlement.limit} for this feature. Please upgrade your plan.`,
+              code: "LIMIT_REACHED",
+              limit: entitlement.limit,
+              currentUsage: entitlement.currentUsage,
+            },
+            { status: 403 }
+          );
+        }
+      }
+
+      // Call the handler
+      const response = await handler(req, { id: user.id, tenantId });
+
+      // Increment usage if the request was successful and incrementUsage is true
+      if (options.incrementUsage && response.status >= 200 && response.status < 300) {
+        try {
+          await incrementEntitlementUsage(tenantId, options.featureKey);
+        } catch (err) {
+          console.error("Error incrementing entitlement usage:", err);
+          // Don't fail the request if usage tracking fails
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Entitlement middleware error:", error);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      );
+    }
+  };
+}
+
+/**
+ * Simple entitlement check for API routes
+ * Returns true if entitled, false otherwise
+ */
+export async function checkRouteEntitlement(
+  req: NextRequest,
+  featureKey: FeatureKey
+): Promise<{ allowed: boolean; error?: string; tenantId?: string }> {
+  try {
+    const supabase = await createClient();
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return { allowed: false, error: "Unauthorized" };
+    }
+
+    const tenantId = user.user_metadata?.tenant_id;
+    const isPlatformAdmin = user.user_metadata?.roles?.includes("PLATFORM_ADMIN");
+    
+    if (isPlatformAdmin) {
+      return { allowed: true, tenantId };
+    }
+
+    if (!tenantId) {
+      return { allowed: false, error: "No tenant assigned" };
+    }
+
+    const entitlement = await checkEntitlementServer(tenantId, featureKey);
+
+    if (!entitlement.enabled) {
+      return { 
+        allowed: false, 
+        error: `Feature ${featureKey} is not available in your plan`,
+        tenantId 
+      };
+    }
+
+    if (entitlement.limit !== undefined && entitlement.currentUsage !== undefined) {
+      if (entitlement.currentUsage >= entitlement.limit) {
+        return { 
+          allowed: false, 
+          error: `Usage limit reached: ${entitlement.currentUsage}/${entitlement.limit}`,
+          tenantId 
+        };
+      }
+    }
+
+    return { allowed: true, tenantId };
+  } catch (error) {
+    console.error("Error checking route entitlement:", error);
+    return { allowed: false, error: "Internal server error" };
+  }
+}

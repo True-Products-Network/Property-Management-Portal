@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Wrench, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 
 interface Property {
   id: string;
@@ -601,15 +602,17 @@ function MaintenanceRequestForm() {
   );
 }
 
-// Wrap the component with Suspense for useSearchParams
+// Wrap the component with Suspense for useSearchParams and EntitlementGuard
 export default function NewMaintenanceRequestPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
-      </div>
-    }>
-      <MaintenanceRequestForm />
-    </Suspense>
+    <EntitlementGuard featureKey="maintenance_requests">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+        </div>
+      }>
+        <MaintenanceRequestForm />
+      </Suspense>
+    </EntitlementGuard>
   );
 }
