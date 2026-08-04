@@ -1,8 +1,11 @@
 // PL-11: Platform Audit Log
 // Full audit log with filters and export
 
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,82 +40,111 @@ interface AuditEvent {
   };
 }
 
-export default async function AuditPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const supabase = await createClient();
+interface Tenant {
+  id: string;
+  name: string;
+  code: string;
+}
 
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/platform-login");
-  }
+export default function AuditPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
 
-  // Check if user is platform admin or support
-  const { data: platformRole } = await supabase
-    .from("platform_user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .is("revoked_at", null)
-    .single();
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!platformRole) {
-    redirect("/unauthorized");
-  }
+  const categoryFilter = searchParams.get("category") || "";
+  const tenantFilter = searchParams.get("tenant") || "";
+  const actionFilter = searchParams.get("action") || "";
 
-  const categoryFilter = searchParams.category as string | undefined;
-  const tenantFilter = searchParams.tenant as string | undefined;
-  const actionFilter = searchParams.action as string | undefined;
-
-  // Fetch audit events with error handling
-  let events: AuditEvent[] = [];
-  let fetchError = null;
-
-  try {
-    let query = supabase
-      .from("platform_audit_events")
-      .select(`
-        *,
-        tenants(id, name, code)
-      `)
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (categoryFilter) {
-      query = query.eq("action_category", categoryFilter);
-    }
-
-    if (tenantFilter) {
-      query = query.eq("tenant_id", tenantFilter);
-    }
-
-    if (actionFilter) {
-      query = query.eq("action", actionFilter);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Error fetching audit events:", error);
-      fetchError = error;
-    } else {
-      events = data || [];
-    }
-  } catch (e) {
-    console.error("Exception fetching audit events:", e);
-    fetchError = e;
-  }
-
-  // Get tenants for filter
-  const { data: tenants } = await supabase
-    .from("tenants")
-    .select("id, name, code")
-    .order("name");
-
-  // Get unique categories
   const categories = ["tenant", "plan", "entitlement", "support", "integration", "security"];
+
+  useEffect(() => {
+    loadData();
+  }, [categoryFilter, tenantFilter, actionFilter]);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/platform-login");
+        return;
+      }
+
+      // Check platform role
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .single();
+
+      if (!platformRole) {
+        router.push("/unauthorized");
+        return;
+      }
+
+      // Build query
+      let query = supabase
+        .from("platform_audit_events")
+        .select(`
+          *,
+          tenants(id, name, code)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (categoryFilter) {
+        query = query.eq("action_category", categoryFilter);
+      }
+
+      if (tenantFilter) {
+        query = query.eq("tenant_id", tenantFilter);
+      }
+
+      if (actionFilter) {
+        query = query.eq("action", actionFilter);
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setEvents(data || []);
+
+      // Get tenants for filter
+      const { data: tenantsData } = await supabase
+        .from("tenants")
+        .select("id, name, code")
+        .order("name");
+
+      setTenants(tenantsData || []);
+    } catch (e) {
+      console.error("Error fetching audit events:", e);
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`/platform/audit?${params.toString()}`);
+  };
 
   const getCategoryBadge = (category: string) => {
     const colors: Record<string, string> = {
@@ -150,10 +182,10 @@ export default async function AuditPage({
         </Button>
       </div>
 
-      {fetchError && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">Error loading audit log. Please check database permissions.</p>
-          <p className="text-red-600 text-sm mt-1">{String(fetchError)}</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
         </div>
       )}
 
@@ -167,7 +199,8 @@ export default async function AuditPage({
         {/* Category Filter */}
         <select
           className="border rounded-md px-3 py-1 text-sm"
-          name="category"
+          value={categoryFilter}
+          onChange={(e) => updateFilter("category", e.target.value)}
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (
@@ -178,13 +211,37 @@ export default async function AuditPage({
         {/* Tenant Filter */}
         <select
           className="border rounded-md px-3 py-1 text-sm"
-          name="tenant"
+          value={tenantFilter}
+          onChange={(e) => updateFilter("tenant", e.target.value)}
         >
           <option value="">All Tenants</option>
-          {tenants?.map((t: any) => (
+          {tenants?.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
+
+        {/* Action Filter */}
+        <select
+          className="border rounded-md px-3 py-1 text-sm"
+          value={actionFilter}
+          onChange={(e) => updateFilter("action", e.target.value)}
+        >
+          <option value="">All Actions</option>
+          <option value="tenant_created">Tenant Created</option>
+          <option value="tenant_updated">Tenant Updated</option>
+          <option value="tenant_deleted">Tenant Deleted</option>
+          <option value="subscription_created">Subscription Created</option>
+          <option value="subscription_updated">Subscription Updated</option>
+        </select>
+
+        {(categoryFilter || tenantFilter || actionFilter) && (
+          <Link
+            href="/platform/audit"
+            className="text-sm text-blue-600 hover:underline self-center"
+          >
+            Clear filters
+          </Link>
+        )}
       </div>
 
       {/* Audit Events Table */}
@@ -201,7 +258,13 @@ export default async function AuditPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {events.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <p className="text-gray-500">Loading...</p>
+                </TableCell>
+              </TableRow>
+            ) : events.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -209,7 +272,7 @@ export default async function AuditPage({
                 </TableCell>
               </TableRow>
             ) : (
-              events.map((event: AuditEvent) => (
+              events.map((event) => (
                 <TableRow key={event.id}>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-2">

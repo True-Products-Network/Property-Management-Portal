@@ -1,8 +1,11 @@
 // PL-07: Entitlements & Add-ons
 // Manage tenant entitlements and feature add-ons
 
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,106 +41,159 @@ interface Entitlement {
   };
 }
 
-export default async function EntitlementsPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const supabase = await createClient();
+interface Tenant {
+  id: string;
+  name: string;
+  code: string;
+}
 
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/platform-login");
-  }
+interface Feature {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+}
 
-  // Check if user is platform admin or support
-  const { data: platformRole } = await supabase
-    .from("platform_user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .is("revoked_at", null)
-    .single();
+export default function EntitlementsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
 
-  if (!platformRole) {
-    redirect("/unauthorized");
-  }
+  const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    addon: 0,
+    override: 0,
+    trial: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const tenantFilter = searchParams.tenant as string | undefined;
-  const featureFilter = searchParams.feature as string | undefined;
-  const typeFilter = searchParams.type as string | undefined;
+  const tenantFilter = searchParams.get("tenant") || "";
+  const featureFilter = searchParams.get("feature") || "";
+  const typeFilter = searchParams.get("type") || "";
 
-  // Fetch entitlements with error handling
-  let entitlements: Entitlement[] = [];
-  let fetchError = null;
-  
-  try {
-    let query = supabase
-      .from("tenant_entitlements")
-      .select(`
-        *,
-        tenants(id, name, code),
-        features(id, code, name, category)
-      `)
-      .order("created_at", { ascending: false });
+  useEffect(() => {
+    loadData();
+  }, [tenantFilter, featureFilter, typeFilter]);
 
-    if (tenantFilter) {
-      query = query.eq("tenant_id", tenantFilter);
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/platform-login");
+        return;
+      }
+
+      // Check platform role
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .single();
+
+      if (!platformRole) {
+        router.push("/unauthorized");
+        return;
+      }
+
+      // Build query
+      let query = supabase
+        .from("tenant_entitlements")
+        .select(`
+          *,
+          tenants(id, name, code),
+          features(id, code, name, category)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (tenantFilter) {
+        query = query.eq("tenant_id", tenantFilter);
+      }
+
+      if (featureFilter) {
+        query = query.eq("feature_id", featureFilter);
+      }
+
+      if (typeFilter) {
+        query = query.eq("entitlement_type", typeFilter);
+      }
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setEntitlements(data || []);
+
+      // Get tenants for filter
+      const { data: tenantsData } = await supabase
+        .from("tenants")
+        .select("id, name, code")
+        .order("name");
+
+      setTenants(tenantsData || []);
+
+      // Get features for filter
+      const { data: featuresData } = await supabase
+        .from("features")
+        .select("id, code, name, category")
+        .eq("is_active", true)
+        .order("name");
+
+      setFeatures(featuresData || []);
+
+      // Get counts
+      const { count: totalCount } = await supabase
+        .from("tenant_entitlements")
+        .select("*", { count: "exact", head: true });
+
+      const { count: addonCount } = await supabase
+        .from("tenant_entitlements")
+        .select("*", { count: "exact", head: true })
+        .eq("entitlement_type", "addon");
+
+      const { count: overrideCount } = await supabase
+        .from("tenant_entitlements")
+        .select("*", { count: "exact", head: true })
+        .eq("entitlement_type", "override");
+
+      const { count: trialCount } = await supabase
+        .from("tenant_entitlements")
+        .select("*", { count: "exact", head: true })
+        .eq("entitlement_type", "trial");
+
+      setStats({
+        total: totalCount || 0,
+        addon: addonCount || 0,
+        override: overrideCount || 0,
+        trial: trialCount || 0,
+      });
+    } catch (e) {
+      console.error("Error fetching entitlements:", e);
+      setError(String(e));
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (featureFilter) {
-      query = query.eq("feature_id", featureFilter);
-    }
-
-    if (typeFilter) {
-      query = query.eq("entitlement_type", typeFilter);
-    }
-
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error("Error fetching entitlements:", error);
-      fetchError = error;
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
     } else {
-      entitlements = data || [];
+      params.delete(key);
     }
-  } catch (e) {
-    console.error("Exception fetching entitlements:", e);
-    fetchError = e;
-  }
-
-  // Get tenants for filter
-  const { data: tenants } = await supabase
-    .from("tenants")
-    .select("id, name, code")
-    .order("name");
-
-  // Get features for filter
-  const { data: features } = await supabase
-    .from("features")
-    .select("id, code, name, category")
-    .eq("is_active", true)
-    .order("name");
-
-  // Get counts
-  const { count: totalCount } = await supabase
-    .from("tenant_entitlements")
-    .select("*", { count: "exact", head: true });
-
-  const { count: addonCount } = await supabase
-    .from("tenant_entitlements")
-    .select("*", { count: "exact", head: true })
-    .eq("entitlement_type", "addon");
-
-  const { count: overrideCount } = await supabase
-    .from("tenant_entitlements")
-    .select("*", { count: "exact", head: true })
-    .eq("entitlement_type", "override");
-
-  const { count: trialCount } = await supabase
-    .from("tenant_entitlements")
-    .select("*", { count: "exact", head: true })
-    .eq("entitlement_type", "trial");
+    router.push(`/platform/entitlements?${params.toString()}`);
+  };
 
   const getTypeBadge = (type: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -171,10 +227,10 @@ export default async function EntitlementsPage({
         </Button>
       </div>
 
-      {fetchError && (
+      {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Error loading entitlements. Please check database permissions.</p>
-          <p className="text-red-600 text-sm mt-1">{String(fetchError)}</p>
+          <p className="text-red-800">Error loading entitlements.</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
         </div>
       )}
 
@@ -188,10 +244,11 @@ export default async function EntitlementsPage({
         {/* Tenant Filter */}
         <select 
           className="border rounded-md px-3 py-1 text-sm"
-          name="tenant"
+          value={tenantFilter}
+          onChange={(e) => updateFilter("tenant", e.target.value)}
         >
           <option value="">All Tenants</option>
-          {tenants?.map((t: any) => (
+          {tenants?.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
         </select>
@@ -199,10 +256,11 @@ export default async function EntitlementsPage({
         {/* Feature Filter */}
         <select 
           className="border rounded-md px-3 py-1 text-sm"
-          name="feature"
+          value={featureFilter}
+          onChange={(e) => updateFilter("feature", e.target.value)}
         >
           <option value="">All Features</option>
-          {features?.map((f: any) => (
+          {features?.map((f) => (
             <option key={f.id} value={f.id}>{f.name}</option>
           ))}
         </select>
@@ -210,31 +268,41 @@ export default async function EntitlementsPage({
         {/* Type Filter */}
         <select 
           className="border rounded-md px-3 py-1 text-sm"
-          name="type"
+          value={typeFilter}
+          onChange={(e) => updateFilter("type", e.target.value)}
         >
           <option value="">All Types</option>
           <option value="addon">Add-on</option>
           <option value="override">Override</option>
           <option value="trial">Trial</option>
         </select>
+
+        {(tenantFilter || featureFilter || typeFilter) && (
+          <Link
+            href="/platform/entitlements"
+            className="text-sm text-blue-600 hover:underline self-center"
+          >
+            Clear filters
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-2xl font-bold">{totalCount || 0}</p>
+          <p className="text-2xl font-bold">{stats.total}</p>
           <p className="text-sm text-gray-500">Total Entitlements</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-2xl font-bold">{addonCount || 0}</p>
+          <p className="text-2xl font-bold">{stats.addon}</p>
           <p className="text-sm text-gray-500">Add-ons</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-2xl font-bold">{overrideCount || 0}</p>
+          <p className="text-2xl font-bold">{stats.override}</p>
           <p className="text-sm text-gray-500">Overrides</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-2xl font-bold">{trialCount || 0}</p>
+          <p className="text-2xl font-bold">{stats.trial}</p>
           <p className="text-sm text-gray-500">Trials</p>
         </div>
       </div>
@@ -253,7 +321,13 @@ export default async function EntitlementsPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {entitlements.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <p className="text-gray-500">Loading...</p>
+                </TableCell>
+              </TableRow>
+            ) : entitlements.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8">
                   <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -261,7 +335,7 @@ export default async function EntitlementsPage({
                 </TableCell>
               </TableRow>
             ) : (
-              entitlements.map((ent: Entitlement) => (
+              entitlements.map((ent) => (
                 <TableRow key={ent.id}>
                   <TableCell>
                     <div>

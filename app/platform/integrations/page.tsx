@@ -1,8 +1,11 @@
 // PL-10: Association Integrations
 // Manage GHL integrations for all associations
 
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -47,86 +50,139 @@ interface GhlConnection {
   };
 }
 
-export default async function IntegrationsPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const supabase = await createClient();
+interface Tenant {
+  id: string;
+  name: string;
+}
 
-  // Check authentication
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/platform-login");
-  }
+export default function IntegrationsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
 
-  // Check if user is platform admin or support
-  const { data: platformRole } = await supabase
-    .from("platform_user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .is("revoked_at", null)
-    .single();
+  const [connections, setConnections] = useState<GhlConnection[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    syncEnabled: 0,
+    errors: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!platformRole) {
-    redirect("/unauthorized");
-  }
+  const tenantFilter = searchParams.get("tenant") || "";
+  const statusFilter = searchParams.get("status") || "";
 
-  const tenantFilter = searchParams.tenant as string | undefined;
-  const statusFilter = searchParams.status as string | undefined;
+  useEffect(() => {
+    loadData();
+  }, [tenantFilter, statusFilter]);
 
-  // Build query
-  let query = supabase
-    .from("association_ghl_connections")
-    .select(`
-      *,
-      associations(id, name, code, tenant_id, tenants(id, name))
-    `)
-    .order("connected_at", { ascending: false });
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
 
-  if (tenantFilter) {
-    query = query.eq("associations.tenant_id", tenantFilter);
-  }
+    try {
+      // Check authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/platform-login");
+        return;
+      }
 
-  if (statusFilter === "active") {
-    query = query.eq("is_active", true);
-  } else if (statusFilter === "inactive") {
-    query = query.eq("is_active", false);
-  } else if (statusFilter === "error") {
-    query = query.eq("last_sync_status", "error");
-  }
+      // Check platform role
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .single();
 
-  const { data: connections, error } = await query;
+      if (!platformRole) {
+        router.push("/unauthorized");
+        return;
+      }
 
-  if (error) {
-    console.error("Error fetching integrations:", error);
-  }
+      // Build query
+      let query = supabase
+        .from("association_ghl_connections")
+        .select(`
+          *,
+          associations(id, name, code, tenant_id, tenants(id, name))
+        `)
+        .order("connected_at", { ascending: false });
 
-  // Get tenants for filter
-  const { data: tenants } = await supabase
-    .from("tenants")
-    .select("id, name")
-    .order("name");
+      if (tenantFilter) {
+        query = query.eq("associations.tenant_id", tenantFilter);
+      }
 
-  // Get counts
-  const { count: totalCount } = await supabase
-    .from("association_ghl_connections")
-    .select("*", { count: "exact", head: true });
+      if (statusFilter === "active") {
+        query = query.eq("is_active", true);
+      } else if (statusFilter === "inactive") {
+        query = query.eq("is_active", false);
+      } else if (statusFilter === "error") {
+        query = query.eq("last_sync_status", "error");
+      }
 
-  const { count: activeCount } = await supabase
-    .from("association_ghl_connections")
-    .select("*", { count: "exact", head: true })
-    .eq("is_active", true);
+      const { data, error: fetchError } = await query;
 
-  const { count: syncEnabledCount } = await supabase
-    .from("association_ghl_connections")
-    .select("*", { count: "exact", head: true })
-    .eq("sync_enabled", true);
+      if (fetchError) {
+        throw fetchError;
+      }
 
-  const { count: errorCount } = await supabase
-    .from("association_ghl_connections")
-    .select("*", { count: "exact", head: true })
-    .eq("last_sync_status", "error");
+      setConnections(data || []);
+
+      // Get tenants for filter
+      const { data: tenantsData } = await supabase
+        .from("tenants")
+        .select("id, name")
+        .order("name");
+
+      setTenants(tenantsData || []);
+
+      // Get counts
+      const { count: totalCount } = await supabase
+        .from("association_ghl_connections")
+        .select("*", { count: "exact", head: true });
+
+      const { count: activeCount } = await supabase
+        .from("association_ghl_connections")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
+      const { count: syncEnabledCount } = await supabase
+        .from("association_ghl_connections")
+        .select("*", { count: "exact", head: true })
+        .eq("sync_enabled", true);
+
+      const { count: errorCount } = await supabase
+        .from("association_ghl_connections")
+        .select("*", { count: "exact", head: true })
+        .eq("last_sync_status", "error");
+
+      setStats({
+        total: totalCount || 0,
+        active: activeCount || 0,
+        syncEnabled: syncEnabledCount || 0,
+        errors: errorCount || 0,
+      });
+    } catch (e) {
+      console.error("Error fetching integrations:", e);
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateFilter = (key: string, value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`/platform/integrations?${params.toString()}`);
+  };
 
   const getStatusBadge = (connection: GhlConnection) => {
     if (!connection.is_active) {
@@ -173,13 +229,20 @@ export default async function IntegrationsPage({
         </Button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Error loading integrations.</p>
+          <p className="text-red-600 text-sm mt-1">{error}</p>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total Connections</p>
-              <p className="text-2xl font-bold">{totalCount || 0}</p>
+              <p className="text-2xl font-bold">{stats.total}</p>
             </div>
             <Link2 className="h-8 w-8 text-blue-600" />
           </div>
@@ -188,7 +251,7 @@ export default async function IntegrationsPage({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Active</p>
-              <p className="text-2xl font-bold text-green-600">{activeCount || 0}</p>
+              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
             </div>
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
@@ -197,7 +260,7 @@ export default async function IntegrationsPage({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Sync Enabled</p>
-              <p className="text-2xl font-bold text-blue-600">{syncEnabledCount || 0}</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.syncEnabled}</p>
             </div>
             <RefreshCw className="h-8 w-8 text-blue-600" />
           </div>
@@ -206,7 +269,7 @@ export default async function IntegrationsPage({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Errors</p>
-              <p className="text-2xl font-bold text-red-600">{errorCount || 0}</p>
+              <p className="text-2xl font-bold text-red-600">{stats.errors}</p>
             </div>
             <AlertTriangle className="h-8 w-8 text-red-500" />
           </div>
@@ -223,17 +286,19 @@ export default async function IntegrationsPage({
           
           <select
             className="border rounded-md px-3 py-1.5 text-sm"
-            defaultValue={tenantFilter || ""}
+            value={tenantFilter}
+            onChange={(e) => updateFilter("tenant", e.target.value)}
           >
             <option value="">All Tenants</option>
-            {tenants?.map((t: { id: string; name: string }) => (
+            {tenants?.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
 
           <select
             className="border rounded-md px-3 py-1.5 text-sm"
-            defaultValue={statusFilter || ""}
+            value={statusFilter}
+            onChange={(e) => updateFilter("status", e.target.value)}
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -254,7 +319,11 @@ export default async function IntegrationsPage({
 
       {/* Connections Table */}
       <div className="bg-white rounded-lg shadow">
-        {(connections || []).length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center">
+            <p className="text-gray-500">Loading...</p>
+          </div>
+        ) : connections.length === 0 ? (
           <div className="p-8 text-center">
             <Link2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">No integrations found</p>
@@ -276,7 +345,7 @@ export default async function IntegrationsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(connections || []).map((connection: GhlConnection) => (
+              {connections.map((connection) => (
                 <TableRow key={connection.id}>
                   <TableCell>
                     <div>
@@ -318,7 +387,7 @@ export default async function IntegrationsPage({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => window.location.href = `/platform/integrations/${connection.id}`}>
+                        <DropdownMenuItem onClick={() => router.push(`/platform/integrations/${connection.id}`)}>
                           View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem>
