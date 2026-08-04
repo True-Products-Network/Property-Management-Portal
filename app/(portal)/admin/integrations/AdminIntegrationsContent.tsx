@@ -97,7 +97,7 @@ interface PaymentProcessorSettings {
   ghl_invoice_webhook_enabled: boolean;
 }
 
-export default function AdminIntegrationsPage() {
+export default function AdminIntegrationsContent() {
   const [ghlStatus, setGhlStatus] = useState<GhlConnectionStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -582,18 +582,24 @@ export default function AdminIntegrationsPage() {
                   <SelectValue placeholder="Select an association..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {associations.map((assoc) => (
-                    <SelectItem key={assoc.id} value={assoc.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{assoc.name}</span>
-                        {assoc.ghlLocationId ? (
-                          <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-200">Connected</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="ml-2">Not Connected</Badge>
-                        )}
-                      </div>
+                  {associations && associations.length > 0 ? (
+                    associations.map((assoc) => (
+                      <SelectItem key={assoc.id} value={assoc.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{assoc.name}</span>
+                          {assoc.ghlLocationId ? (
+                            <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-200">Connected</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="ml-2">Not Connected</Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No associations available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
 
