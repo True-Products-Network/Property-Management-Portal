@@ -32,114 +32,35 @@ export default function AddPlatformUserPage() {
     setSuccess("");
 
     try {
-      // Step 1: Try to sign up the user (creates if doesn't exist, errors if exists)
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/platform`,
+      // Get current admin user before any operations
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        setError("You must be logged in to add platform users");
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 1: Create the user via API route (server-side) to avoid session issues
+      const response = await fetch("/api/platform/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          email,
+          password,
+          role,
+        }),
       });
 
-      let userId: string;
-      let isNewUser = false;
+      const result = await response.json();
 
-      if (signUpError) {
-        // User might already exist, try to get their ID
-        // We need to check if it's a "user already exists" error
-        if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
-          // User exists - we need to find their ID
-          // Since we can't query auth.users directly, we'll use a different approach
-          // Try to sign in to get the user ID
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (signInError) {
-            setError("User already exists but password is incorrect. If you want to add an existing user, they must provide their correct password.");
-            setIsLoading(false);
-            return;
-          }
-
-          if (!signInData.user) {
-            setError("Could not authenticate user");
-            setIsLoading(false);
-            return;
-          }
-
-          userId = signInData.user.id;
-          
-          // Sign out immediately since we just needed to verify
-          await supabase.auth.signOut();
-          
-          // Re-sign in as the current admin user (this is a workaround)
-          // Actually, we need to preserve the admin session
-        } else {
-          setError(`Failed to create user: ${signUpError.message}`);
-          setIsLoading(false);
-          return;
-        }
-      } else if (signUpData.user) {
-        // New user created
-        userId = signUpData.user.id;
-        isNewUser = true;
-      } else {
-        setError("Failed to create user");
-        setIsLoading(false);
-        return;
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to create user");
       }
 
-      // Step 2: Check if user already has a platform role
-      const { data: existingRole } = await supabase
-        .from("platform_user_roles")
-        .select("id, role, revoked_at")
-        .eq("user_id", userId)
-        .single();
-
-      if (existingRole && !existingRole.revoked_at) {
-        setError(`User already has an active ${existingRole.role} role.`);
-        setIsLoading(false);
-        return;
-      }
-
-      // Step 3: Grant or reactivate platform role
-      if (existingRole?.revoked_at) {
-        const { error: updateError } = await supabase
-          .from("platform_user_roles")
-          .update({
-            role,
-            revoked_at: null,
-            granted_at: new Date().toISOString(),
-          })
-          .eq("id", existingRole.id);
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from("platform_user_roles")
-          .insert({
-            user_id: userId,
-            role,
-            granted_at: new Date().toISOString(),
-          });
-
-        if (insertError) throw insertError;
-      }
-
-      // Step 4: Log the action
-      const currentUser = await supabase.auth.getUser();
-      await supabase.from("platform_audit_events").insert({
-        actor_id: currentUser.data.user?.id,
-        actor_type: "platform_admin",
-        action: isNewUser ? "platform_user_created" : "platform_role_granted",
-        action_category: "security",
-        target_type: "user",
-        target_id: userId,
-        new_value: { role, email, is_new_user: isNewUser },
-      });
-
-      setSuccess(`Successfully ${isNewUser ? 'created' : 'added'} ${email} as ${role}`);
+      setSuccess(`Successfully ${result.isNewUser ? 'created' : 'added'} ${email} as ${role}`);
       
       // Clear form
       setEmail("");
