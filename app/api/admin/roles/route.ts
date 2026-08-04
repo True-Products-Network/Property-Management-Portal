@@ -43,8 +43,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch permissions for each role
+    interface Role {
+      id: string;
+      name: string;
+      description: string | null;
+      is_system_role: boolean;
+      is_active: boolean;
+      created_at: string;
+      updated_at: string;
+    }
     const rolesWithPermissions = await Promise.all(
-      (roles || []).map(async (role) => {
+      (roles || []).map(async (role: Role) => {
         const { data: permissions } = await supabase
           .from("role_permissions")
           .select("permission_code")
