@@ -54,19 +54,20 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
   // Fetch tenant details
   const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
-    .select(`
-      *,
-      tenant_subscriptions(
-        *,
-        plans(*)
-      )
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
   if (tenantError || !tenant) {
     notFound();
   }
+
+  // Fetch subscription separately to ensure we get the data
+  const { data: subscription } = await supabase
+    .from("tenant_subscriptions")
+    .select("*, plans(*)")
+    .eq("tenant_id", id)
+    .maybeSingle();
 
   // Fetch tenant users
   const { data: tenantUsers } = await supabase
@@ -116,7 +117,6 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
     .eq("is_active", true)
     .order("started_at", { ascending: false });
 
-  const subscription = tenant.tenant_subscriptions?.[0];
   const isPastDue = subscription?.status === "past_due";
   const isSuspended = tenant.status === "suspended";
 

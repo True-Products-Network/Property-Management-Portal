@@ -37,10 +37,7 @@ export default async function EditTenantPage({ params }: EditTenantPageProps) {
   // Fetch tenant details
   const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
-    .select(`
-      *,
-      tenant_subscriptions(plan_id)
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -48,7 +45,12 @@ export default async function EditTenantPage({ params }: EditTenantPageProps) {
     notFound();
   }
 
-  const subscription = tenant.tenant_subscriptions?.[0];
+  // Fetch subscription separately to ensure we get the data
+  const { data: subscription } = await supabase
+    .from("tenant_subscriptions")
+    .select("plan_id")
+    .eq("tenant_id", id)
+    .maybeSingle();
 
   const initialData = {
     name: tenant.name,
