@@ -596,9 +596,9 @@ export default function AdminIntegrationsContent() {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <div className="px-2 py-1.5 text-sm text-gray-500">
                       No associations available
-                    </SelectItem>
+                    </div>
                   )}
                 </SelectContent>
               </Select>
