@@ -479,14 +479,19 @@ async function getGhlEntity(
   ghlId: string
 ): Promise<Record<string, unknown> | null> {
   switch (entityType) {
-    case "contact":
-      return getContact(ghlId);
-    case "association":
-      return getCompany(ghlId);
+    case "contact": {
+      const contact = await getContact(ghlId);
+      return contact as unknown as Record<string, unknown>;
+    }
+    case "association": {
+      const company = await getCompany(ghlId);
+      return company as unknown as Record<string, unknown>;
+    }
     default: {
       const objectKey = getGhlObjectKey(entityType);
       if (!objectKey) throw new Error(`No object key for ${entityType}`);
-      return getCustomObject(objectKey, ghlId);
+      const obj = await getCustomObject(objectKey, ghlId);
+      return obj as unknown as Record<string, unknown>;
     }
   }
 }
