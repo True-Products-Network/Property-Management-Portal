@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             if (propAssociations) {
               // Merge without duplicates
               const existingIds = new Set(associations.map(a => a.id));
-              propAssociations.forEach(pa => {
+              propAssociations.forEach((pa: { id: string; name: string; code: string }) => {
                 if (!existingIds.has(pa.id)) {
                   associations.push(pa);
                 }
