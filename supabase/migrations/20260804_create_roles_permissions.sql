@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS roles (
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
-    is_system_role BOOLEAN DEFAULT false, -- true for the 10 standard roles
+    is_system_role BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     code TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     description TEXT,
-    module TEXT NOT NULL, -- dashboard, properties, maintenance, etc.
+    module TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -32,96 +32,76 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     UNIQUE(role_id, permission_code)
 );
 
+-- Create user_roles table (extends tenant_users with custom roles)
+CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    assigned_by UUID REFERENCES auth.users(id),
+    UNIQUE(user_id, tenant_id, role_id)
+);
+
 -- Insert default permissions
 INSERT INTO permissions (code, name, description, module) VALUES
--- Dashboard
 ('dashboard.view', 'View Dashboard', 'Access the main dashboard', 'dashboard'),
 ('dashboard.manage', 'Manage Dashboard', 'Customize dashboard widgets', 'dashboard'),
-
--- Associations
 ('associations.view', 'View Associations', 'View association details', 'associations'),
 ('associations.create', 'Create Associations', 'Create new associations', 'associations'),
 ('associations.edit', 'Edit Associations', 'Edit association details', 'associations'),
 ('associations.delete', 'Delete Associations', 'Delete associations', 'associations'),
-
--- Properties
 ('properties.view', 'View Properties', 'View property details', 'properties'),
 ('properties.create', 'Create Properties', 'Create new properties', 'properties'),
 ('properties.edit', 'Edit Properties', 'Edit property details', 'properties'),
 ('properties.delete', 'Delete Properties', 'Delete properties', 'properties'),
-
--- Units
 ('units.view', 'View Units', 'View unit details', 'units'),
 ('units.create', 'Create Units', 'Create new units', 'units'),
 ('units.edit', 'Edit Units', 'Edit unit details', 'units'),
 ('units.delete', 'Delete Units', 'Delete units', 'units'),
-
--- People
 ('people.view', 'View People', 'View contact details', 'people'),
 ('people.create', 'Create People', 'Create new contacts', 'people'),
 ('people.edit', 'Edit People', 'Edit contact details', 'people'),
 ('people.delete', 'Delete People', 'Delete contacts', 'people'),
-
--- Vendors
 ('vendors.view', 'View Vendors', 'View vendor details', 'vendors'),
 ('vendors.create', 'Create Vendors', 'Create new vendors', 'vendors'),
 ('vendors.edit', 'Edit Vendors', 'Edit vendor details', 'vendors'),
 ('vendors.delete', 'Delete Vendors', 'Delete vendors', 'vendors'),
-
--- Maintenance
 ('maintenance.view', 'View Maintenance', 'View maintenance requests', 'maintenance'),
 ('maintenance.create', 'Create Maintenance', 'Create maintenance requests', 'maintenance'),
 ('maintenance.edit', 'Edit Maintenance', 'Edit maintenance requests', 'maintenance'),
 ('maintenance.delete', 'Delete Maintenance', 'Delete maintenance requests', 'maintenance'),
 ('maintenance.approve', 'Approve Maintenance', 'Approve maintenance requests', 'maintenance'),
-
--- Inspections
 ('inspections.view', 'View Inspections', 'View inspections', 'inspections'),
 ('inspections.create', 'Create Inspections', 'Create new inspections', 'inspections'),
 ('inspections.edit', 'Edit Inspections', 'Edit inspections', 'inspections'),
 ('inspections.delete', 'Delete Inspections', 'Delete inspections', 'inspections'),
-
--- Documents
 ('documents.view', 'View Documents', 'View documents', 'documents'),
 ('documents.create', 'Create Documents', 'Upload documents', 'documents'),
 ('documents.edit', 'Edit Documents', 'Edit document metadata', 'documents'),
 ('documents.delete', 'Delete Documents', 'Delete documents', 'documents'),
-
--- Approvals
 ('approvals.view', 'View Approvals', 'View approval requests', 'approvals'),
 ('approvals.create', 'Create Approvals', 'Create approval requests', 'approvals'),
 ('approvals.vote', 'Vote on Approvals', 'Vote on approval requests', 'approvals'),
 ('approvals.manage', 'Manage Approvals', 'Manage approval workflow', 'approvals'),
-
--- Compliance
 ('compliance.view', 'View Compliance', 'View compliance items', 'compliance'),
 ('compliance.create', 'Create Compliance', 'Create compliance items', 'compliance'),
 ('compliance.edit', 'Edit Compliance', 'Edit compliance items', 'compliance'),
 ('compliance.delete', 'Delete Compliance', 'Delete compliance items', 'compliance'),
-
--- Payments
 ('payments.view', 'View Payments', 'View payments', 'payments'),
 ('payments.create', 'Create Payments', 'Record payments', 'payments'),
 ('payments.edit', 'Edit Payments', 'Edit payments', 'payments'),
 ('payments.delete', 'Delete Payments', 'Delete payments', 'payments'),
 ('payments.refund', 'Refund Payments', 'Process refunds', 'payments'),
-
--- Communications
 ('communications.view', 'View Communications', 'View messages and announcements', 'communications'),
 ('communications.create', 'Create Communications', 'Send messages and announcements', 'communications'),
 ('communications.edit', 'Edit Communications', 'Edit communications', 'communications'),
 ('communications.delete', 'Delete Communications', 'Delete communications', 'communications'),
-
--- Reports
 ('reports.view', 'View Reports', 'View reports', 'reports'),
 ('reports.create', 'Create Reports', 'Create custom reports', 'reports'),
 ('reports.export', 'Export Reports', 'Export report data', 'reports'),
-
--- Settings
 ('settings.view', 'View Settings', 'View settings', 'settings'),
 ('settings.edit', 'Edit Settings', 'Edit settings', 'settings'),
-
--- Admin (Platform level)
 ('admin.users.manage', 'Manage Users', 'Manage system users', 'admin'),
 ('admin.roles.manage', 'Manage Roles', 'Manage roles and permissions', 'admin'),
 ('admin.tenants.manage', 'Manage Tenants', 'Manage tenants', 'admin'),
@@ -146,16 +126,20 @@ CREATE INDEX IF NOT EXISTS idx_roles_tenant ON roles(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_roles_system ON roles(is_system_role);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_perm ON role_permissions(permission_code);
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_tenant ON user_roles(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
 
 -- Enable RLS
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE permissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 CREATE POLICY roles_tenant_isolation ON roles
     FOR ALL USING (
-        tenant_id IS NULL -- System roles visible to all
+        tenant_id IS NULL
         OR tenant_id IN (
             SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
         )
@@ -172,25 +156,61 @@ CREATE POLICY role_permissions_tenant_isolation ON role_permissions
         )
     );
 
--- Simple function to get user permissions based on tenant_users role
+CREATE POLICY user_roles_tenant_isolation ON user_roles
+    FOR ALL USING (
+        tenant_id IN (
+            SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid()
+        )
+    );
+
+-- Function to get user permissions
+CREATE OR REPLACE FUNCTION get_user_permissions(p_user_id UUID, p_tenant_id UUID)
+RETURNS TABLE(permission_code TEXT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT rp.permission_code
+    FROM user_roles ur
+    JOIN role_permissions rp ON ur.role_id = rp.role_id
+    WHERE ur.user_id = p_user_id
+    AND ur.tenant_id = p_tenant_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get effective permissions (combines user_roles with default tenant role)
 CREATE OR REPLACE FUNCTION get_user_effective_permissions(p_user_id UUID, p_tenant_id UUID)
 RETURNS TABLE(permission_code TEXT) AS $$
 DECLARE
     v_role TEXT;
+    v_has_custom_roles BOOLEAN;
 BEGIN
-    -- Get the user's role from tenant_users
-    SELECT tu.role INTO v_role
-    FROM tenant_users tu
-    WHERE tu.user_id = p_user_id
-    AND tu.tenant_id = p_tenant_id
-    LIMIT 1;
+    -- Check if user has custom roles
+    SELECT EXISTS(
+        SELECT 1 FROM user_roles 
+        WHERE user_id = p_user_id AND tenant_id = p_tenant_id
+    ) INTO v_has_custom_roles;
     
-    -- Map basic roles to permissions
-    IF v_role = 'admin' THEN
-        RETURN QUERY SELECT p.code FROM permissions p WHERE p.module != 'admin';
+    -- If custom roles exist, use those permissions
+    IF v_has_custom_roles THEN
+        RETURN QUERY
+        SELECT rp.permission_code
+        FROM user_roles ur
+        JOIN role_permissions rp ON ur.role_id = rp.role_id
+        WHERE ur.user_id = p_user_id
+        AND ur.tenant_id = p_tenant_id;
     ELSE
-        RETURN QUERY SELECT p.code FROM permissions p 
-        WHERE p.module IN ('dashboard', 'maintenance', 'documents', 'communications');
+        -- Fall back to default tenant role
+        SELECT tu.role INTO v_role
+        FROM tenant_users tu
+        WHERE tu.user_id = p_user_id
+        AND tu.tenant_id = p_tenant_id
+        LIMIT 1;
+        
+        IF v_role = 'admin' THEN
+            RETURN QUERY SELECT p.code FROM permissions p WHERE p.module != 'admin';
+        ELSE
+            RETURN QUERY SELECT p.code FROM permissions p 
+            WHERE p.module IN ('dashboard', 'maintenance', 'documents', 'communications');
+        END IF;
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
