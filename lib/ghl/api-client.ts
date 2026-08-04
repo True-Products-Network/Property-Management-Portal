@@ -108,8 +108,9 @@ export async function getContact(contactId: string): Promise<GhlContact> {
   return ghlApiCall(`/contacts/${contactId}`);
 }
 
-export async function createContact(contact: GhlContact): Promise<GhlContact> {
-  return ghlApiCall("/contacts/", "POST", contact);
+export async function createContact(contact: GhlContact): Promise<{ id: string }> {
+  const result = await ghlApiCall("/contacts/", "POST", contact);
+  return { id: result.id };
 }
 
 export async function updateContact(
@@ -153,8 +154,9 @@ export async function getCompany(companyId: string): Promise<GhlCompany> {
   return ghlApiCall(`/companies/${companyId}`);
 }
 
-export async function createCompany(company: GhlCompany): Promise<GhlCompany> {
-  return ghlApiCall("/companies/", "POST", company);
+export async function createCompany(company: GhlCompany): Promise<{ id: string }> {
+  const result = await ghlApiCall("/companies/", "POST", company);
+  return { id: result.id };
 }
 
 export async function updateCompany(
@@ -192,8 +194,9 @@ export async function getCustomObject(
 export async function createCustomObject(
   objectKey: string,
   data: Record<string, unknown>
-): Promise<GhlCustomObject> {
-  return ghlApiCall(`/objects/${objectKey}/records`, "POST", { properties: data });
+): Promise<{ id: string }> {
+  const result = await ghlApiCall(`/objects/${objectKey}/records`, "POST", { properties: data });
+  return { id: result.id };
 }
 
 export async function updateCustomObject(
