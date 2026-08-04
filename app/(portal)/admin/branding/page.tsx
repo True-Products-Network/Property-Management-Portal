@@ -410,33 +410,55 @@ export default function BrandingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="enable_live_chat"
-                checked={settings.enable_live_chat}
-                onChange={(e) => setSettings(prev => ({ ...prev, enable_live_chat: e.target.checked }))}
-                className="h-4 w-4 text-[var(--teal)] rounded border-gray-300 focus:ring-[var(--teal)]"
-              />
-              <label htmlFor="enable_live_chat" className="text-sm font-medium">
-                Enable Live Chat Widget
-              </label>
+            {/* Toggle Switch */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div>
+                <label htmlFor="enable_live_chat" className="text-sm font-medium text-gray-900">
+                  Enable Live Chat Widget
+                </label>
+                <p className="text-xs text-gray-500">
+                  Show chat widget on all portal pages
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettings(prev => ({ ...prev, enable_live_chat: !prev.enable_live_chat }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--teal)] focus:ring-offset-2 ${
+                  settings.enable_live_chat ? 'bg-[var(--teal)]' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.enable_live_chat ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Chat Widget Code
-              </label>
-              <textarea
-                value={settings.ghl_chat_widget_code}
-                onChange={(e) => setSettings(prev => ({ ...prev, ghl_chat_widget_code: e.target.value }))}
-                placeholder="<!-- Paste your chat widget code here -->"
-                className="w-full min-h-[150px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--teal)] font-mono"
-                disabled={!settings.enable_live_chat}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Paste your GHL, Intercom, Zendesk, or other chat widget code here
-              </p>
-            </div>
+
+            {/* Chat Widget Code - Only show when enabled */}
+            {settings.enable_live_chat && (
+              <div className="space-y-3 pt-2">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>GHL Instructions:</strong> Go to GHL → Sites → Chat Widget → Copy the embed code and paste it below.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Chat Widget Embed Code
+                  </label>
+                  <textarea
+                    value={settings.ghl_chat_widget_code}
+                    onChange={(e) => setSettings(prev => ({ ...prev, ghl_chat_widget_code: e.target.value }))}
+                    placeholder="<!-- Paste your chat widget code here -->"
+                    className="w-full min-h-[150px] rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--teal)] font-mono"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supports GHL, Intercom, Zendesk, or any other chat widget code
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
