@@ -144,6 +144,22 @@ export default async function FeaturesPage() {
         </Button>
       </div>
 
+      {/* Feature Categories Legend */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-gray-600">Feature Categories</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {["core", "maintenance", "operations", "portals", "financial", "reports", "integrations"].map((category) => (
+              <Badge key={category} className={getCategoryColor(category)}>
+                {getCategoryLabel(category)}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Features by Category */}
       <div className="space-y-6">
         {Object.entries(featuresByCategory).map(([category, categoryFeatures]: [string, Feature[]]) => {

@@ -227,22 +227,6 @@ export default async function PlansPage() {
         })}
       </div>
 
-      {/* Feature Categories Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Feature Categories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {["core", "maintenance", "operations", "portals", "financial", "reports", "integrations"].map((category) => (
-              <Badge key={category} className={getCategoryColor(category)}>
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Empty State */}
       {(!plans || plans.length === 0) && (
         <div className="text-center py-12">
