@@ -298,11 +298,17 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
 
           {/* Users */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-purple-600" />
                 Users ({tenantUsers?.length || 0})
               </CardTitle>
+              <Button size="sm" asChild>
+                <Link href={`/platform/tenants/${tenant.id}/users/invite`}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Invite User
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
               {tenantUsers && tenantUsers.length > 0 ? (

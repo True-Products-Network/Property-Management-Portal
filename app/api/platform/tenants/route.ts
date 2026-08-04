@@ -18,6 +18,8 @@ const createTenantSchema = z.object({
   locale: z.string().default("en-US"),
   branding: z.record(z.string(), z.any()).default({}),
   settings: z.record(z.string(), z.any()).default({}),
+  planId: z.string().optional(),
+  trialDays: z.number().default(14),
 });
 
 // Check if user has platform support access
@@ -181,6 +183,30 @@ export async function POST(request: NextRequest) {
         { success: false, error: error.message },
         { status: 400 }
       );
+    }
+
+    // Create subscription if planId is provided
+    if (validation.data.planId) {
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + validation.data.trialDays);
+
+      const { error: subError } = await supabase
+        .from("tenant_subscriptions")
+        .insert({
+          tenant_id: data.id,
+          plan_id: validation.data.planId,
+          status: validation.data.status === "trialing" ? "trialing" : "active",
+          trial_ends_at: validation.data.trialDays > 0 ? trialEndDate.toISOString() : null,
+          current_period_starts_at: new Date().toISOString(),
+          current_period_ends_at: trialEndDate.toISOString(),
+          created_by: user?.id,
+          updated_by: user?.id,
+        });
+
+      if (subError) {
+        console.error("Error creating subscription:", subError);
+        // Don't fail the tenant creation, just log the error
+      }
     }
 
     // Log audit event
