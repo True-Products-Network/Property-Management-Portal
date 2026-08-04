@@ -614,7 +614,7 @@ function NewComplianceFormPage() {
         <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
       </div>
     }>
-      <ComplianceFormContent />
+      <NewComplianceForm />
     </Suspense>
   );
 }
