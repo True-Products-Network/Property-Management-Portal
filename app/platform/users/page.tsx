@@ -70,21 +70,32 @@ export default async function PlatformUsersPage() {
     console.error("Error fetching platform users:", error);
   }
 
-  // Get user details separately via the users view/table
+  // Get user details - since we can't query auth.users directly,
+  // we'll use the session user's info and fetch other details via API if needed
+  // For now, we'll show what we can from the platform_user_roles table
+  // and use a separate API call to get user details
   const userIds = platformUsers?.map((u: PlatformUser) => u.user_id) || [];
   let userDetails: Record<string, UserDetails> = {};
   
-  if (userIds.length > 0) {
-    // Try to get user details from the users view
-    const { data: usersData } = await supabase
-      .from("users")
-      .select("id, email, raw_user_meta_data")
-      .in("id", userIds);
-    
-    usersData?.forEach((u: UserDetails) => {
-      userDetails[u.id] = u;
-    });
+  // Add current user to details
+  if (user) {
+    userDetails[user.id] = {
+      id: user.id,
+      email: user.email || "",
+      raw_user_meta_data: user.user_metadata as { full_name?: string },
+    };
   }
+  
+  // For other users, we'll need to fetch via an API route since we can't access auth.users directly
+  // For now, we'll show the user_id as a fallback
+  platformUsers?.forEach((pu: PlatformUser) => {
+    if (!userDetails[pu.user_id]) {
+      userDetails[pu.user_id] = {
+        id: pu.user_id,
+        email: `User ID: ${pu.user_id.substring(0, 8)}...`,
+      };
+    }
+  });
 
   // Get counts
   const { count: totalCount } = await supabase
