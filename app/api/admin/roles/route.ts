@@ -1,35 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-// GET /api/admin/roles - List all roles
+// GET /api/admin/roles - List all roles with their permissions
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check if user is admin
+    // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user roles from metadata
-    const userRoles = user.user_metadata?.roles || [];
-    if (!userRoles.includes("ADMIN_USER")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Get user's tenant
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+
+    if (!tenantUser) {
+      return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
-    // Fetch roles from database
-    const { data: roles, error } = await supabase
-      .from("portal_roles")
+    // Check if user is admin (role = 'admin' in tenant_users)
+    if (tenantUser.role !== 'admin') {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+    }
+
+    // Fetch system roles (tenant_id IS NULL) and tenant-specific roles
+    const { data: roles, error: rolesError } = await supabase
+      .from("roles")
       .select("*")
+      .or(`tenant_id.is.null,tenant_id.eq.${tenantUser.tenant_id}`)
+      .order("is_system_role", { ascending: false })
       .order("name");
 
-    if (error) {
-      console.error("Error fetching roles:", error);
+    if (rolesError) {
+      console.error("Error fetching roles:", rolesError);
       return NextResponse.json({ error: "Failed to fetch roles" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: roles || [] });
+    // Fetch permissions for each role
+    const rolesWithPermissions = await Promise.all(
+      (roles || []).map(async (role) => {
+        const { data: permissions } = await supabase
+          .from("role_permissions")
+          .select("permission_code")
+          .eq("role_id", role.id);
+
+        // Get user count for this role
+        const { count: userCount } = await supabase
+          .from("user_roles")
+          .select("*", { count: "exact", head: true })
+          .eq("role_id", role.id)
+          .eq("tenant_id", tenantUser.tenant_id);
+
+        return {
+          id: role.id,
+          name: role.name,
+          description: role.description || "",
+          is_system_role: role.is_system_role,
+          is_active: role.is_active,
+          permissions: (permissions || []).map((p: { permission_code: string }) => p.permission_code),
+          user_count: userCount || 0,
+          created_at: role.created_at,
+          updated_at: role.updated_at,
+        };
+      })
+    );
+
+    return NextResponse.json({ success: true, data: rolesWithPermissions });
   } catch (error) {
     console.error("Error in GET /api/admin/roles:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -41,34 +83,58 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check if user is admin
+    // Check if user is authenticated
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userRoles = user.user_metadata?.roles || [];
-    if (!userRoles.includes("ADMIN_USER")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Get user's tenant
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+
+    if (!tenantUser) {
+      return NextResponse.json({ error: "No tenant found" }, { status: 403 });
+    }
+
+    // Check if user is admin
+    if (tenantUser.role !== 'admin') {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { name, description, permissions, requiresMFA, status, auditReason } = body;
+    const { name, description, permissions, is_active } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Role name is required" }, { status: 400 });
     }
 
+    // Check if role name already exists for this tenant
+    const { data: existingRole } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("name", name.trim())
+      .eq("tenant_id", tenantUser.tenant_id)
+      .limit(1)
+      .single();
+
+    if (existingRole) {
+      return NextResponse.json({ error: "Role with this name already exists" }, { status: 400 });
+    }
+
     // Insert role
     const { data: role, error: roleError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .insert({
         name: name.trim(),
         description: description?.trim() || "",
-        permissions: permissions || [],
-        requires_mfa: requiresMFA || false,
-        status: status || "active",
-        is_default: false,
+        tenant_id: tenantUser.tenant_id,
+        is_system_role: false,
+        is_active: is_active !== false,
         created_by: user.id,
       })
       .select()
@@ -79,19 +145,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create role" }, { status: 500 });
     }
 
+    // Insert role permissions
+    if (permissions && permissions.length > 0) {
+      const permissionInserts = permissions.map((code: string) => ({
+        role_id: role.id,
+        permission_code: code,
+      }));
+
+      const { error: permError } = await supabase
+        .from("role_permissions")
+        .insert(permissionInserts);
+
+      if (permError) {
+        console.error("Error inserting permissions:", permError);
+      }
+    }
+
     // Create audit log entry
-    await supabase.from("audit_logs").insert({
-      user_id: user.id,
-      action: "ROLE_CREATED",
-      entity_type: "portal_role",
+    await supabase.from("platform_audit_events").insert({
+      tenant_id: tenantUser.tenant_id,
+      event_type: "ROLE_CREATED",
+      entity_type: "role",
       entity_id: role.id,
       details: {
         role_name: name,
-        reason: auditReason || "Created new role",
+        permissions: permissions || [],
       },
+      created_by: user.id,
     });
 
-    return NextResponse.json({ success: true, data: role });
+    return NextResponse.json({ 
+      success: true, 
+      data: {
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        is_system_role: role.is_system_role,
+        is_active: role.is_active,
+        permissions: permissions || [],
+        user_count: 0,
+        created_at: role.created_at,
+        updated_at: role.updated_at,
+      }
+    });
   } catch (error) {
     console.error("Error in POST /api/admin/roles:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
