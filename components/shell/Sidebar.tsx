@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getMenuForRole, type MenuItem } from "@/lib/permissions/roles";
 import { PortalRole } from "@/schemas/portal/auth";
+import { useBranding } from "@/lib/contexts/BrandingContext";
 import {
   LayoutDashboard,
   Building2,
@@ -198,13 +199,7 @@ function MenuItemComponent({
 
 export function Sidebar({ role, userName, userEmail }: SidebarProps) {
   const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
-  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
-    brand_logo_url: "",
-    brand_logo_svg: "",
-    brand_name_line1: "Exemplary",
-    brand_name_line2: "Property Management",
-    brand_primary_color: "#0d3b66",
-  });
+  const { branding, isLoading: brandingLoading } = useBranding();
 
   // Determine which menu groups to show based on role
   const isOwner = role === "OWNER" || role === "RESIDENT";
@@ -216,21 +211,6 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
       .then(res => res.json())
       .then(data => setGhlStatus(data))
       .catch(() => setGhlStatus({ connected: false }));
-    
-    // Fetch brand settings
-    fetch("/api/settings?category=branding")
-      .then(res => res.json())
-      .then(result => {
-        if (result.success && result.data) {
-          setBrandSettings(prev => ({
-            ...prev,
-            ...result.data,
-          }));
-        }
-      })
-      .catch(() => {
-        // Use defaults on error
-      });
   }, []);
 
   return (
@@ -238,28 +218,32 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
       {/* Logo */}
       <div className="p-4 border-b border-white/10">
         <Link href="/" className="flex items-center gap-2">
-          {brandSettings.brand_logo_url ? (
+          {brandingLoading ? (
+            <div className="w-8 h-8 rounded-lg bg-gray-400 animate-pulse" />
+          ) : branding.brand_logo_url ? (
             <img 
-              src={brandSettings.brand_logo_url} 
+              src={branding.brand_logo_url} 
               alt="Logo" 
               className="w-8 h-8 object-contain rounded"
             />
-          ) : brandSettings.brand_logo_svg ? (
+          ) : branding.brand_logo_svg ? (
             <div 
               className="w-8 h-8 flex items-center justify-center"
-              dangerouslySetInnerHTML={{ __html: brandSettings.brand_logo_svg }}
+              dangerouslySetInnerHTML={{ __html: branding.brand_logo_svg }}
             />
           ) : (
             <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold"
-              style={{ backgroundColor: brandSettings.brand_primary_color }}
+              style={{ backgroundColor: branding.brand_primary_color }}
             >
-              {brandSettings.brand_name_line1.charAt(0)}
+              {branding.brand_name.charAt(0)}
             </div>
           )}
           <div className="flex flex-col">
-            <span className="font-semibold text-white text-sm">{brandSettings.brand_name_line1}</span>
-            <span className="text-xs text-white/60">{brandSettings.brand_name_line2}</span>
+            <span className="font-semibold text-white text-sm">{branding.brand_name}</span>
+            {branding.brand_name_line2 && (
+              <span className="text-xs text-white/60">{branding.brand_name_line2}</span>
+            )}
           </div>
         </Link>
       </div>
