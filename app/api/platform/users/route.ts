@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { email, password, role } = body;
+    const { email, password, fullName, role } = body;
 
     if (!email || !password || !role) {
       return NextResponse.json(
@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
       email,
       password,
       email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        full_name: fullName,
+      },
     });
 
     let userId: string;

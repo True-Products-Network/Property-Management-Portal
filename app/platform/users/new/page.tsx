@@ -20,6 +20,7 @@ export default function AddPlatformUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"PLATFORM_ADMIN" | "PLATFORM_SUPPORT">("PLATFORM_SUPPORT");
   const [error, setError] = useState("");
@@ -50,6 +51,7 @@ export default function AddPlatformUserPage() {
         body: JSON.stringify({
           email,
           password,
+          fullName,
           role,
         }),
       });
@@ -65,6 +67,7 @@ export default function AddPlatformUserPage() {
       // Clear form
       setEmail("");
       setPassword("");
+      setFullName("");
       
       setTimeout(() => {
         router.push("/platform/users");
@@ -115,6 +118,18 @@ export default function AddPlatformUserPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="John Doe"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

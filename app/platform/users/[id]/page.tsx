@@ -6,7 +6,7 @@ import { redirect, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { ArrowLeft, Shield, UserX, Calendar, Mail, User } from "lucide-react";
+import { ArrowLeft, Shield, UserX, Calendar, Mail, User, Edit2 } from "lucide-react";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -100,9 +100,17 @@ export default async function PlatformUserDetailPage({ params }: PageProps) {
         </Link>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Platform User Details</h1>
-        <p className="text-gray-500">View user information and access history</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Platform User Details</h1>
+          <p className="text-gray-500">View user information and access history</p>
+        </div>
+        <Link href={`/platform/users/${id}/edit`}>
+          <Button variant="outline">
+            <Edit2 className="h-4 w-4 mr-2" />
+            Edit User
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
