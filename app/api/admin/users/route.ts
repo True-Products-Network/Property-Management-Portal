@@ -7,7 +7,7 @@ interface Association {
 }
 
 interface TenantUser {
-  id: string;
+  user_id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
     const { data: currentUser, error: userError } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
-      .eq("id", authUser.id)
-      .single();
+      .eq("user_id", authUser.id)
+      .maybeSingle();
 
     if (userError || !currentUser) {
       console.error("[Admin Users API] Error getting current user:", userError);
@@ -56,11 +56,27 @@ export async function GET(request: NextRequest) {
 
     const tenantId = currentUser.tenant_id;
 
+    // If no tenant user found, we can still show users if they're a platform admin
+    // For now, return empty list with proper error
+    if (!currentUser) {
+      console.error("[Admin Users API] User not found in tenant_users:", authUser.id);
+      return NextResponse.json({
+        success: true,
+        data: [],
+        meta: {
+          tenantId: null,
+          associationId: associationId || null,
+          total: 0,
+          warning: "User not associated with any tenant",
+        }
+      });
+    }
+
     // Build the query for tenant users
     let query = supabase
       .from("tenant_users")
       .select(`
-        id,
+        user_id,
         email,
         first_name,
         last_name,
@@ -98,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Map users with association names
     const mappedUsers = (users as TenantUser[] || []).map((u: TenantUser) => ({
-      id: u.id,
+      id: u.user_id,
       email: u.email,
       firstName: u.first_name,
       lastName: u.last_name,
