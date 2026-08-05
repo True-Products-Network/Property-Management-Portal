@@ -1,23 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { signInSchema, type SignInInput } from "@/schemas/portal/auth";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignInPage() {
+interface TenantBranding {
+  name: string;
+  logo?: string;
+  primaryColor?: string;
+}
+
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  
+  // Get tenant and invitation from URL
+  const tenantId = searchParams.get("tenant");
+  const invitationToken = searchParams.get("invitation");
+  
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tenantBranding, setTenantBranding] = useState<TenantBranding | null>(null);
+  const [isLoadingTenant, setIsLoadingTenant] = useState(false);
   const [formData, setFormData] = useState<SignInInput>({
     email: "",
     password: "",
     rememberMe: false,
   });
+
+  // Fetch tenant branding if tenantId is provided
+  useEffect(() => {
+    if (tenantId) {
+      fetchTenantBranding();
+    }
+  }, [tenantId]);
+
+  async function fetchTenantBranding() {
+    setIsLoadingTenant(true);
+    try {
+      const { data: tenant, error } = await supabase
+        .from("tenants")
+        .select("name, logo_url, primary_color")
+        .eq("id", tenantId)
+        .single();
+
+      if (tenant && !error) {
+        setTenantBranding({
+          name: tenant.name,
+          logo: tenant.logo_url,
+          primaryColor: tenant.primary_color,
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching tenant branding:", err);
+    } finally {
+      setIsLoadingTenant(false);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +87,13 @@ export default function SignInPage() {
       }
 
       if (data.user) {
+        // If there's an invitation token, redirect to accept-invitation
+        if (invitationToken) {
+          router.push(`/accept-invitation?token=${invitationToken}`);
+          router.refresh();
+          return;
+        }
+        
         // Get redirect URL from user metadata
         const redirectUrl = data.user.user_metadata?.redirect_url || "/management/overview";
         router.push(redirectUrl);
@@ -58,26 +109,48 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-[var(--primary-navy)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Logo - Tenant branded or default Associos */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[var(--teal)] rounded-xl flex items-center justify-center">
-              <Building2 className="h-7 w-7 text-white" />
+          {isLoadingTenant ? (
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
             </div>
-            <div className="text-white">
-              <h1 className="text-xl font-semibold">Associos</h1>
-              <p className="text-sm text-white/60">Property Management</p>
+          ) : tenantBranding?.logo ? (
+            <div className="flex flex-col items-center gap-2">
+              <img 
+                src={tenantBranding.logo} 
+                alt={tenantBranding.name}
+                className="h-16 w-auto object-contain"
+              />
+              <p className="text-sm text-white/60">Property Management Portal</p>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: tenantBranding?.primaryColor || 'var(--teal)' }}
+              >
+                <Building2 className="h-7 w-7 text-white" />
+              </div>
+              <div className="text-white">
+                <h1 className="text-xl font-semibold">
+                  {tenantBranding?.name || "Associos"}
+                </h1>
+                <p className="text-sm text-white/60">Property Management</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sign In Card */}
         <div className="card p-8">
           <h2 className="text-2xl font-semibold text-[var(--main-text)] mb-2">
-            Sign in to your account
+            {invitationToken ? "Sign in to accept invitation" : "Sign in to your account"}
           </h2>
           <p className="text-[var(--secondary-text)] mb-6">
-            Enter your credentials to access the portal
+            {tenantBranding?.name 
+              ? `Enter your credentials to access ${tenantBranding.name}`
+              : "Enter your credentials to access the portal"}
           </p>
 
           {error && (
@@ -211,8 +284,24 @@ export default function SignInPage() {
               Terms of Service
             </Link>
           </p>
+          {!tenantBranding?.name && (
+            <p className="mt-2">Powered by Associos</p>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--primary-navy)] flex items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
   );
 }
