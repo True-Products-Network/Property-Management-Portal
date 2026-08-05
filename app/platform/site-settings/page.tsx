@@ -44,10 +44,10 @@ export default function SiteSettingsPage() {
             settingsMap[s.key] = s.value;
           });
           setSettings({
-            portal_url: settingsMap.portal_url || "https://portal.trueproductsnetwork.com",
-            app_name: settingsMap.app_name || "Associos",
-            support_email: settingsMap.support_email || "support@trueproductsnetwork.com",
-            company_name: settingsMap.company_name || "True Products Network",
+            portal_url: settingsMap.site_portal_url || "https://portal.trueproductsnetwork.com",
+            app_name: settingsMap.site_app_name || "Associos",
+            support_email: settingsMap.site_support_email || "support@trueproductsnetwork.com",
+            company_name: settingsMap.site_company_name || "True Products Network",
           });
         }
       }
@@ -70,10 +70,10 @@ export default function SiteSettingsPage() {
         body: JSON.stringify({
           category: "site",
           settings: {
-            portal_url: settings.portal_url,
-            app_name: settings.app_name,
-            support_email: settings.support_email,
-            company_name: settings.company_name,
+            site_portal_url: settings.portal_url,
+            site_app_name: settings.app_name,
+            site_support_email: settings.support_email,
+            site_company_name: settings.company_name,
           },
         }),
       });
