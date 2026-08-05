@@ -304,7 +304,8 @@ export async function POST(
       }
     }
 
-    // Push to GHL (async - don't wait)
+    // Push to GHL (async - don't wait but handle errors)
+    console.log("[Tenant Users] Triggering GHL push...");
     pushToGHL(supabase, {
       email: validation.data.email,
       firstName: validation.data.firstName,
@@ -312,7 +313,9 @@ export async function POST(
       role: validation.data.role,
       tenantId,
       isNewUser,
-    }).catch(console.error);
+    }).catch((err) => {
+      console.error("[Tenant Users] GHL push error:", err);
+    });
 
     // Log audit event
     await logAuditEvent(supabase, {
@@ -361,28 +364,29 @@ async function pushToGHL(
     isNewUser: boolean;
   }
 ) {
-  console.log("[GHL Push] Starting GHL push for:", params.email);
-  
-  // Get GHL credentials
-  const { data: locationSetting, error: locationError } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_location_id")
-    .single();
+  try {
+    console.log("[GHL Push] Starting GHL push for:", params.email);
+    
+    // Get GHL credentials
+    const { data: locationSetting, error: locationError } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ghl_location_id")
+      .single();
 
-  const { data: tokenSetting, error: tokenError } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_access_token")
-    .single();
+    const { data: tokenSetting, error: tokenError } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ghl_access_token")
+      .single();
 
-  console.log("[GHL Push] Location setting:", locationSetting?.value ? "found" : "missing", "Error:", locationError?.message);
-  console.log("[GHL Push] Token setting:", tokenSetting?.value ? "found" : "missing", "Error:", tokenError?.message);
+    console.log("[GHL Push] Location setting:", locationSetting?.value ? "found" : "missing", "Error:", locationError?.message);
+    console.log("[GHL Push] Token setting:", tokenSetting?.value ? "found" : "missing", "Error:", tokenError?.message);
 
-  if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("[GHL Push] GHL not configured - missing credentials");
-    return;
-  }
+    if (!locationSetting?.value || !tokenSetting?.value) {
+      console.log("[GHL Push] GHL not configured - missing credentials");
+      return;
+    }
 
   // Get tenant info
   const { data: tenant } = await supabase
@@ -467,5 +471,8 @@ async function pushToGHL(
     }
   } catch (error) {
     console.error("[GHL Push] Error:", error);
+  }
+  } catch (outerError) {
+    console.error("[GHL Push] Outer error:", outerError);
   }
 }
