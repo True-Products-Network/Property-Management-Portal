@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
+import { AuditLogger } from "@/lib/audit/logger";
 
 // POST /api/admin/ghl/disconnect - Disconnect association from GHL
 export async function POST(request: NextRequest) {
@@ -55,6 +56,20 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       console.error("Error updating association:", updateError);
     }
+
+    // Log audit event
+    const auditLogger = new AuditLogger();
+    await auditLogger.logAuditEvent({
+      actorId: user.id,
+      role: user.roles?.join(",") || "admin",
+      action: "ghl_disconnected",
+      associationId: associationId,
+      recordType: "integration",
+      recordId: associationId,
+      previousValue: { connected: true },
+      newValue: { connected: false },
+      reason: "GHL integration disconnected",
+    });
 
     return NextResponse.json({
       success: true,

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/ghl/crypto";
+import { AuditLogger } from "@/lib/audit/logger";
 
 // POST /api/admin/ghl/connect - Connect association to GHL
 export async function POST(request: NextRequest) {
@@ -172,6 +173,26 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", associationId);
 
+      // Log audit event
+      const auditLogger = new AuditLogger();
+      await auditLogger.logAuditEvent({
+        actorId: user.id,
+        role: user.roles?.join(",") || "admin",
+        action: "ghl_connected",
+        associationId: associationId,
+        recordType: "integration",
+        recordId: locationData.id || providedLocationId,
+        newValue: {
+          connectionType: "oauth",
+          locationId: locationData.id || providedLocationId,
+          locationName: locationData.name,
+          companyId: locationData.companyId,
+          apiVersion: apiVersionUsed,
+          testSuccess,
+        },
+        reason: testSuccess ? "OAuth connection successful" : "Credentials saved but test failed",
+      });
+
       return NextResponse.json({
         success: true,
         message: testSuccess 
@@ -293,6 +314,25 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", associationId);
+
+      // Log audit event
+      const auditLogger = new AuditLogger();
+      await auditLogger.logAuditEvent({
+        actorId: user.id,
+        role: user.roles?.join(",") || "admin",
+        action: "ghl_connected",
+        associationId: associationId,
+        recordType: "integration",
+        recordId: locationData.id || providedLocationId,
+        newValue: {
+          connectionType: "api_key",
+          locationId: locationData.id || providedLocationId,
+          locationName: locationData.name,
+          apiVersion: apiVersionUsed,
+          testSuccess,
+        },
+        reason: testSuccess ? "API Key connection successful" : "Credentials saved but test failed",
+      });
 
       return NextResponse.json({
         success: true,
