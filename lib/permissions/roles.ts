@@ -219,6 +219,37 @@ export async function getRedirectUrlForRole(
   return "/management/overview";
 }
 
+// Role hierarchy for determining primary role (higher index = more permissions)
+// This is used for display purposes only - permissions should be checked via database
+const ROLE_HIERARCHY: string[] = [
+  "VENDOR",
+  "RESIDENT",
+  "OWNER",
+  "STAFF",
+  "FINANCE_USER",
+  "BOARD_MEMBER",
+  "PROPERTY_MANAGER",
+  "ASSOCIATION_MANAGER",
+  "PORTFOLIO_MANAGER",
+  "ADMIN_USER",
+];
+
+/**
+ * Get the primary role (highest in hierarchy) from user's roles
+ * This is used for UI display purposes, not permission checks
+ */
+export function getPrimaryRole(userRoles: string[]): string | null {
+  if (!userRoles || userRoles.length === 0) return null;
+  
+  for (let i = ROLE_HIERARCHY.length - 1; i >= 0; i--) {
+    if (userRoles.includes(ROLE_HIERARCHY[i])) {
+      return ROLE_HIERARCHY[i];
+    }
+  }
+  // If no match in hierarchy, return first role
+  return userRoles[0];
+}
+
 // Legacy helper functions - these check against user_metadata.roles
 // These are kept for backward compatibility but should be replaced with permission-based checks
 

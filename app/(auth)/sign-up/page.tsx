@@ -63,7 +63,7 @@ export default function SignUpPage() {
             last_name: formData.lastName,
             roles: [formData.role],
             ghl_contact_id: formData.ghlContactId || `TEST-${Date.now()}`,
-            redirect_url: getRedirectUrl(formData.role),
+            // redirect_url is set server-side based on portal_roles configuration
           },
         },
       });

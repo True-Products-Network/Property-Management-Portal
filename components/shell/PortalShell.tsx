@@ -1,13 +1,12 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import { PortalRole } from "@/schemas/portal/auth";
 import { isAdmin } from "@/lib/permissions/roles";
 import { AssociationProvider } from "@/lib/contexts/AssociationContext";
 import { BrandingProvider } from "@/lib/contexts/BrandingContext";
 
 interface PortalShellProps {
   children: React.ReactNode;
-  role: PortalRole;
+  role: string;
   userName: string;
   userEmail: string;
   notificationCount?: number;
