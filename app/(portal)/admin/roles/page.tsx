@@ -107,34 +107,44 @@ export default function RolesAndPermissionsPage() {
   async function loadRoles() {
     try {
       const response = await fetch("/api/admin/roles");
+      console.log("Roles API response status:", response.status);
       if (response.ok) {
         const result = await response.json();
+        console.log("Roles API result:", result);
         if (result.success && result.data) {
           // Transform API response to match Role interface
+          // API returns permissions as JSONB array: [{module: "dashboard", read: true, write: true, ...}]
           const transformedRoles = result.data.map((r: any) => ({
             id: r.id,
             name: r.name,
             description: r.description || "",
-            permissions: DEFAULT_MODULES.map((m) => ({
-              module: m.id,
-              read: r.permissions?.includes(`${m.id}:read`) || r.permissions?.includes(m.id),
-              write: r.permissions?.includes(`${m.id}:write`),
-              delete: r.permissions?.includes(`${m.id}:delete`),
-              approve: r.permissions?.includes(`${m.id}:approve`),
-            })),
+            permissions: DEFAULT_MODULES.map((m) => {
+              // Find permission for this module in the role's permissions array
+              const modulePerm = r.permissions?.find((p: any) => p.module === m.id);
+              return {
+                module: m.id,
+                read: modulePerm?.read || false,
+                write: modulePerm?.write || false,
+                delete: modulePerm?.delete || false,
+                approve: modulePerm?.approve || false,
+              };
+            }),
             userCount: r.user_count || 0,
             isDefault: r.is_system_role,
-            requiresMFA: false, // TODO: Add to roles table
+            requiresMFA: r.requires_mfa || false,
             status: r.is_active ? "active" : "inactive",
             createdAt: r.created_at,
             updatedAt: r.updated_at,
           }));
+          console.log("Transformed roles:", transformedRoles);
           setRoles(transformedRoles);
         } else {
+          console.log("No roles data in response");
           setRoles([]);
         }
       } else {
-        console.error("API failed to load roles");
+        const errorText = await response.text();
+        console.error("API failed to load roles:", errorText);
         setRoles([]);
       }
     } catch (error) {
@@ -329,41 +339,49 @@ export default function RolesAndPermissionsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRoles.map((role) => (
-                <tr key={role.id} className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--teal)]/10 flex items-center justify-center">
-                        <Shield className="h-4 w-4 text-[var(--teal)]" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-[var(--main-text)]">{role.name}</p>
-                        <p className="text-xs text-[var(--secondary-text)]">{role.description}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge variant="outline">{role.userCount} users</Badge>
-                  </td>
-                  <td className="py-3 px-4">
-                    {role.requiresMFA ? (
-                      <Badge className="bg-green-100 text-green-700">Required</Badge>
-                    ) : (
-                      <Badge className="bg-gray-100 text-gray-700">Optional</Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge className={role.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-                      {role.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(role)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
+              {filteredRoles.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-[var(--secondary-text)]">
+                    No roles found. {roles.length > 0 ? `${roles.length} roles loaded but filtered out.` : "Check console for errors."}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredRoles.map((role) => (
+                  <tr key={role.id} className="border-b border-[var(--border-color)] last:border-0 hover:bg-[var(--page-background)]">
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[var(--teal)]/10 flex items-center justify-center">
+                          <Shield className="h-4 w-4 text-[var(--teal)]" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--main-text)]">{role.name}</p>
+                          <p className="text-xs text-[var(--secondary-text)]">{role.description}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="outline">{role.userCount} users</Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      {role.requiresMFA ? (
+                        <Badge className="bg-green-100 text-green-700">Required</Badge>
+                      ) : (
+                        <Badge className="bg-gray-100 text-gray-700">Optional</Badge>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge className={role.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
+                        {role.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(role)}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </CardContent>
