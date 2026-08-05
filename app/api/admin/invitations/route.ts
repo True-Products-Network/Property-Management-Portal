@@ -83,6 +83,11 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     });
 
+    // Get inviter's name for GHL
+    const inviterName = user.user_metadata?.first_name && user.user_metadata?.last_name 
+      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+      : user.email;
+
     // Push contact to GHL and send invitation (if configured)
     // Now synchronous to catch errors
     try {
@@ -94,6 +99,9 @@ export async function POST(request: NextRequest) {
         tenantId,
         role,
         portalRole,
+        invitedByName: inviterName,
+        invitationId: invitation.id,
+        expiresAt: invitation.expires_at,
       });
     } catch (ghlError) {
       console.error("[Invitations] GHL push failed:", ghlError);
@@ -182,6 +190,9 @@ async function sendGHLInvitation(
     tenantId: string;
     role?: string;
     portalRole?: string;
+    invitedByName: string;
+    invitationId: string;
+    expiresAt: string;
   }
 ) {
   // Get tenant's association_id first
@@ -227,8 +238,15 @@ async function sendGHLInvitation(
   console.log("[GHL Invitation] GHL configured - locationId:", locationId);
 
   const tenantName = tenant?.name || "Associos Property Management";
-  const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${params.token}`;
-  const tenantName = tenant?.name || "Associos Property Management";
+  const tenantId = params.tenantId;
+  
+  // Build invitation URL with tenant ID for branded login
+  const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login?tenant=${tenantId}&invitation=${params.token}`;
+  
+  // Calculate days until expiry
+  const expiryDate = new Date(params.expiresAt);
+  const now = new Date();
+  const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   // First, create/update contact in GHL with "invited" tag
   console.log(`[GHL Invitation] Creating/updating contact for ${params.email}`);
@@ -258,10 +276,13 @@ async function sendGHLInvitation(
         customFields: [
           { key: "portal_role", field_value: params.portalRole || params.role || "member" },
           { key: "tenant_name", field_value: tenantName },
+          { key: "tenant_id", field_value: tenantId },
+          { key: "invited_by_name", field_value: params.invitedByName },
+          { key: "invitation_url", field_value: invitationUrl },
+          { key: "invitation_expiry_days", field_value: daysUntilExpiry },
           { key: "source", field_value: "Associos Portal" },
           { key: "portal_user_type", field_value: "invited" },
           { key: "invitation_token", field_value: params.token },
-          { key: "invitation_url", field_value: invitationUrl },
         ],
       }),
     });
@@ -312,8 +333,13 @@ async function sendGHLInvitation(
         customFields: [
           { id: "portal_role", value: params.portalRole || params.role || "member" },
           { id: "tenant_name", value: tenantName },
+          { id: "tenant_id", value: tenantId },
+          { id: "invited_by_name", value: params.invitedByName },
+          { id: "invitation_url", value: invitationUrl },
+          { id: "invitation_expiry_days", value: daysUntilExpiry },
           { id: "source", value: "Associos Portal" },
           { id: "portal_user_type", value: "invited" },
+          { id: "invitation_token", value: params.token },
         ],
       }),
     });
