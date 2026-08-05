@@ -27,6 +27,8 @@ import {
   DoorOpen,
   CircleDollarSign,
   Loader2,
+  Plug,
+  ClipboardList,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -50,6 +52,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Shield,
   HelpCircle,
   DoorOpen,
+  Plug,
+  ClipboardList,
 };
 
 interface MenuItem {

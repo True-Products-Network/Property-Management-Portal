@@ -12,7 +12,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user's role from user_metadata
+    // Check if user is platform admin
+    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+
+    // If platform admin, return platform admin menu
+    if (isPlatformAdmin) {
+      return NextResponse.json({
+        success: true,
+        role: {
+          name: "Platform Admin",
+          description: "Full platform administration access",
+          requires_mfa: true,
+        },
+        permissions: getPlatformAdminPermissions(),
+        menu: getPlatformAdminMenu(),
+        isPlatformAdmin: true,
+      });
+    }
+
+    // Get user's role from user_metadata for regular users
     const userRoles = user.user_metadata?.roles || [];
     const primaryRole = userRoles[0];
 
@@ -20,7 +38,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ 
         permissions: [],
         menu: [],
-        role: null 
+        role: null,
+        isPlatformAdmin: false,
       });
     }
 
@@ -37,7 +56,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ 
         permissions: [],
         menu: [],
-        role: primaryRole 
+        role: primaryRole,
+        isPlatformAdmin: false,
       });
     }
 
@@ -54,6 +74,7 @@ export async function GET(request: NextRequest) {
       },
       permissions: permissions,
       menu: menu,
+      isPlatformAdmin: false,
     });
   } catch (error) {
     console.error("Error in GET /api/user/permissions:", error);
@@ -61,7 +82,62 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Build menu structure from permissions
+// Platform Admin permissions (full access)
+function getPlatformAdminPermissions(): any[] {
+  const modules = [
+    "dashboard", "tenants", "users", "plans", "features", 
+    "entitlements", "integrations", "audit", "settings", "health"
+  ];
+  
+  return modules.map((module) => ({
+    module,
+    read: true,
+    write: true,
+    delete: true,
+    approve: true,
+  }));
+}
+
+// Platform Admin menu structure
+function getPlatformAdminMenu(): any[] {
+  return [
+    {
+      id: "dashboard",
+      items: [
+        { label: "Dashboard", href: "/platform", icon: "LayoutDashboard" },
+      ],
+    },
+    {
+      id: "management",
+      label: "Management",
+      items: [
+        { label: "Tenants", href: "/platform/tenants", icon: "Building2" },
+        { label: "Users", href: "/platform/users", icon: "Users" },
+      ],
+    },
+    {
+      id: "platform",
+      label: "Platform",
+      items: [
+        { label: "Plans", href: "/platform/plans", icon: "CreditCard" },
+        { label: "Features", href: "/platform/features", icon: "CheckSquare" },
+        { label: "Entitlements", href: "/platform/entitlements", icon: "Shield" },
+      ],
+    },
+    {
+      id: "system",
+      label: "System",
+      items: [
+        { label: "Integrations", href: "/platform/integrations", icon: "Plug" },
+        { label: "Audit Log", href: "/platform/audit", icon: "ClipboardList" },
+        { label: "Site Settings", href: "/platform/site-settings", icon: "Settings" },
+        { label: "Health", href: "/platform/health", icon: "Activity" },
+      ],
+    },
+  ];
+}
+
+// Build menu structure from permissions for regular users
 function buildMenuFromPermissions(permissions: any[]): any[] {
   const menuGroups: Record<string, any> = {
     dashboard: { id: "dashboard", label: "Dashboard", items: [] },
@@ -152,11 +228,9 @@ function buildMenuFromPermissions(permissions: any[]): any[] {
   if (permissions.some((p: any) => p.module === "dashboard" && p.read)) {
     menu.push({
       id: "dashboard",
-      items: [{
-        label: "Dashboard",
-        href: "/management/overview",
-        icon: "LayoutDashboard",
-      }],
+      items: [
+        { label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
+      ],
     });
   }
 
