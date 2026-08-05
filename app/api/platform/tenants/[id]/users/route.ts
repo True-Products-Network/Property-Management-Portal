@@ -367,24 +367,26 @@ async function pushToGHL(
   try {
     console.log("[GHL Push] Starting GHL push for:", params.email);
     
-    // Get GHL credentials
-    const { data: locationSetting, error: locationError } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "ghl_location_id")
+    // Get GHL credentials from ghl_credentials table (same as test/status endpoints)
+    const { data: ghlCreds, error: credsError } = await supabase
+      .from("ghl_credentials")
+      .select("*")
       .single();
 
-    const { data: tokenSetting, error: tokenError } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "ghl_access_token")
-      .single();
+    console.log("[GHL Push] Credentials query error:", credsError?.message || "none");
+    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no", "Type:", ghlCreds?.type);
 
-    console.log("[GHL Push] Location setting:", locationSetting?.value ? "found" : "missing", "Error:", locationError?.message);
-    console.log("[GHL Push] Token setting:", tokenSetting?.value ? "found" : "missing", "Error:", tokenError?.message);
+    if (!ghlCreds) {
+      console.log("[GHL Push] GHL not configured - no credentials found");
+      return;
+    }
 
-    if (!locationSetting?.value || !tokenSetting?.value) {
-      console.log("[GHL Push] GHL not configured - missing credentials");
+    // Get the access token (decrypt if needed - for now assume it's stored plaintext or handle accordingly)
+    const accessToken = ghlCreds.access_token;
+    const locationId = ghlCreds.location_id;
+
+    if (!accessToken || !locationId) {
+      console.log("[GHL Push] GHL not configured - missing access_token or location_id");
       return;
     }
 
@@ -397,20 +399,20 @@ async function pushToGHL(
 
   const tenantName = tenant?.name || "Associos";
 
-  console.log(`[GHL Push] Pushing user ${params.email} to GHL`);
+  console.log(`[GHL Push] Pushing user ${params.email} to GHL location ${locationId}`);
 
   try {
     // Try GHL v2 API
     const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Version": "2021-07-28",
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        locationId: locationSetting.value,
+        locationId: locationId,
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
@@ -436,12 +438,14 @@ async function pushToGHL(
       return;
     }
 
+    console.log("[GHL Push] V2 failed:", v2Response.status, await v2Response.text());
+
     // Fall back to v1
-    console.log("[GHL Push] V2 failed, trying V1...");
+    console.log("[GHL Push] Trying V1...");
     const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -467,7 +471,7 @@ async function pushToGHL(
     if (v1Response.ok) {
       console.log("[GHL Push] Contact created in GHL v1");
     } else {
-      console.error("[GHL Push] V1 failed:", await v1Response.text());
+      console.error("[GHL Push] V1 failed:", v1Response.status, await v1Response.text());
     }
   } catch (error) {
     console.error("[GHL Push] Error:", error);
