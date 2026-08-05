@@ -38,32 +38,31 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const associationId = searchParams.get("associationId");
 
-    // Check if current user is admin
+    // Check if current user is admin (portal_users or platform_user_roles)
     console.log("[Admin Users API] Checking admin status for user ID:", authUser.id);
     
+    // Check portal_users first
     const { data: currentUser, error: adminCheckError } = await supabase
       .from("portal_users")
       .select("id, email, is_admin, status")
       .eq("id", authUser.id)
       .maybeSingle();
 
-    console.log("[Admin Users API] Current user lookup result:", { currentUser, error: adminCheckError });
+    // Also check if user is platform admin
+    const { data: platformRole } = await supabase
+      .from("platform_user_roles")
+      .select("role")
+      .eq("user_id", authUser.id)
+      .is("revoked_at", null)
+      .maybeSingle();
+    
+    const isPlatformAdmin = platformRole?.role === "PLATFORM_ADMIN" || authUser.user_metadata?.is_platform_admin === true;
 
-    if (!currentUser) {
-      console.error("[Admin Users API] User not found in portal_users:", authUser.id);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: "Account setup incomplete",
-          message: "Your user account exists but is missing required portal data. Please contact support or recreate your account through the proper registration flow.",
-          userId: authUser.id
-        },
-        { status: 403 }
-      );
-    }
+    console.log("[Admin Users API] Current user lookup result:", { currentUser, isPlatformAdmin });
 
-    if (!currentUser.is_admin) {
-      console.error("[Admin Users API] User is not admin:", authUser.id, "is_admin:", currentUser.is_admin);
+    // Allow access if user is in portal_users as admin OR is platform admin
+    if (!currentUser?.is_admin && !isPlatformAdmin) {
+      console.error("[Admin Users API] User is not admin:", authUser.id);
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
