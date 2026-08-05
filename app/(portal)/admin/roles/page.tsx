@@ -109,205 +109,44 @@ export default function RolesAndPermissionsPage() {
       const response = await fetch("/api/admin/roles");
       if (response.ok) {
         const result = await response.json();
-        if (result.success) {
-          setRoles(result.data || []);
+        if (result.success && result.data) {
+          // Transform API response to match Role interface
+          const transformedRoles = result.data.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            description: r.description || "",
+            permissions: DEFAULT_MODULES.map((m) => ({
+              module: m.id,
+              read: r.permissions?.includes(`${m.id}:read`) || r.permissions?.includes(m.id),
+              write: r.permissions?.includes(`${m.id}:write`),
+              delete: r.permissions?.includes(`${m.id}:delete`),
+              approve: r.permissions?.includes(`${m.id}:approve`),
+            })),
+            userCount: r.user_count || 0,
+            isDefault: r.is_system_role,
+            requiresMFA: false, // TODO: Add to roles table
+            status: r.is_active ? "active" : "inactive",
+            createdAt: r.created_at,
+            updatedAt: r.updated_at,
+          }));
+          setRoles(transformedRoles);
+        } else {
+          setRoles([]);
         }
       } else {
-        // Load default roles if API fails
-        setRoles(getDefaultRoles());
+        console.error("API failed to load roles");
+        setRoles([]);
       }
     } catch (error) {
       console.error("Error loading roles:", error);
-      setRoles(getDefaultRoles());
+      setRoles([]);
     } finally {
       setIsLoading(false);
     }
   }
 
-  function getDefaultRoles(): Role[] {
-    return [
-      {
-        id: "admin_user",
-        name: "Admin User",
-        description: "Full portal administration access",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: true,
-          write: true,
-          delete: true,
-          approve: true,
-        })),
-        userCount: 1,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "portfolio_manager",
-        name: "Portfolio Manager",
-        description: "Assigned Portfolio Operations and Management",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: true,
-          write: m.id !== "settings",
-          delete: false,
-          approve: ["maintenance", "inspections", "approvals"].includes(m.id),
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "association_manager",
-        name: "Association Manager",
-        description: "Assigned Association Management",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: true,
-          write: m.id !== "settings",
-          delete: false,
-          approve: ["maintenance", "inspections", "approvals"].includes(m.id),
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "property_manager",
-        name: "Property Manager",
-        description: "Assigned Property Management",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: true,
-          write: m.id !== "settings",
-          delete: false,
-          approve: ["maintenance", "inspections", "approvals"].includes(m.id),
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "board_member",
-        name: "Board Member",
-        description: "Assigned Board view and approvals",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "associations", "properties", "documents", "reports"].includes(m.id),
-          write: false,
-          delete: false,
-          approve: ["approvals"].includes(m.id),
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "vendor_contractor",
-        name: "Vendor Contractor",
-        description: "Assigned Vendor Jobs",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "maintenance", "inspections"].includes(m.id),
-          write: ["maintenance"].includes(m.id),
-          delete: false,
-          approve: false,
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: false,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "resident",
-        name: "Resident",
-        description: "Own associated records",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "units", "maintenance", "documents"].includes(m.id),
-          write: ["maintenance"].includes(m.id),
-          delete: false,
-          approve: false,
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: false,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "owner",
-        name: "Owner",
-        description: "Own associated records",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "properties", "units", "maintenance", "documents", "payments"].includes(m.id),
-          write: ["maintenance"].includes(m.id),
-          delete: false,
-          approve: false,
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: false,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "staff",
-        name: "Staff",
-        description: "Standard User Access",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "associations", "properties", "people"].includes(m.id),
-          write: false,
-          delete: false,
-          approve: false,
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: false,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: "finance_user",
-        name: "Finance User",
-        description: "Financial Access Only",
-        permissions: DEFAULT_MODULES.map((m) => ({
-          module: m.id,
-          read: ["dashboard", "payments", "reports"].includes(m.id),
-          write: ["payments"].includes(m.id),
-          delete: false,
-          approve: false,
-        })),
-        userCount: 0,
-        isDefault: true,
-        requiresMFA: true,
-        status: "active",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-  }
+  // Roles are now fetched from the API /api/admin/roles
+  // No hardcoded defaults - all roles come from the database
 
   function handleEdit(role: Role) {
     setEditingRole(role);
