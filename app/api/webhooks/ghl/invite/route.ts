@@ -9,11 +9,12 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 interface InvitePayload {
-  contactId: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
+  firstName?: string;
+  lastName?: string;
+  invitationToken: string;
+  tenantName: string;
+  invitationUrl: string;
 }
 
 export async function POST(request: Request) {
@@ -21,9 +22,8 @@ export async function POST(request: Request) {
     const payload: InvitePayload = await request.json();
     
     console.log("GHL Invitation webhook received:", {
-      contactId: payload.contactId,
       email: payload.email,
-      role: payload.role,
+      tenantName: payload.tenantName,
     });
 
     const supabase = await createClient();
@@ -38,27 +38,19 @@ export async function POST(request: Request) {
     const { data: tokenSetting } = await supabase
       .from("app_settings")
       .select("value")
-      .eq("key", "ghl_access_token")
+      .eq("key", "ghl_api_token")
       .single();
 
     if (!locationSetting?.value || !tokenSetting?.value) {
+      console.error("GHL not configured - cannot send invitation");
       return NextResponse.json(
         { success: false, error: "GHL not configured" },
         { status: 400 }
       );
     }
 
-    // In a real implementation, you would:
-    // 1. Create or update the contact in GHL
-    // 2. Trigger a workflow in GHL that sends the invitation email
-    // 3. Or use GHL's email API to send directly
-
-    // For now, we'll simulate a successful webhook call
-    console.log("Would send GHL invitation to:", payload.email);
-
-    // Example GHL API call (commented out until GHL integration is fully set up):
-    /*
-    const ghlResponse = await fetch(`https://rest.gohighlevel.com/v1/contacts/`, {
+    // Create or update contact in GHL
+    const contactResponse = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${tokenSetting.value}`,
@@ -66,21 +58,46 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         email: payload.email,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        tags: ["portal_invited", `role_${payload.role}`],
+        firstName: payload.firstName || "",
+        lastName: payload.lastName || "",
+        tags: ["portal_invited", "portal_user"],
+        customFields: [
+          {
+            id: "invitation_token",
+            value: payload.invitationToken,
+          },
+          {
+            id: "tenant_name",
+            value: payload.tenantName,
+          },
+        ],
       }),
     });
 
-    if (!ghlResponse.ok) {
-      throw new Error(`GHL API error: ${ghlResponse.statusText}`);
+    if (!contactResponse.ok) {
+      const errorText = await contactResponse.text();
+      console.error("GHL API error creating contact:", errorText);
+      return NextResponse.json(
+        { success: false, error: "Failed to create contact in GHL" },
+        { status: 500 }
+      );
     }
-    */
+
+    const contactData = await contactResponse.json();
+    console.log("Contact created in GHL:", contactData.contact?.id);
+
+    // Send email via GHL
+    // Option 1: Trigger a workflow
+    // Option 2: Send direct email (if GHL supports it)
+    
+    // For now, we'll return success and let the admin trigger emails via GHL workflows
+    // The contact is created with tags that can trigger workflows
 
     return NextResponse.json({
       success: true,
-      message: "Invitation webhook processed",
-      note: "GHL integration ready - uncomment API call when credentials are configured",
+      message: "Contact created in GHL successfully",
+      contactId: contactData.contact?.id,
+      note: "Email will be sent via GHL workflow triggered by 'portal_invited' tag",
     });
   } catch (error) {
     console.error("Error processing GHL invitation webhook:", error);
