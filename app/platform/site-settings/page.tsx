@@ -140,7 +140,7 @@ export default function SiteSettingsPage() {
               placeholder="https://portal.associos.com"
             />
             <p className="text-sm text-gray-500">
-              The main URL users access the portal from. Used in GHL integration and emails.
+              The main URL users access the portal from. Used in GHL integration and emails. Users will be directed to /sign-in with their tenant ID.
             </p>
           </div>
 

@@ -428,7 +428,7 @@ async function pushToGHL(
 
   // Build URLs - use environment variable or fallback
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://portal.trueproductsnetwork.com";
-  const loginUrl = `${appUrl}/login?tenant=${params.tenantId}`;
+  const loginUrl = `${appUrl}/sign-in?tenant=${params.tenantId}`;
   const expiryDays = 7;
   
   const contactData = {
