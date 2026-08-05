@@ -423,7 +423,6 @@ async function pushToGHL(
 
   // Build URLs
   const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login?tenant=${params.tenantId}`;
-  const acceptInvitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=PLACEHOLDER_TOKEN`;
   const expiryDays = 7;
   
   const contactData = {
@@ -444,7 +443,6 @@ async function pushToGHL(
       { key: "tenant_id", field_value: params.tenantId },
       { key: "invited_by_name", field_value: "Platform Admin" },
       { key: "login_url", field_value: loginUrl },
-      { key: "accept_invitation_url", field_value: acceptInvitationUrl },
       { key: "invitation_expiry_days", field_value: expiryDays },
       { key: "portal_source", field_value: "Associos Portal" },
       { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
@@ -530,7 +528,6 @@ async function pushToGHL(
                 { key: "tenant_id", field_value: params.tenantId },
                 { key: "invited_by_name", field_value: "Platform Admin" },
                 { key: "login_url", field_value: loginUrl },
-                { key: "accept_invitation_url", field_value: acceptInvitationUrl },
                 { key: "invitation_expiry_days", field_value: expiryDays },
                 { key: "portal_source", field_value: "Associos Portal" },
                 { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
