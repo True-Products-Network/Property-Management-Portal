@@ -368,28 +368,27 @@ async function pushToGHL(
   try {
     console.log("[GHL Push] Starting GHL push for:", params.email);
     
-    // Get GHL credentials using the proper helper (handles decryption)
-    const ghlCreds = await getGhlCredentials();
-    
-    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no");
-    
-    if (!ghlCreds) {
-      console.log("[GHL Push] GHL not configured - no credentials found in ghl_credentials table");
-      return;
-    }
-    
-    console.log("[GHL Push] Credentials type:", ghlCreds.type);
-    console.log("[GHL Push] Location ID:", ghlCreds.locationId);
+    // Get GHL credentials from app_settings (Platform GHL integration)
+    const { data: locationSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ghl_location_id")
+      .single();
 
-    // Get the access token and location_id
-    const accessToken = ghlCreds.type === "oauth" ? ghlCreds.accessToken : ghlCreds.apiKey;
-    const locationId = ghlCreds.locationId;
+    const { data: tokenSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ghl_access_token")
+      .single();
 
-    console.log("[GHL Push] Access token present:", accessToken ? "yes" : "no");
-    console.log("[GHL Push] Location ID present:", locationId ? "yes" : "no");
+    console.log("[GHL Push] Location ID found:", locationSetting?.value ? "yes" : "no");
+    console.log("[GHL Push] Access token found:", tokenSetting?.value ? "yes" : "no");
+
+    const accessToken = tokenSetting?.value;
+    const locationId = locationSetting?.value;
 
     if (!accessToken || !locationId) {
-      console.log("[GHL Push] GHL not configured - missing access_token/location_id");
+      console.log("[GHL Push] GHL not configured - missing access_token or location_id in app_settings");
       return;
     }
 
