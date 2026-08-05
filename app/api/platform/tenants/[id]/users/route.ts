@@ -370,35 +370,42 @@ async function pushToGHL(
     
     // Get GHL credentials from app_settings (Platform GHL integration)
     // Try both ghl_access_token and ghl_api_token keys
-    const { data: locationSetting } = await supabase
+    const { data: locationData, error: locationError } = await supabase
       .from("app_settings")
       .select("value")
       .eq("key", "ghl_location_id")
-      .single();
+      .maybeSingle();
 
-    const { data: tokenSetting } = await supabase
+    const { data: tokenData, error: tokenError } = await supabase
       .from("app_settings")
       .select("value")
       .eq("key", "ghl_access_token")
-      .single();
+      .maybeSingle();
     
-    const { data: apiTokenSetting } = await supabase
+    const { data: apiTokenData, error: apiTokenError } = await supabase
       .from("app_settings")
       .select("value")
       .eq("key", "ghl_api_token")
-      .single();
+      .maybeSingle();
 
-    console.log("[GHL Push] Location ID found:", locationSetting?.value ? "yes" : "no");
-    console.log("[GHL Push] ghl_access_token found:", tokenSetting?.value ? "yes" : "no");
-    console.log("[GHL Push] ghl_api_token found:", apiTokenSetting?.value ? "yes" : "no");
+    console.log("[GHL Push] Location query error:", locationError?.message || "none");
+    console.log("[GHL Push] ghl_access_token query error:", tokenError?.message || "none");
+    console.log("[GHL Push] ghl_api_token query error:", apiTokenError?.message || "none");
+    
+    console.log("[GHL Push] Location ID found:", locationData?.value ? "yes" : "no");
+    console.log("[GHL Push] ghl_access_token found:", tokenData?.value ? "yes" : "no");
+    console.log("[GHL Push] ghl_api_token found:", apiTokenData?.value ? "yes" : "no");
 
-    const accessToken = tokenSetting?.value || apiTokenSetting?.value;
-    const locationId = locationSetting?.value;
+    const accessToken = tokenData?.value || apiTokenData?.value;
+    const locationId = locationData?.value;
 
     if (!accessToken || !locationId) {
       console.log("[GHL Push] GHL not configured - missing access_token or location_id in app_settings");
       return;
     }
+    
+    console.log("[GHL Push] Using location ID:", locationId);
+    console.log("[GHL Push] Access token prefix:", accessToken?.substring(0, 10) + "...");
 
   // Get tenant name
   const { data: tenantData } = await supabase
