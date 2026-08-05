@@ -3,18 +3,26 @@ import { createClient } from "@/lib/supabase/server";
 
 // Helper function to check if user is platform admin
 async function checkPlatformAdmin(supabase: any, user: any) {
+  console.log("Checking platform admin for user:", user.id);
+  console.log("User metadata:", user.user_metadata);
+  
   // Check platform_user_roles table
-  const { data: platformRole } = await supabase
+  const { data: platformRole, error } = await supabase
     .from("platform_user_roles")
     .select("role")
     .eq("user_id", user.id)
     .is("revoked_at", null)
     .maybeSingle();
 
+  console.log("Platform role query result:", platformRole, "Error:", error);
+
   // Also check user_metadata fallback
   const isMetadataAdmin = user.user_metadata?.is_platform_admin === true;
+  const isDbAdmin = platformRole?.role === 'admin';
   
-  return platformRole?.role === 'admin' || isMetadataAdmin;
+  console.log("isDbAdmin:", isDbAdmin, "isMetadataAdmin:", isMetadataAdmin);
+  
+  return isDbAdmin || isMetadataAdmin;
 }
 
 // GET /api/platform/settings?category=xxx - Get settings by category
