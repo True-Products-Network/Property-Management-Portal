@@ -18,6 +18,7 @@ import {
   Settings,
   Shield,
   Flag,
+  Globe,
 } from "lucide-react";
 
 const navigation = [
@@ -30,6 +31,7 @@ const navigation = [
   { name: "Integrations", href: "/platform/integrations", icon: Link2 },
   { name: "Audit Log", href: "/platform/audit", icon: ClipboardList },
   { name: "Health & Status", href: "/platform/health", icon: Activity },
+  { name: "Site Settings", href: "/platform/site-settings", icon: Globe },
 ];
 
 export function PlatformSidebar() {
