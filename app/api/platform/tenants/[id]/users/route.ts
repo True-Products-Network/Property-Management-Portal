@@ -208,6 +208,10 @@ export async function POST(
       // Create new user with service role
       const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase();
       
+      // Map detailed role to simple role for auth metadata
+      const adminRoles = ["admin_user", "portfolio_manager", "association_manager"];
+      const simpleRole = adminRoles.includes(validation.data.role) ? "ADMIN_USER" : "MANAGEMENT_STAFF";
+      
       const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
         email: validation.data.email,
         password: tempPassword,
@@ -218,6 +222,7 @@ export async function POST(
           full_name: `${validation.data.firstName} ${validation.data.lastName}`,
           phone: validation.data.phone,
           portal_role: validation.data.role,
+          roles: [simpleRole], // Add roles array for portal access
         },
       });
 
