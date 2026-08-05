@@ -9,7 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 
 const roles = [
   { value: "ADMIN_USER", label: "Admin User", description: "Full system access" },
-  { value: "MANAGEMENT_STAFF", label: "Management Staff", description: "Property management operations" },
+  { value: "STAFF", label: "Staff", description: "Standard staff access" },
+  { value: "PORTFOLIO_MANAGER", label: "Portfolio Manager", description: "Portfolio operations and management" },
+  { value: "ASSOCIATION_MANAGER", label: "Association Manager", description: "Association management" },
+  { value: "PROPERTY_MANAGER", label: "Property Manager", description: "Property management" },
+  { value: "FINANCE_USER", label: "Finance User", description: "Financial access only" },
   { value: "OWNER", label: "Owner", description: "Property owner access" },
   { value: "RESIDENT", label: "Resident", description: "Tenant/occupant access" },
   { value: "BOARD_MEMBER", label: "Board Member", description: "Association board access" },
@@ -93,7 +97,7 @@ export default function SignUpPage() {
   const getRedirectUrl = (role: string): string => {
     switch (role) {
       case "ADMIN_USER":
-      case "MANAGEMENT_STAFF":
+      case "STAFF":
         return "/management/overview";
       case "BOARD_MEMBER":
         return "/board";

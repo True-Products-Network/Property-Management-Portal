@@ -15,7 +15,12 @@ export async function POST(request: NextRequest) {
     // Check admin or management role
     const userRoles = user.user_metadata?.roles || [];
     const isAdmin = userRoles.includes("ADMIN_USER");
-    const isManagement = userRoles.includes("MANAGEMENT_STAFF");
+    const isManagement = userRoles.includes("STAFF") || 
+                         userRoles.includes("ADMIN_USER") ||
+                         userRoles.includes("PORTFOLIO_MANAGER") ||
+                         userRoles.includes("ASSOCIATION_MANAGER") ||
+                         userRoles.includes("PROPERTY_MANAGER") ||
+                         userRoles.includes("FINANCE_USER");
     
     if (!isAdmin && !isManagement) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

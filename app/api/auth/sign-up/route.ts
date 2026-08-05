@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 function getRedirectUrl(role: string): string {
   switch (role) {
     case "ADMIN_USER":
-    case "MANAGEMENT_STAFF":
+    case "STAFF":
       return "/management/overview";
     case "BOARD_MEMBER":
       return "/board";

@@ -65,7 +65,11 @@ export function getPrimaryRole(userRoles: PortalRole[]): PortalRole | null {
 export function getDefaultRouteForRole(role: PortalRole): string {
   switch (role) {
     case "ADMIN_USER":
-    case "MANAGEMENT_STAFF":
+    case "STAFF":
+    case "FINANCE_USER":
+    case "PROPERTY_MANAGER":
+    case "ASSOCIATION_MANAGER":
+    case "PORTFOLIO_MANAGER":
       return "/management/overview";
     case "BOARD_MEMBER":
       return "/board";
@@ -90,7 +94,11 @@ export interface MenuItem {
 export function getMenuForRole(role: PortalRole): MenuItem[] {
   switch (role) {
     case "ADMIN_USER":
-    case "MANAGEMENT_STAFF":
+    case "STAFF":
+    case "FINANCE_USER":
+    case "PROPERTY_MANAGER":
+    case "ASSOCIATION_MANAGER":
+    case "PORTFOLIO_MANAGER":
       return [
         { label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
         { label: "Associations", href: "/management/associations", icon: "Building2" },
