@@ -58,11 +58,26 @@ interface TenantUser {
   first_name: string | null;
   last_name: string | null;
   role: string;
+  portal_role?: string;
   is_primary_admin: boolean;
   status: string;
   invited_at: string | null;
   joined_at: string | null;
   created_at: string;
+}
+
+// Helper to get display role name
+function getDisplayRole(user: TenantUser): string {
+  // If user is primary admin, show as Admin
+  if (user.is_primary_admin) return "Admin";
+  
+  // Map database role to display name
+  const roleMap: Record<string, string> = {
+    "admin": "Manager",
+    "member": "Staff",
+  };
+  
+  return roleMap[user.role] || user.role;
 }
 
 interface Tenant {
@@ -266,8 +281,8 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Manager</SelectItem>
+                <SelectItem value="member">Staff</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -312,9 +327,9 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Badge
-                          variant={user.role === "admin" ? "default" : "secondary"}
+                          variant={user.role === "admin" || user.is_primary_admin ? "default" : "secondary"}
                         >
-                          {user.role}
+                          {getDisplayRole(user)}
                         </Badge>
                         {user.is_primary_admin && (
                           <Badge variant="outline" className="text-amber-600">
@@ -365,12 +380,12 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
                             {user.role === "admin" ? (
                               <>
                                 <UserX className="mr-2 h-4 w-4" />
-                                Remove Admin
+                                Demote to Staff
                               </>
                             ) : (
                               <>
                                 <Shield className="mr-2 h-4 w-4" />
-                                Make Admin
+                                Promote to Manager
                               </>
                             )}
                           </DropdownMenuItem>
