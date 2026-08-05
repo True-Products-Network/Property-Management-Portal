@@ -219,6 +219,7 @@ export async function POST(
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
       .insert({
+        contact_id: `CNT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         first_name: validation.data.firstName,
         last_name: validation.data.lastName,
         email: validation.data.email,
@@ -249,11 +250,25 @@ export async function POST(
       });
 
     if (tenantUserError) {
-      console.error("Error creating tenant user:", tenantUserError);
-      return NextResponse.json(
-        { success: false, error: `Failed to assign user to tenant: ${tenantUserError.message}` },
-        { status: 400 }
-      );
+      // If duplicate, user is already in tenant - that's ok for re-invites
+      if (tenantUserError.message.includes('duplicate')) {
+        console.log("[Tenant Users] User already exists in tenant:", userId);
+        // Update role if needed
+        await supabase
+          .from("tenant_users")
+          .update({ 
+            role: dbRole,
+            is_primary_admin: validation.data.role === "admin_user" 
+          })
+          .eq("tenant_id", tenantId)
+          .eq("user_id", userId);
+      } else {
+        console.error("Error creating tenant user:", tenantUserError);
+        return NextResponse.json(
+          { success: false, error: `Failed to assign user to tenant: ${tenantUserError.message}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Log audit event
