@@ -421,8 +421,30 @@ async function pushToGHL(
 
   console.log(`[GHL Push] Pushing user ${params.email} to GHL location ${locationId}`);
 
+  const contactData = {
+    locationId: locationId,
+    email: params.email,
+    firstName: params.firstName,
+    lastName: params.lastName,
+    tags: [
+      "portal_user",
+      params.isNewUser ? "status_invited" : "status_active",
+      `role_${params.role}`,
+      `tenant_${tenantName}`,
+      "source_associos_portal"
+    ],
+    customFields: [
+      { key: "portal_role", field_value: params.role },
+      { key: "tenant_name", field_value: tenantName },
+      { key: "tenant_id", field_value: params.tenantId },
+      { key: "source", field_value: "Associos Portal" },
+      { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
+      { key: "created_by_platform", field_value: "true" },
+    ],
+  };
+
   try {
-    // Try GHL v2 API
+    // Try GHL v2 API - create new contact
     const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
       method: "POST",
       headers: {
@@ -431,27 +453,7 @@ async function pushToGHL(
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
-      body: JSON.stringify({
-        locationId: locationId,
-        email: params.email,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        tags: [
-          "portal_user",
-          params.isNewUser ? "status_invited" : "status_active",
-          `role_${params.role}`,
-          `tenant_${tenantName}`,
-          "source_associos_portal"
-        ],
-        customFields: [
-          { key: "portal_role", field_value: params.role },
-          { key: "tenant_name", field_value: tenantName },
-          { key: "tenant_id", field_value: params.tenantId },
-          { key: "source", field_value: "Associos Portal" },
-          { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
-          { key: "created_by_platform", field_value: "true" },
-        ],
-      }),
+      body: JSON.stringify(contactData),
     });
 
     if (v2Response.ok) {
@@ -460,10 +462,61 @@ async function pushToGHL(
       return;
     }
 
-    console.log("[GHL Push] V2 failed:", v2Response.status, await v2Response.text());
+    // Check if it's a duplicate contact error
+    const v2ErrorText = await v2Response.text();
+    console.log("[GHL Push] V2 create failed:", v2Response.status, v2ErrorText);
 
-    // Fall back to v1
-    console.log("[GHL Push] Trying V1...");
+    if (v2Response.status === 400 && v2ErrorText.includes("duplicated contacts")) {
+      console.log("[GHL Push] Contact already exists, searching for existing contact...");
+      
+      // Search for existing contact by email
+      const searchResponse = await fetch(
+        `https://services.leadconnectorhq.com/contacts/?locationId=${locationId}&query=${encodeURIComponent(params.email)}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Version": "2021-07-28",
+            "Accept": "application/json",
+          },
+        }
+      );
+
+      if (searchResponse.ok) {
+        const searchResult = await searchResponse.json();
+        const existingContact = searchResult.contacts?.find((c: any) => c.email === params.email);
+
+        if (existingContact?.id) {
+          console.log("[GHL Push] Found existing contact:", existingContact.id);
+          
+          // Update existing contact
+          const updateResponse = await fetch(`https://services.leadconnectorhq.com/contacts/${existingContact.id}`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Version": "2021-07-28",
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: JSON.stringify({
+              ...contactData,
+              id: existingContact.id,
+            }),
+          });
+
+          if (updateResponse.ok) {
+            console.log("[GHL Push] Contact updated in GHL v2:", existingContact.id);
+            return;
+          } else {
+            console.error("[GHL Push] Update failed:", await updateResponse.text());
+          }
+        }
+      }
+    }
+
+    console.log("[GHL Push] V2 create/update failed, trying V1...");
+
+    // Fall back to v1 - try create first
     const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
@@ -474,13 +527,7 @@ async function pushToGHL(
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
-        tags: [
-          "portal_user",
-          params.isNewUser ? "status_invited" : "status_active",
-          `role_${params.role}`,
-          `tenant_${tenantName}`,
-          "source_associos_portal"
-        ],
+        tags: contactData.tags,
         customFields: [
           { id: "portal_role", value: params.role },
           { id: "tenant_name", value: tenantName },
