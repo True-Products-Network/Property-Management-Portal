@@ -72,9 +72,13 @@ interface Tenant {
   code: string;
 }
 
-export default function TenantUsersPage({ params }: { params: { id: string } }) {
+export default function TenantUsersPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
-  const tenantId = params.id;
+  const [tenantId, setTenantId] = useState<string>("");
+
+  useEffect(() => {
+    params.then(p => setTenantId(p.id));
+  }, [params]);
 
   const [users, setUsers] = useState<TenantUser[]>([]);
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -97,7 +101,9 @@ export default function TenantUsersPage({ params }: { params: { id: string } }) 
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
-    fetchTenantAndUsers();
+    if (tenantId) {
+      fetchTenantAndUsers();
+    }
   }, [tenantId]);
 
   async function fetchTenantAndUsers() {
