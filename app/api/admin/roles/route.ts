@@ -37,12 +37,10 @@ export async function GET(request: NextRequest) {
     // Use tenant_id from tenantUser or a default for platform admins
     const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
 
-    // Fetch system roles (tenant_id IS NULL) and tenant-specific roles
+    // Fetch all portal roles (system-wide, no tenant filtering)
     const { data: roles, error: rolesError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .select("*")
-      .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
-      .order("is_system_role", { ascending: false })
       .order("name");
 
     if (rolesError) {
@@ -50,43 +48,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch roles" }, { status: 500 });
     }
 
-    // Fetch permissions for each role
-    interface Role {
+    // Format roles with permissions from JSONB
+    interface PortalRole {
       id: string;
       name: string;
       description: string | null;
-      is_system_role: boolean;
-      is_active: boolean;
+      permissions: any;
+      is_default: boolean;
+      requires_mfa: boolean;
+      status: string;
+      user_count: number;
       created_at: string;
       updated_at: string;
     }
-    const rolesWithPermissions = await Promise.all(
-      (roles || []).map(async (role: Role) => {
-        const { data: permissions } = await supabase
-          .from("role_permissions")
-          .select("permission_code")
-          .eq("role_id", role.id);
-
-        // Get user count for this role
-        const { count: userCount } = await supabase
-          .from("user_roles")
-          .select("*", { count: "exact", head: true })
-          .eq("role_id", role.id)
-          .eq("tenant_id", tenantId);
-
-        return {
-          id: role.id,
-          name: role.name,
-          description: role.description || "",
-          is_system_role: role.is_system_role,
-          is_active: role.is_active,
-          permissions: (permissions || []).map((p: { permission_code: string }) => p.permission_code),
-          user_count: userCount || 0,
-          created_at: role.created_at,
-          updated_at: role.updated_at,
-        };
-      })
-    );
+    const rolesWithPermissions = (roles || []).map((role: PortalRole) => {
+      // permissions are already in JSONB format
+      return {
+        id: role.id,
+        name: role.name,
+        description: role.description || "",
+        is_system_role: role.is_default,
+        is_active: role.status === 'active',
+        requires_mfa: role.requires_mfa,
+        permissions: role.permissions || [],
+        user_count: role.user_count || 0,
+        created_at: role.created_at,
+        updated_at: role.updated_at,
+      };
+    });
 
     return NextResponse.json({ success: true, data: rolesWithPermissions });
   } catch (error) {
@@ -138,12 +127,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Role name is required" }, { status: 400 });
     }
 
-    // Check if role name already exists for this tenant
+    // Check if role name already exists
     const { data: existingRole } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .select("id")
       .eq("name", name.trim())
-      .eq("tenant_id", tenantId)
       .limit(1)
       .single();
 
@@ -151,15 +139,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Role with this name already exists" }, { status: 400 });
     }
 
-    // Insert role
+    // Insert role into portal_roles
     const { data: role, error: roleError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .insert({
         name: name.trim(),
         description: description?.trim() || "",
-        tenant_id: tenantId,
-        is_system_role: false,
-        is_active: is_active !== false,
+        permissions: permissions || [],
+        is_default: false,
+        requires_mfa: false,
+        status: is_active !== false ? 'active' : 'inactive',
+        user_count: 0,
         created_by: user.id,
       })
       .select()
@@ -168,22 +158,6 @@ export async function POST(request: NextRequest) {
     if (roleError) {
       console.error("Error creating role:", roleError);
       return NextResponse.json({ error: "Failed to create role" }, { status: 500 });
-    }
-
-    // Insert role permissions
-    if (permissions && permissions.length > 0) {
-      const permissionInserts = permissions.map((code: string) => ({
-        role_id: role.id,
-        permission_code: code,
-      }));
-
-      const { error: permError } = await supabase
-        .from("role_permissions")
-        .insert(permissionInserts);
-
-      if (permError) {
-        console.error("Error inserting permissions:", permError);
-      }
     }
 
     // Create audit log entry
@@ -199,15 +173,16 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         id: role.id,
         name: role.name,
         description: role.description,
-        is_system_role: role.is_system_role,
-        is_active: role.is_active,
-        permissions: permissions || [],
+        is_system_role: role.is_default,
+        is_active: role.status === 'active',
+        requires_mfa: role.requires_mfa,
+        permissions: role.permissions || [],
         user_count: 0,
         created_at: role.created_at,
         updated_at: role.updated_at,
