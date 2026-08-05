@@ -19,9 +19,27 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getSession();
 
-    if (!user || !isAdmin(user.roles)) {
+    console.log("[Admin Users API] Session user:", JSON.stringify(user, null, 2));
+
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        { success: false, error: "Unauthorized - No session" },
+        { status: 401 }
+      );
+    }
+
+    if (!user.roles || !Array.isArray(user.roles)) {
+      console.error("[Admin Users API] User roles missing or invalid:", user.roles);
+      return NextResponse.json(
+        { success: false, error: "Unauthorized - Invalid roles" },
+        { status: 401 }
+      );
+    }
+
+    if (!isAdmin(user.roles)) {
+      console.error("[Admin Users API] User is not admin:", user.roles);
+      return NextResponse.json(
+        { success: false, error: "Unauthorized - Admin access required" },
         { status: 401 }
       );
     }
@@ -30,6 +48,8 @@ export async function GET(request: NextRequest) {
 
     // Get all users from auth.users via the admin API
     // First, let's get users from our users table with their roles
+    console.log("[Admin Users API] Fetching users from database...");
+
     const { data: users, error } = await supabase
       .from("users")
       .select(`
@@ -45,12 +65,14 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching users:", error);
+      console.error("[Admin Users API] Error fetching users:", error);
       return NextResponse.json(
-        { success: false, error: "Failed to fetch users" },
+        { success: false, error: "Failed to fetch users: " + error.message },
         { status: 500 }
       );
     }
+
+    console.log("[Admin Users API] Fetched users count:", users?.length || 0);
 
     // Map to the expected format
     const mappedUsers = (users as UserRow[]).map((u: UserRow) => ({
