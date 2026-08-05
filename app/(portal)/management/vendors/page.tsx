@@ -17,6 +17,8 @@ import {
   Loader2,
   Building2,
   Wrench,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface Vendor {
@@ -48,6 +50,9 @@ export default function VendorsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadVendors();
@@ -71,6 +76,38 @@ export default function VendorsPage() {
       setError(error instanceof Error ? error.message : "Failed to load vendors");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleDelete(vendor: Vendor) {
+    setVendorToDelete(vendor);
+    setDeleteModalOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!vendorToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/vendors/${vendorToDelete.id}`, {
+        method: "DELETE",
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete vendor");
+      }
+      
+      // Remove from local state
+      setVendors(vendors.filter(v => v.id !== vendorToDelete.id));
+      setDeleteModalOpen(false);
+      setVendorToDelete(null);
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete vendor");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -335,11 +372,21 @@ export default function VendorsPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Link href={`/management/vendors/${vendor.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <ArrowRight className="h-4 w-4" />
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/management/vendors/${vendor.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDelete(vendor)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -355,6 +402,50 @@ export default function VendorsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && vendorToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <h2 className="text-lg font-semibold">Delete Vendor</h2>
+              </div>
+              <p className="text-[var(--secondary-text)] mb-6">
+                Are you sure you want to delete <strong>{vendorToDelete.companyName}</strong>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteModalOpen(false);
+                    setVendorToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Delete Vendor
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
