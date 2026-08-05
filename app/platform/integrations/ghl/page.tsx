@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Save, TestTube, CheckCircle, XCircle, Mail, Key, Building } from "lucide-react";
+import { Loader2, Save, TestTube, CheckCircle, XCircle, Mail, Key, Building, BadgeCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface GHLSettings {
   ghl_api_token: string;
@@ -22,6 +23,7 @@ export default function GHLIntegrationPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -33,11 +35,14 @@ export default function GHLIntegrationPage() {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.settings) {
+          const hasToken = !!result.settings.ghl_api_token;
+          const hasLocation = !!result.settings.ghl_location_id;
           setSettings({
             ghl_api_token: result.settings.ghl_api_token || "",
             ghl_location_id: result.settings.ghl_location_id || "",
             ghl_webhook_url: result.settings.ghl_webhook_url || "",
           });
+          setIsConnected(hasToken && hasLocation);
         }
       }
     } catch (error) {
@@ -61,6 +66,7 @@ export default function GHLIntegrationPage() {
       });
 
       if (response.ok) {
+        setIsConnected(!!settings.ghl_api_token && !!settings.ghl_location_id);
         alert("GHL settings saved successfully!");
       } else {
         const error = await response.json();
@@ -111,11 +117,19 @@ export default function GHLIntegrationPage() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">GoHighLevel (GHL) Integration</h1>
-        <p className="text-gray-500 mt-1">
-          Configure GHL API credentials for email sending and CRM integration
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">GoHighLevel (GHL) Integration</h1>
+          <p className="text-gray-500 mt-1">
+            Configure GHL API credentials for email sending and CRM integration
+          </p>
+        </div>
+        {isConnected && (
+          <Badge className="bg-green-100 text-green-800 border-green-200 px-3 py-1">
+            <BadgeCheck className="h-4 w-4 mr-1" />
+            Connected
+          </Badge>
+        )}
       </div>
 
       {/* Settings Form */}
