@@ -14,11 +14,15 @@ async function checkPlatformAdmin(supabase: any, user: any) {
     .is("revoked_at", null)
     .maybeSingle();
 
-  console.log("Platform role query result:", platformRole, "Error:", error);
+  console.log("Platform role query result:", JSON.stringify(platformRole), "Error:", error);
+  console.log("Role value:", platformRole?.role);
+  console.log("Role type:", typeof platformRole?.role);
 
   // Also check user_metadata fallback
   const isMetadataAdmin = user.user_metadata?.is_platform_admin === true;
-  const isDbAdmin = platformRole?.role === 'admin' || platformRole?.role === 'PLATFORM_ADMIN';
+  const roleValue = platformRole?.role;
+  const isDbAdmin = roleValue === 'admin' || roleValue === 'PLATFORM_ADMIN';
+  console.log("Comparing role:", roleValue, "=== 'admin':", roleValue === 'admin', "=== 'PLATFORM_ADMIN':", roleValue === 'PLATFORM_ADMIN');
   
   console.log("isDbAdmin:", isDbAdmin, "isMetadataAdmin:", isMetadataAdmin);
   
