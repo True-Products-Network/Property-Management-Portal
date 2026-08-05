@@ -74,7 +74,7 @@ function getDisplayRole(user: TenantUser): string {
   // Map database role to display name
   const roleMap: Record<string, string> = {
     "admin": "Manager",
-    "member": "Staff",
+    "member": "Member",
   };
   
   return roleMap[user.role] || user.role;
@@ -282,7 +282,7 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
               <SelectContent>
                 <SelectItem value="">All Roles</SelectItem>
                 <SelectItem value="admin">Manager</SelectItem>
-                <SelectItem value="member">Staff</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -380,7 +380,7 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
                             {user.role === "admin" ? (
                               <>
                                 <UserX className="mr-2 h-4 w-4" />
-                                Demote to Staff
+                                Demote to Member
                               </>
                             ) : (
                               <>
