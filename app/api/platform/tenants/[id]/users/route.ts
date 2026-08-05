@@ -377,6 +377,8 @@ async function pushToGHL(
     const ghlCreds = ghlCredsList && ghlCredsList.length > 0 ? ghlCredsList[0] : null;
 
     console.log("[GHL Push] Credentials query error:", credsError?.message || "none");
+    console.log("[GHL Push] Credentials list length:", ghlCredsList?.length || 0);
+    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no");
     console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no", "Type:", ghlCreds?.type);
 
     if (!ghlCreds) {
