@@ -19,12 +19,15 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase admin client with service role to bypass email confirmation
     const supabase = await createClient();
-    
+
+    // Get redirect URL from database
+    const redirectUrl = await getRedirectUrl(supabase, role);
+
     // Note: To create confirmed users without email verification,
     // you need to use the service role key in Supabase
     // For now, we'll create the user and they need to confirm via email
     // or you can disable email confirmation in Supabase Auth settings
-    
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
           last_name: lastName,
           roles: [role],
           ghl_contact_id: ghlContactId || `TEST-${Date.now()}`,
-          redirect_url: getRedirectUrl(role),
+          redirect_url: redirectUrl,
         },
       },
     });
@@ -87,19 +90,30 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function getRedirectUrl(role: string): string {
-  switch (role) {
-    case "ADMIN_USER":
-    case "STAFF":
-      return "/management/overview";
-    case "BOARD_MEMBER":
-      return "/board";
-    case "OWNER":
-    case "RESIDENT":
-      return "/owner";
-    case "VENDOR":
-      return "/vendor";
-    default:
-      return "/management/overview";
+async function getRedirectUrl(supabase: any, role: string): Promise<string> {
+  // Fetch role configuration from portal_roles
+  const { data: roleData } = await supabase
+    .from("portal_roles")
+    .select("redirect_url, name")
+    .eq("name", role)
+    .single();
+
+  if (roleData?.redirect_url) {
+    return roleData.redirect_url;
   }
+
+  // Default fallback based on role name patterns
+  const roleLower = role.toLowerCase();
+  if (roleLower.includes("board")) {
+    return "/board";
+  }
+  if (roleLower.includes("owner") || roleLower.includes("resident")) {
+    return "/owner";
+  }
+  if (roleLower.includes("vendor")) {
+    return "/vendor";
+  }
+
+  // Default for all management roles
+  return "/management/overview";
 }

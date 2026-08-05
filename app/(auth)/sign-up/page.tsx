@@ -94,22 +94,7 @@ export default function SignUpPage() {
     }
   };
 
-  const getRedirectUrl = (role: string): string => {
-    switch (role) {
-      case "ADMIN_USER":
-      case "STAFF":
-        return "/management/overview";
-      case "BOARD_MEMBER":
-        return "/board";
-      case "OWNER":
-      case "RESIDENT":
-        return "/owner";
-      case "VENDOR":
-        return "/vendor";
-      default:
-        return "/management/overview";
-    }
-  };
+  // Redirect URL is now determined server-side based on portal_roles configuration
 
   if (success) {
     return (
