@@ -87,16 +87,27 @@ export async function GET(
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    // Get auth user details separately
+    // Get auth user details using service client (admin access required for auth.users)
     const userIds = tenantUsers?.map((tu: { user_id: string }) => tu.user_id) || [];
     let authUsers: { id: string; email: string; user_metadata: any }[] = [];
     
     if (userIds.length > 0) {
-      const { data: authData } = await supabase
-        .from("auth.users")
-        .select("id, email, user_metadata")
-        .in("id", userIds);
-      authUsers = authData || [];
+      try {
+        // Use service role to access auth.users
+        const serviceClient = createServiceClient();
+        const { data: authData, error: authError } = await serviceClient
+          .from("auth.users")
+          .select("id, email, user_metadata")
+          .in("id", userIds);
+        
+        if (authError) {
+          console.error("[Tenant Users API] Error fetching auth users:", authError);
+        } else {
+          authUsers = authData || [];
+        }
+      } catch (authFetchError) {
+        console.error("[Tenant Users API] Failed to fetch auth users:", authFetchError);
+      }
     }
 
     // Merge auth user data with tenant users
