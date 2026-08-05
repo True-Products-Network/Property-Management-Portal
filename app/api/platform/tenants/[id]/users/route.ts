@@ -304,6 +304,16 @@ export async function POST(
       }
     }
 
+    // Push to GHL (async - don't wait)
+    pushToGHL(supabase, {
+      email: validation.data.email,
+      firstName: validation.data.firstName,
+      lastName: validation.data.lastName,
+      role: validation.data.role,
+      tenantId,
+      isNewUser,
+    }).catch(console.error);
+
     // Log audit event
     await logAuditEvent(supabase, {
       action: "tenant_user_invited",
@@ -336,5 +346,121 @@ export async function POST(
       { success: false, error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+// Helper to push user to GHL
+async function pushToGHL(
+  supabase: any,
+  params: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    tenantId: string;
+    isNewUser: boolean;
+  }
+) {
+  // Get GHL credentials
+  const { data: locationSetting } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ghl_location_id")
+    .single();
+
+  const { data: tokenSetting } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "ghl_access_token")
+    .single();
+
+  if (!locationSetting?.value || !tokenSetting?.value) {
+    console.log("[GHL Push] GHL not configured");
+    return;
+  }
+
+  // Get tenant info
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name")
+    .eq("id", params.tenantId)
+    .single();
+
+  const tenantName = tenant?.name || "Associos";
+
+  console.log(`[GHL Push] Pushing user ${params.email} to GHL`);
+
+  try {
+    // Try GHL v2 API
+    const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Version": "2021-07-28",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        locationId: locationSetting.value,
+        email: params.email,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        tags: [
+          "portal_user",
+          params.isNewUser ? "status_invited" : "status_active",
+          `role_${params.role}`,
+          `tenant_${tenantName}`,
+          "source_associos_portal"
+        ],
+        customFields: [
+          { key: "portal_role", field_value: params.role },
+          { key: "tenant_name", field_value: tenantName },
+          { key: "source", field_value: "Associos Portal" },
+          { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
+        ],
+      }),
+    });
+
+    if (v2Response.ok) {
+      const result = await v2Response.json();
+      console.log("[GHL Push] Contact created in GHL v2:", result.contact?.id);
+      return;
+    }
+
+    // Fall back to v1
+    console.log("[GHL Push] V2 failed, trying V1...");
+    const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: params.email,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        tags: [
+          "portal_user",
+          params.isNewUser ? "status_invited" : "status_active",
+          `role_${params.role}`,
+          `tenant_${tenantName}`,
+          "source_associos_portal"
+        ],
+        customFields: [
+          { id: "portal_role", value: params.role },
+          { id: "tenant_name", value: tenantName },
+          { id: "source", value: "Associos Portal" },
+          { id: "portal_user_type", value: params.isNewUser ? "invited" : "active" },
+        ],
+      }),
+    });
+
+    if (v1Response.ok) {
+      console.log("[GHL Push] Contact created in GHL v1");
+    } else {
+      console.error("[GHL Push] V1 failed:", await v1Response.text());
+    }
+  } catch (error) {
+    console.error("[GHL Push] Error:", error);
   }
 }
