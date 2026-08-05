@@ -8,26 +8,21 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-interface Contact {
+interface User {
   id: string;
-  contactId: string;
-  firstName: string;
-  lastName: string;
   email: string;
-  phone?: string;
-  mobilePhone?: string;
-  portalInvitationStatus: string;
-  createdAt: string;
-}
-
-interface UserWithStatus extends Contact {
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  role?: string;
   status: string;
+  createdAt: string;
+  lastSignInAt?: string;
 }
 
 export default function UserMaintenancePage() {
   const router = useRouter();
-  const [users, setUsers] = useState<UserWithStatus[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,41 +33,24 @@ export default function UserMaintenancePage() {
       try {
         setLoading(true);
         
-        // Fetch contacts
-        const contactsRes = await fetch("/api/contacts?pageSize=100");
+        // Fetch users from admin API
+        const usersRes = await fetch("/api/admin/users");
 
-        if (!contactsRes.ok) {
-          if (contactsRes.status === 401) {
+        if (!usersRes.ok) {
+          if (usersRes.status === 401) {
             router.push("/access-denied");
             return;
           }
-          throw new Error("Failed to fetch contacts");
+          throw new Error("Failed to fetch users");
         }
 
-        const contactsData = await contactsRes.json();
+        const usersData = await usersRes.json();
 
-        if (!contactsData.success) {
-          throw new Error(contactsData.error || "Failed to fetch contacts");
+        if (!usersData.success) {
+          throw new Error(usersData.error || "Failed to fetch users");
         }
 
-        const contacts: Contact[] = contactsData.data?.data || [];
-
-        // Map contacts to users
-        const usersWithStatus: UserWithStatus[] = contacts.map((contact) => {
-          const status = contact.portalInvitationStatus === "active" || contact.portalInvitationStatus === "accepted" 
-            ? "active" 
-            : contact.portalInvitationStatus === "pending" || contact.portalInvitationStatus === "invited"
-            ? "pending"
-            : "inactive";
-
-          return {
-            ...contact,
-            name: `${contact.firstName} ${contact.lastName}`,
-            status,
-          };
-        });
-
-        setUsers(usersWithStatus);
+        setUsers(usersData.data || []);
         setError(null);
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -89,7 +67,9 @@ export default function UserMaintenancePage() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch = 
       !searchQuery || 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (user.name && user.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (user.firstName && user.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (user.lastName && user.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = 
@@ -102,14 +82,25 @@ export default function UserMaintenancePage() {
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case "active":
-      case "accepted":
         return "bg-green-100 text-green-700";
       case "pending":
-      case "invited":
         return "bg-amber-100 text-amber-700";
       case "inactive":
       case "suspended":
         return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  const getRoleBadgeClass = (role?: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-purple-100 text-purple-700";
+      case "manager":
+        return "bg-blue-100 text-blue-700";
+      case "user":
+        return "bg-gray-100 text-gray-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -185,11 +176,11 @@ export default function UserMaintenancePage() {
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[300px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)] z-10" />
                 <input
                   type="text"
                   placeholder="Search users..."
-                  className="input pl-10 w-full"
+                  className="w-full h-10 pl-10 pr-4 rounded-md border border-[var(--border-color)] bg-white text-[var(--main-text)] placeholder:text-[var(--secondary-text)] focus:outline-none focus:ring-2 focus:ring-[var(--teal)] focus:border-transparent"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -224,8 +215,9 @@ export default function UserMaintenancePage() {
               <thead>
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">User</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Contact ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Role</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Last Sign In</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Actions</th>
                 </tr>
               </thead>
@@ -235,21 +227,26 @@ export default function UserMaintenancePage() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white text-sm font-medium">
-                          {user.name.charAt(0).toUpperCase()}
+                          {(user.name || user.firstName || user.email).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium text-[var(--main-text)]">{user.name}</p>
+                          <p className="font-medium text-[var(--main-text)]">{user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}</p>
                           <p className="text-sm text-[var(--secondary-text)]">{user.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
-                      {user.contactId}
+                    <td className="py-3 px-4">
+                      <Badge className={getRoleBadgeClass(user.role)}>
+                        {user.role || 'User'}
+                      </Badge>
                     </td>
                     <td className="py-3 px-4">
                       <Badge className={getStatusBadgeClass(user.status)}>
                         {user.status}
                       </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
+                      {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
