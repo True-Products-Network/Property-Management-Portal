@@ -22,11 +22,22 @@ const updateTenantSchema = z.object({
 
 // Check if user has platform admin or support access
 async function isPlatformAdminOrSupport(supabase: Awaited<ReturnType<typeof createClient>>): Promise<boolean> {
-  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
-  if (isAdmin) return true;
-  
-  const { data: isSupport } = await supabase.rpc("is_platform_support");
-  return !!isSupport;
+  try {
+    const { data: isAdmin, error: adminError } = await supabase.rpc("is_platform_admin");
+    if (adminError) {
+      console.error("[Tenant API] is_platform_admin error:", adminError);
+    }
+    if (isAdmin) return true;
+    
+    const { data: isSupport, error: supportError } = await supabase.rpc("is_platform_support");
+    if (supportError) {
+      console.error("[Tenant API] is_platform_support error:", supportError);
+    }
+    return !!isSupport;
+  } catch (error) {
+    console.error("[Tenant API] Error checking platform access:", error);
+    return false;
+  }
 }
 
 // Log audit event
