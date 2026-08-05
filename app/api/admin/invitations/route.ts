@@ -84,16 +84,21 @@ export async function POST(request: NextRequest) {
     });
 
     // Push contact to GHL and send invitation (if configured)
-    // This is async - don't wait for it
-    sendGHLInvitation(supabase, {
-      email,
-      firstName,
-      lastName,
-      token,
-      tenantId,
-      role,
-      portalRole,
-    }).catch(console.error);
+    // Now synchronous to catch errors
+    try {
+      await sendGHLInvitation(supabase, {
+        email,
+        firstName,
+        lastName,
+        token,
+        tenantId,
+        role,
+        portalRole,
+      });
+    } catch (ghlError) {
+      console.error("[Invitations] GHL push failed:", ghlError);
+      // Don't fail the invitation if GHL push fails, just log it
+    }
 
     return NextResponse.json({
       success: true,
@@ -193,9 +198,11 @@ async function sendGHLInvitation(
     .single();
 
   if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("GHL not configured, skipping invitation sync");
+    console.log("[GHL Invitation] GHL not configured - location:", locationSetting?.value, "token:", tokenSetting?.value ? "exists" : "missing");
     return;
   }
+
+  console.log("[GHL Invitation] GHL configured - locationId:", locationSetting.value);
 
   // Get tenant info
   const { data: tenant } = await supabase
