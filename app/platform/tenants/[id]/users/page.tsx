@@ -336,15 +336,15 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[var(--primary-navy)] flex items-center justify-center text-white text-sm font-medium">
-                          {(user.first_name?.[0] || user.email[0]).toUpperCase()}
+                          {(user.first_name?.[0] || user.email?.[0] || "?").toUpperCase()}
                         </div>
                         <div>
                           <p className="font-medium">
                             {user.first_name && user.last_name
                               ? `${user.first_name} ${user.last_name}`
-                              : user.email}
+                              : user.email || "Unknown"}
                           </p>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                          <p className="text-sm text-gray-500">{user.email || "No email"}</p>
                         </div>
                       </div>
                     </TableCell>
