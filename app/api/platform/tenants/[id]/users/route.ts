@@ -371,7 +371,9 @@ async function pushToGHL(
     const { data: ghlCreds, error: credsError } = await supabase
       .from("ghl_credentials")
       .select("*")
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     console.log("[GHL Push] Credentials query error:", credsError?.message || "none");
     console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no", "Type:", ghlCreds?.type);
