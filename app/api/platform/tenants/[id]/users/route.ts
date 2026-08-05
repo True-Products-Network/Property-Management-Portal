@@ -446,8 +446,10 @@ async function pushToGHL(
         customFields: [
           { key: "portal_role", field_value: params.role },
           { key: "tenant_name", field_value: tenantName },
+          { key: "tenant_id", field_value: params.tenantId },
           { key: "source", field_value: "Associos Portal" },
           { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
+          { key: "created_by_platform", field_value: "true" },
         ],
       }),
     });
@@ -482,8 +484,10 @@ async function pushToGHL(
         customFields: [
           { id: "portal_role", value: params.role },
           { id: "tenant_name", value: tenantName },
+          { id: "tenant_id", value: params.tenantId },
           { id: "source", value: "Associos Portal" },
           { id: "portal_user_type", value: params.isNewUser ? "invited" : "active" },
+          { id: "created_by_platform", value: "true" },
         ],
       }),
     });
