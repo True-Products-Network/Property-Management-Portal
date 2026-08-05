@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+interface Association {
+  id: string;
+  name: string;
+}
+
 // GET /api/admin/users - Get all users for the current tenant
 // Supports filtering by associationId
 export async function GET(request: NextRequest) {
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
       .select("id, name")
       .eq("tenant_id", tenantId);
 
-    const associationMap = new Map(associations?.map(a => [a.id, a.name]) || []);
+    const associationMap = new Map((associations as Association[] || []).map((a: Association) => [a.id, a.name]));
 
     // Map users with association names
     const mappedUsers = (users || []).map((u) => ({
