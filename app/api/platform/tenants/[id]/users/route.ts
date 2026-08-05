@@ -83,12 +83,32 @@ export async function GET(
     // Get users associated with this tenant
     const { data: tenantUsers, error } = await supabase
       .from("tenant_users")
-      .select(`
-        *,
-        user:auth.users!tenant_users_user_id_fkey(id, email, user_metadata)
-      `)
+      .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
+
+    // Get auth user details separately
+    const userIds = tenantUsers?.map((tu: { user_id: string }) => tu.user_id) || [];
+    let authUsers: { id: string; email: string; user_metadata: any }[] = [];
+    
+    if (userIds.length > 0) {
+      const { data: authData } = await supabase
+        .from("auth.users")
+        .select("id, email, user_metadata")
+        .in("id", userIds);
+      authUsers = authData || [];
+    }
+
+    // Merge auth user data with tenant users
+    const mergedUsers = tenantUsers?.map((tu: { user_id: string; [key: string]: any }) => {
+      const authUser = authUsers.find((au: { id: string }) => au.id === tu.user_id);
+      return {
+        ...tu,
+        email: authUser?.email || tu.email,
+        first_name: tu.first_name || authUser?.user_metadata?.first_name,
+        last_name: tu.last_name || authUser?.user_metadata?.last_name,
+      };
+    });
 
     if (error) {
       console.error("Error fetching tenant users:", error);
@@ -112,7 +132,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        users: tenantUsers || [],
+        users: mergedUsers || [],
         contacts: contacts || [],
       },
     });
