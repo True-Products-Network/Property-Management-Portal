@@ -99,6 +99,9 @@ export default function RolesAndPermissionsPage() {
   });
   const [permissions, setPermissions] = useState<Permission[]>(DEFAULT_PERMISSIONS);
   const [auditReason, setAuditReason] = useState("");
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadRoles();
@@ -182,6 +185,45 @@ export default function RolesAndPermissionsPage() {
     setPermissions(DEFAULT_PERMISSIONS);
     setAuditReason("");
     setShowModal(true);
+  }
+
+  async function handleDelete(role: Role) {
+    // Prevent deleting system/default roles
+    if (role.isDefault) {
+      alert("System roles cannot be deleted");
+      return;
+    }
+    if (role.userCount > 0) {
+      alert(`Cannot delete role with ${role.userCount} active user(s). Reassign users first.`);
+      return;
+    }
+    setRoleToDelete(role);
+    setDeleteModalOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!roleToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/roles/${roleToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setDeleteModalOpen(false);
+        setRoleToDelete(null);
+        loadRoles();
+      } else {
+        const result = await response.json();
+        alert(result.error || "Failed to delete role");
+      }
+    } catch (error) {
+      console.error("Error deleting role:", error);
+      alert("Failed to delete role");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   async function handleSave() {
@@ -375,9 +417,22 @@ export default function RolesAndPermissionsPage() {
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(role)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(role)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        {!role.isDefault && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(role)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title={role.userCount > 0 ? "Cannot delete: role has users" : "Delete role"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -552,6 +607,50 @@ export default function RolesAndPermissionsPage() {
                       {editingRole ? "Save Changes" : "Create Role"}
                     </>
                   )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && roleToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <h2 className="text-lg font-semibold">Delete Role</h2>
+              </div>
+              <p className="text-[var(--secondary-text)] mb-6">
+                Are you sure you want to delete <strong>{roleToDelete.name}</strong>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDeleteModalOpen(false);
+                    setRoleToDelete(null);
+                  }}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDelete}
+                  disabled={isDeleting}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Trash2 className="h-4 w-4 mr-2" />
+                  )}
+                  Delete Role
                 </Button>
               </div>
             </div>

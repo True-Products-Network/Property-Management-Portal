@@ -16,47 +16,50 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tenantUser) {
+    if (!isPlatformAdmin && !tenantUser) {
       return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
     // Check if user is admin
-    if (tenantUser.role !== 'admin') {
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    if (!isPlatformAdmin && !isTenantAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
-    // Fetch role
+    // Fetch role from portal_roles
     const { data: role, error: roleError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .select("*")
       .eq("id", id)
-      .or(`tenant_id.is.null,tenant_id.eq.${tenantUser.tenant_id}`)
       .single();
 
     if (roleError || !role) {
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
-
-    // Fetch permissions for this role
-    const { data: permissions } = await supabase
-      .from("role_permissions")
-      .select("permission_code")
-      .eq("role_id", role.id);
-
-    // Get user count for this role
-    const { count: userCount } = await supabase
-      .from("user_roles")
-      .select("*", { count: "exact", head: true })
-      .eq("role_id", role.id)
-      .eq("tenant_id", tenantUser.tenant_id);
 
     return NextResponse.json({
       success: true,
@@ -64,10 +67,11 @@ export async function GET(
         id: role.id,
         name: role.name,
         description: role.description || "",
-        is_system_role: role.is_system_role,
-        is_active: role.is_active,
-        permissions: (permissions || []).map((p: { permission_code: string }) => p.permission_code),
-        user_count: userCount || 0,
+        is_system_role: role.is_default,
+        is_active: role.status === 'active',
+        requires_mfa: role.requires_mfa,
+        permissions: role.permissions || [],
+        user_count: role.user_count || 0,
         created_at: role.created_at,
         updated_at: role.updated_at,
       }
@@ -93,32 +97,48 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tenantUser) {
+    if (!isPlatformAdmin && !tenantUser) {
       return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
     // Check if user is admin
-    if (tenantUser.role !== 'admin') {
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    if (!isPlatformAdmin && !isTenantAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { name, description, permissions, is_active } = body;
+    const { name, description, permissions, is_active, requires_mfa } = body;
 
-    // Check if role exists and belongs to this tenant (or is system role)
+    // Check if role exists
     const { data: existingRole, error: existingError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .select("*")
       .eq("id", id)
-      .or(`tenant_id.is.null,tenant_id.eq.${tenantUser.tenant_id}`)
       .single();
 
     if (existingError || !existingRole) {
@@ -126,19 +146,20 @@ export async function PUT(
     }
 
     // Cannot edit system roles
-    if (existingRole.is_system_role) {
+    if (existingRole.is_default) {
       return NextResponse.json({ error: "Cannot edit system roles" }, { status: 403 });
     }
 
     // Update role
     const { data: role, error: roleError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .update({
         name: name?.trim(),
         description: description?.trim(),
-        is_active: is_active,
+        permissions: permissions,
+        status: is_active ? 'active' : 'inactive',
+        requires_mfa: requires_mfa,
         updated_at: new Date().toISOString(),
-        updated_by: user.id,
       })
       .eq("id", id)
       .select()
@@ -149,34 +170,9 @@ export async function PUT(
       return NextResponse.json({ error: "Failed to update role" }, { status: 500 });
     }
 
-    // Update permissions - first delete existing, then insert new
-    if (permissions !== undefined) {
-      // Delete existing permissions
-      await supabase
-        .from("role_permissions")
-        .delete()
-        .eq("role_id", id);
-
-      // Insert new permissions
-      if (permissions && permissions.length > 0) {
-        const permissionInserts = permissions.map((code: string) => ({
-          role_id: id,
-          permission_code: code,
-        }));
-
-        const { error: permError } = await supabase
-          .from("role_permissions")
-          .insert(permissionInserts);
-
-        if (permError) {
-          console.error("Error updating permissions:", permError);
-        }
-      }
-    }
-
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
-      tenant_id: tenantUser.tenant_id,
+      tenant_id: tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000',
       event_type: "ROLE_UPDATED",
       entity_type: "role",
       entity_id: id,
@@ -209,29 +205,45 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!tenantUser) {
+    if (!isPlatformAdmin && !tenantUser) {
       return NextResponse.json({ error: "No tenant found" }, { status: 403 });
     }
 
     // Check if user is admin
-    if (tenantUser.role !== 'admin') {
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    if (!isPlatformAdmin && !isTenantAdmin) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
-    // Check if role exists and belongs to this tenant
+    // Check if role exists
     const { data: role, error: roleError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .select("*")
       .eq("id", id)
-      .eq("tenant_id", tenantUser.tenant_id)
       .single();
 
     if (roleError || !role) {
@@ -239,36 +251,21 @@ export async function DELETE(
     }
 
     // Cannot delete system roles
-    if (role.is_system_role) {
+    if (role.is_default) {
       return NextResponse.json({ error: "Cannot delete system roles" }, { status: 403 });
     }
 
     // Check if role is in use
-    const { count, error: countError } = await supabase
-      .from("user_roles")
-      .select("*", { count: "exact", head: true })
-      .eq("role_id", id);
-
-    if (countError) {
-      console.error("Error checking role usage:", countError);
-    }
-
-    if (count && count > 0) {
+    if (role.user_count > 0) {
       return NextResponse.json(
-        { error: "Cannot delete role that is assigned to users" },
+        { error: `Cannot delete role that is assigned to ${role.user_count} user(s)` },
         { status: 400 }
       );
     }
 
-    // Delete role permissions first
-    await supabase
-      .from("role_permissions")
-      .delete()
-      .eq("role_id", id);
-
     // Delete role
     const { error: deleteError } = await supabase
-      .from("roles")
+      .from("portal_roles")
       .delete()
       .eq("id", id);
 
@@ -279,7 +276,7 @@ export async function DELETE(
 
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
-      tenant_id: tenantUser.tenant_id,
+      tenant_id: tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000',
       event_type: "ROLE_DELETED",
       entity_type: "role",
       entity_id: id,
