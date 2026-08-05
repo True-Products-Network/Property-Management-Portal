@@ -215,27 +215,22 @@ export async function POST(
       }
     }
 
-    // Create contact record
+    // Create contact record (only use columns that exist in the table)
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
       .insert({
-        tenant_id: tenantId,
         first_name: validation.data.firstName,
         last_name: validation.data.lastName,
         email: validation.data.email,
-        primary_phone: validation.data.phone,
-        user_id: userId,
-        contact_type: "staff",
-        is_primary_contact: validation.data.role === "admin_user",
-        created_by: currentUser?.id,
-        updated_by: currentUser?.id,
+        phone: validation.data.phone,
+        email_permission: true,
       })
       .select()
       .single();
 
     if (contactError) {
       console.error("Error creating contact:", contactError);
-      // Continue even if contact creation fails
+      // Continue even if contact creation fails - user is still created
     }
 
     // Create tenant user relationship
