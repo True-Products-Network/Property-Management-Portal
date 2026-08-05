@@ -12,8 +12,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is platform admin (from user_metadata) or tenant admin
-    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    // Check if user is platform admin (from user_metadata or platform_user_roles table)
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    
+    // Also check platform_user_roles table if not already identified as platform admin
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
     
     // Get user's tenant
     const { data: tenantUser } = await supabase
@@ -78,24 +92,25 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: rolesWithPermissions });
+
   } catch (error) {
     console.error("Error in GET /api/admin/roles:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// POST /api/admin/roles - Create new role
+// POST /api/admin/roles - Create a new role
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Check if user is authenticated
+    // Check authentication
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is platform admin (from user_metadata) or tenant admin
+    // Check if user is platform admin
     const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
     
     // Get user's tenant
@@ -103,23 +118,17 @@ export async function POST(request: NextRequest) {
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+      .single();
 
-    // If not platform admin and no tenant, deny access
-    if (!isPlatformAdmin && !tenantUser) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 403 });
-    }
-
-    // Check if user is admin (role = 'admin' in tenant_users) or platform admin
     const isTenantAdmin = tenantUser?.role === 'admin';
+    
     if (!isPlatformAdmin && !isTenantAdmin) {
-      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Use tenant_id from tenantUser or a default for platform admins
-    const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
+    const tenantId = tenantUser?.tenant_id;
 
+    // Parse request body
     const body = await request.json();
     const { name, description, permissions, is_active } = body;
 

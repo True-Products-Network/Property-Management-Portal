@@ -47,9 +47,33 @@ export async function GET(request: NextRequest) {
     // user_metadata might have "ADMIN_USER" but portal_roles has "Admin User"
     const roleVariations = [
       primaryRole, // exact match
-      primaryRole.replace(/_/g, " "), // ADMIN_USER -> Admin User
-      primaryRole.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()), // ADMIN_USER -> Admin User (title case)
+      primaryRole.replace(/_/g, " "), // ADMIN_USER -> ADMIN USER
+      primaryRole.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()), // ADMIN_USER -> Admin User (title case)
+      primaryRole.replace(/_/g, "_"), // just in case
     ];
+    
+    // Also add common variations
+    if (primaryRole === "ADMIN_USER") {
+      roleVariations.push("Admin User");
+    } else if (primaryRole === "PORTFOLIO_MANAGER") {
+      roleVariations.push("Portfolio Manager");
+    } else if (primaryRole === "ASSOCIATION_MANAGER") {
+      roleVariations.push("Association Manager");
+    } else if (primaryRole === "PROPERTY_MANAGER") {
+      roleVariations.push("Property Manager");
+    } else if (primaryRole === "BOARD_MEMBER") {
+      roleVariations.push("Board Member");
+    } else if (primaryRole === "VENDOR_CONTRACTOR") {
+      roleVariations.push("Vendor Contractor");
+    } else if (primaryRole === "RESIDENT") {
+      roleVariations.push("Resident");
+    } else if (primaryRole === "OWNER") {
+      roleVariations.push("Owner");
+    } else if (primaryRole === "STAFF") {
+      roleVariations.push("Staff");
+    } else if (primaryRole === "FINANCE_USER") {
+      roleVariations.push("Finance User");
+    }
 
     // Fetch role details from portal_roles - try different name formats
     let roleData = null;
