@@ -3,6 +3,17 @@ import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
 
+interface UserRow {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;
+  status: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
 // GET /api/admin/users - Get all users for admin management
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Map to the expected format
-    const mappedUsers = users.map((u) => ({
+    const mappedUsers = (users as UserRow[]).map((u: UserRow) => ({
       id: u.id,
       email: u.email,
       firstName: u.first_name,
