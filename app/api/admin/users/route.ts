@@ -6,6 +6,19 @@ interface Association {
   name: string;
 }
 
+interface TenantUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string | null;
+  status: string | null;
+  tenant_id: string;
+  association_id: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
 // GET /api/admin/users - Get all users for the current tenant
 // Supports filtering by associationId
 export async function GET(request: NextRequest) {
@@ -84,7 +97,7 @@ export async function GET(request: NextRequest) {
     const associationMap = new Map((associations as Association[] || []).map((a: Association) => [a.id, a.name]));
 
     // Map users with association names
-    const mappedUsers = (users || []).map((u) => ({
+    const mappedUsers = (users as TenantUser[] || []).map((u: TenantUser) => ({
       id: u.id,
       email: u.email,
       firstName: u.first_name,
