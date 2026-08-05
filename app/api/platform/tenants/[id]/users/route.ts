@@ -111,8 +111,11 @@ export async function GET(
     }
 
     // Merge auth user data with tenant users
+    console.log(`[Tenant Users API] Merging ${tenantUsers?.length || 0} tenant users with ${authUsers.length} auth users`);
+    
     const mergedUsers = tenantUsers?.map((tu: { user_id: string; [key: string]: any }) => {
       const authUser = authUsers.find((au: { id: string }) => au.id === tu.user_id);
+      console.log(`[Tenant Users API] User ${tu.user_id}: authEmail=${authUser?.email}, tuEmail=${tu.email}, metadata=`, authUser?.user_metadata);
       return {
         ...tu,
         email: authUser?.email || tu.email,
