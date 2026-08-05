@@ -39,27 +39,38 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const associationId = searchParams.get("associationId");
 
-    // First, get the current user's tenant_id from tenant_users
-    const { data: currentUser, error: userError } = await supabase
+    // First, try to get the current user's tenant_id from tenant_users
+    let { data: currentUser } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", authUser.id)
       .maybeSingle();
 
-    if (userError || !currentUser) {
-      console.error("[Admin Users API] Error getting current user:", userError);
-      return NextResponse.json(
-        { success: false, error: "Failed to get user context" },
-        { status: 500 }
-      );
+    // If not in tenant_users, check portal_users for admin status
+    if (!currentUser) {
+      const { data: portalUser } = await supabase
+        .from("portal_users")
+        .select("is_admin, status")
+        .eq("id", authUser.id)
+        .maybeSingle();
+
+      if (portalUser?.is_admin) {
+        // Admin user without tenant - get first tenant as fallback
+        const { data: firstTenant } = await supabase
+          .from("tenants")
+          .select("id")
+          .limit(1)
+          .single();
+
+        if (firstTenant) {
+          currentUser = { tenant_id: firstTenant.id, role: 'admin' };
+        }
+      }
     }
 
-    const tenantId = currentUser.tenant_id;
-
-    // If no tenant user found, we can still show users if they're a platform admin
-    // For now, return empty list with proper error
+    // If still no tenant context, return empty
     if (!currentUser) {
-      console.error("[Admin Users API] User not found in tenant_users:", authUser.id);
+      console.error("[Admin Users API] User not found in tenant_users or portal_users:", authUser.id);
       return NextResponse.json({
         success: true,
         data: [],
@@ -71,6 +82,8 @@ export async function GET(request: NextRequest) {
         }
       });
     }
+
+    const tenantId = currentUser.tenant_id;
 
     // Build the query for tenant users
     let query = supabase
