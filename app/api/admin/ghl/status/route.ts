@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
       locationName: credentials.location_name || association?.ghl_location_name,
       companyId: credentials.company_id || association?.ghl_company_id,
       lastSync: credentials.updated_at,
+      lastTested: credentials.last_tested_at,
     });
   } catch (error) {
     console.error("Error checking GHL status:", error);

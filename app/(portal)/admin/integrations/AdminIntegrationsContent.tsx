@@ -40,6 +40,7 @@ import {
   FileText,
   CheckSquare,
   XSquare,
+  TestTube,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,6 +65,7 @@ interface GhlConnectionStatus {
   webhooksConfigured?: boolean;
   scopes?: string[];
   lastSync?: string;
+  lastTested?: string;
   error?: string;
 }
 
@@ -644,15 +646,23 @@ export default function AdminIntegrationsContent() {
                 </CardDescription>
               </div>
             </div>
-            <Badge
-              className={
-                ghlStatus?.connected
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-700"
-              }
-            >
-              {ghlStatus?.connected ? "Connected" : "Not Connected"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                className={
+                  ghlStatus?.connected
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-700"
+                }
+              >
+                {ghlStatus?.connected ? "Connected" : "Not Connected"}
+              </Badge>
+              {ghlStatus?.connected && ghlStatus?.lastTested && (
+                <Badge className="bg-blue-100 text-blue-700">
+                  <TestTube className="w-3 h-3 mr-1" />
+                  Tested
+                </Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -765,11 +775,12 @@ export default function AdminIntegrationsContent() {
                   onClick={handleTestConnection}
                   disabled={isConnecting}
                   variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
                 >
                   {isConnecting ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    <TestTube className="h-4 w-4 mr-2" />
                   )}
                   Test Connection
                 </Button>
@@ -785,6 +796,7 @@ export default function AdminIntegrationsContent() {
                 <Button
                   onClick={handleDisconnect}
                   variant="destructive"
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Disconnect

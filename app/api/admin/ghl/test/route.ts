@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
 import { getGhlCredentials } from "@/lib/ghl/credentials";
+import { createClient } from "@/lib/supabase/server";
 
 // POST /api/admin/ghl/test - Test GHL connection
 export async function POST(request: NextRequest) {
@@ -14,6 +15,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Get associationId from request body
+    const body = await request.json().catch(() => ({}));
+    const associationId = body.associationId;
 
     // Get stored credentials
     const credentials = await getGhlCredentials();
@@ -78,6 +83,15 @@ export async function POST(request: NextRequest) {
 
         const locationData = await testResponse.json();
 
+        // Update last_tested timestamp if associationId provided
+        if (associationId) {
+          const supabase = await createClient();
+          await supabase
+            .from("association_ghl_credentials")
+            .update({ last_tested_at: new Date().toISOString() })
+            .eq("association_id", associationId);
+        }
+
         return NextResponse.json({
           success: true,
           message: "OAuth connection test successful",
@@ -131,6 +145,15 @@ export async function POST(request: NextRequest) {
         }
 
         const locationData = await testResponse.json();
+
+        // Update last_tested timestamp if associationId provided
+        if (associationId) {
+          const supabase = await createClient();
+          await supabase
+            .from("association_ghl_credentials")
+            .update({ last_tested_at: new Date().toISOString() })
+            .eq("association_id", associationId);
+        }
 
         return NextResponse.json({
           success: true,
