@@ -43,16 +43,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch role details from portal_roles
-    const { data: roleData, error: roleError } = await supabase
-      .from("portal_roles")
-      .select("name, description, permissions, requires_mfa")
-      .eq("name", primaryRole)
-      .eq("status", "active")
-      .single();
+    // Try to find role - handle different naming conventions
+    // user_metadata might have "ADMIN_USER" but portal_roles has "Admin User"
+    const roleVariations = [
+      primaryRole, // exact match
+      primaryRole.replace(/_/g, " "), // ADMIN_USER -> Admin User
+      primaryRole.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()), // ADMIN_USER -> Admin User (title case)
+    ];
 
-    if (roleError || !roleData) {
-      console.error("Error fetching role:", roleError);
+    // Fetch role details from portal_roles - try different name formats
+    let roleData = null;
+    for (const roleName of roleVariations) {
+      const { data, error } = await supabase
+        .from("portal_roles")
+        .select("name, description, permissions, requires_mfa")
+        .eq("name", roleName)
+        .eq("status", "active")
+        .maybeSingle();
+      
+      if (data) {
+        roleData = data;
+        break;
+      }
+    }
+
+    if (!roleData) {
+      console.error("Role not found in portal_roles:", primaryRole, "tried:", roleVariations);
       return NextResponse.json({ 
         permissions: [],
         menu: [],
@@ -60,6 +76,8 @@ export async function GET(request: NextRequest) {
         isPlatformAdmin: false,
       });
     }
+
+
 
     // Build menu from permissions
     const permissions = roleData.permissions || [];

@@ -34,11 +34,15 @@ export async function GET(request: NextRequest) {
       // Platform admins can see all associations
       const { data, error } = await supabase
         .from("associations")
-        .select("id, name, association_id as code")
+        .select("id, name, association_id")
         .order("name");
 
       if (error) throw error;
-      associations = data || [];
+      associations = (data || []).map((a: any) => ({
+        id: a.id,
+        name: a.name,
+        code: a.association_id,
+      }));
     } else {
       // Get user's contact record
       const { data: contact } = await supabase
@@ -59,12 +63,16 @@ export async function GET(request: NextRequest) {
           
           const { data, error } = await supabase
             .from("associations")
-            .select("id, name, association_id as code")
+            .select("id, name, association_id")
             .in("id", associationIds)
             .order("name");
 
           if (error) throw error;
-          associations = data || [];
+          associations = (data || []).map((a: any) => ({
+            id: a.id,
+            name: a.name,
+            code: a.association_id,
+          }));
         }
 
         // Also check if user has properties/units that link to associations
@@ -88,14 +96,19 @@ export async function GET(request: NextRequest) {
             
             const { data: propAssociations } = await supabase
               .from("associations")
-              .select("id, name, association_id as code")
+              .select("id, name, association_id")
               .in("id", propertyAssociationIds)
               .order("name");
 
             if (propAssociations) {
+              const mappedPropAssociations = propAssociations.map((a: any) => ({
+                id: a.id,
+                name: a.name,
+                code: a.association_id,
+              }));
               // Merge without duplicates
               const existingIds = new Set(associations.map(a => a.id));
-              propAssociations.forEach((pa: { id: string; name: string; code: string }) => {
+              mappedPropAssociations.forEach((pa: { id: string; name: string; code: string }) => {
                 if (!existingIds.has(pa.id)) {
                   associations.push(pa);
                 }
