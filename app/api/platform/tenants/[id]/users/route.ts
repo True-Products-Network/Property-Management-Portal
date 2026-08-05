@@ -305,18 +305,21 @@ export async function POST(
       }
     }
 
-    // Push to GHL (async - don't wait but handle errors)
+    // Push to GHL (sync - wait for completion to ensure it runs)
     console.log("[Tenant Users] Triggering GHL push...");
-    pushToGHL(supabase, {
-      email: validation.data.email,
-      firstName: validation.data.firstName,
-      lastName: validation.data.lastName,
-      role: validation.data.role,
-      tenantId,
-      isNewUser,
-    }).catch((err) => {
+    try {
+      await pushToGHL(supabase, {
+        email: validation.data.email,
+        firstName: validation.data.firstName,
+        lastName: validation.data.lastName,
+        role: validation.data.role,
+        tenantId,
+        isNewUser,
+      });
+      console.log("[Tenant Users] GHL push completed");
+    } catch (err) {
       console.error("[Tenant Users] GHL push error:", err);
-    });
+    }
 
     // Log audit event
     await logAuditEvent(supabase, {
