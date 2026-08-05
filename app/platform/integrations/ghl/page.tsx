@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Save, TestTube, CheckCircle, XCircle, Mail, Key, Building, BadgeCheck } from "lucide-react";
+import { Loader2, Save, TestTube, CheckCircle, XCircle, Mail, Key, Building, BadgeCheck, Unlink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface GHLSettings {
@@ -24,6 +24,7 @@ export default function GHLIntegrationPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isTested, setIsTested] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -95,14 +96,58 @@ export default function GHLIntegrationPage() {
         success: result.success,
         message: result.message || (result.success ? "Connection successful!" : "Connection failed"),
       });
+      setIsTested(result.success);
     } catch (error) {
       console.error("Error testing GHL connection:", error);
       setTestResult({
         success: false,
         message: "Failed to test connection",
       });
+      setIsTested(false);
     } finally {
       setIsTesting(false);
+    }
+  }
+
+  async function disconnect() {
+    if (!confirm("Are you sure you want to disconnect GHL? This will remove all GHL credentials.")) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/platform/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: "ghl",
+          settings: {
+            ghl_api_token: "",
+            ghl_location_id: "",
+            ghl_webhook_url: "",
+          },
+        }),
+      });
+
+      if (response.ok) {
+        setSettings({
+          ghl_api_token: "",
+          ghl_location_id: "",
+          ghl_webhook_url: "",
+        });
+        setIsConnected(false);
+        setIsTested(false);
+        setTestResult(null);
+        alert("GHL disconnected successfully!");
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to disconnect");
+      }
+    } catch (error) {
+      console.error("Error disconnecting GHL:", error);
+      alert("Failed to disconnect");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -124,12 +169,20 @@ export default function GHLIntegrationPage() {
             Configure GHL API credentials for email sending and CRM integration
           </p>
         </div>
-        {isConnected && (
-          <Badge className="bg-green-100 text-green-800 border-green-200 px-3 py-1">
-            <BadgeCheck className="h-4 w-4 mr-1" />
-            Connected
-          </Badge>
-        )}
+        <div className="flex gap-2">
+          {isTested && (
+            <Badge className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1">
+              <BadgeCheck className="h-4 w-4 mr-1" />
+              Tested
+            </Badge>
+          )}
+          {isConnected && (
+            <Badge className="bg-green-100 text-green-800 border-green-200 px-3 py-1">
+              <BadgeCheck className="h-4 w-4 mr-1" />
+              Connected
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Settings Form */}
@@ -156,7 +209,7 @@ export default function GHLIntegrationPage() {
               placeholder="Enter your GHL API token"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Get this from GHL → Settings → API Credentials
+              Get this from GHL → Settings → Private Integrations → Create New Integration
             </p>
           </div>
 
@@ -247,6 +300,16 @@ export default function GHLIntegrationPage() {
                 </>
               )}
             </Button>
+            {isConnected && (
+              <Button
+                onClick={disconnect}
+                disabled={isSaving}
+                variant="destructive"
+              >
+                <Unlink className="h-4 w-4 mr-2" />
+                Disconnect
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -259,8 +322,8 @@ export default function GHLIntegrationPage() {
         <CardContent className="space-y-4 text-sm text-gray-600">
           <ol className="list-decimal list-inside space-y-2">
             <li>Log in to your GoHighLevel account</li>
-            <li>Go to <strong>Settings → API Credentials</strong></li>
-            <li>Generate a new API token (or use existing)</li>
+            <li>Go to <strong>Settings → Private Integrations</strong></li>
+            <li>Click <strong>Create New Integration</strong></li>
             <li>Copy the <strong>API Token</strong> and paste above</li>
             <li>Find your <strong>Location ID</strong> in Settings → Business Profile or in the URL</li>
             <li>Click <strong>Test Connection</strong> to verify</li>
