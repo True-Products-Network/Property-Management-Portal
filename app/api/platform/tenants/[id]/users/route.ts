@@ -437,9 +437,9 @@ async function pushToGHL(
       { key: "portal_role", field_value: params.role },
       { key: "tenant_name", field_value: tenantName },
       { key: "tenant_id", field_value: params.tenantId },
-      { key: "source", field_value: "Associos Portal" },
+      { key: "portal_source", field_value: "Associos Portal" },
       { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
-      { key: "created_by_platform", field_value: "true" },
+      { key: "created_by_platform", field_value: true },
     ],
   };
 
@@ -526,9 +526,9 @@ async function pushToGHL(
                 { key: "invited_by_name", field_value: "Platform Admin" },
                 { key: "invitation_url", field_value: invitationUrl },
                 { key: "invitation_expiry_days", field_value: expiryDays },
-                { key: "source", field_value: "Associos Portal" },
+                { key: "portal_source", field_value: "Associos Portal" },
                 { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
-                { key: "created_by_platform", field_value: "true" },
+                { key: "created_by_platform", field_value: true },
               ],
             }),
           });
