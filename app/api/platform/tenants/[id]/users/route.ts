@@ -367,42 +367,74 @@ async function pushToGHL(
   try {
     console.log("[GHL Push] Starting GHL push for:", params.email);
     
-    // Get GHL credentials from ghl_credentials table (same as test/status endpoints)
-    const { data: ghlCredsList, error: credsError } = await supabase
-      .from("ghl_credentials")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1);
+    // Get GHL credentials from association_ghl_credentials table (where connect stores them)
+    // First get the tenant's association
+    const { data: tenantAssoc } = await supabase
+      .from("tenants")
+      .select("association_id")
+      .eq("id", params.tenantId)
+      .single();
     
-    const ghlCreds = ghlCredsList && ghlCredsList.length > 0 ? ghlCredsList[0] : null;
+    console.log("[GHL Push] Tenant association_id:", tenantAssoc?.association_id);
 
-    console.log("[GHL Push] Credentials query error:", credsError?.message || "none");
-    console.log("[GHL Push] Credentials list length:", ghlCredsList?.length || 0);
-    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no");
-    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no", "Type:", ghlCreds?.type);
+    let ghlCreds = null;
+    
+    if (tenantAssoc?.association_id) {
+      const { data: assocCreds, error: assocError } = await supabase
+        .from("association_ghl_credentials")
+        .select("*")
+        .eq("association_id", tenantAssoc.association_id)
+        .maybeSingle();
+      
+      console.log("[GHL Push] Association credentials error:", assocError?.message || "none");
+      console.log("[GHL Push] Association credentials found:", assocCreds ? "yes" : "no");
+      ghlCreds = assocCreds;
+    }
+    
+    // Fallback to global ghl_credentials if no association-specific credentials
+    if (!ghlCreds) {
+      console.log("[GHL Push] Trying global ghl_credentials table...");
+      const { data: globalCredsList, error: globalError } = await supabase
+        .from("ghl_credentials")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      
+      console.log("[GHL Push] Global credentials error:", globalError?.message || "none");
+      console.log("[GHL Push] Global credentials list length:", globalCredsList?.length || 0);
+      
+      if (globalCredsList && globalCredsList.length > 0) {
+        ghlCreds = globalCredsList[0];
+      }
+    }
+
+    console.log("[GHL Push] Final credentials found:", ghlCreds ? "yes" : "no");
 
     if (!ghlCreds) {
-      console.log("[GHL Push] GHL not configured - no credentials found");
+      console.log("[GHL Push] GHL not configured - no credentials found in association_ghl_credentials or ghl_credentials");
       return;
     }
 
-    // Get the access token (decrypt if needed - for now assume it's stored plaintext or handle accordingly)
+    // Get the access token and location_id
     const accessToken = ghlCreds.access_token;
     const locationId = ghlCreds.location_id;
+
+    console.log("[GHL Push] Access token present:", accessToken ? "yes" : "no");
+    console.log("[GHL Push] Location ID present:", locationId ? "yes" : "no");
 
     if (!accessToken || !locationId) {
       console.log("[GHL Push] GHL not configured - missing access_token or location_id");
       return;
     }
 
-  // Get tenant info
-  const { data: tenant } = await supabase
+  // Get tenant name
+  const { data: tenantData } = await supabase
     .from("tenants")
     .select("name")
     .eq("id", params.tenantId)
     .single();
 
-  const tenantName = tenant?.name || "Associos";
+  const tenantName = tenantData?.name || "Associos";
 
   console.log(`[GHL Push] Pushing user ${params.email} to GHL location ${locationId}`);
 
