@@ -177,30 +177,47 @@ async function sendUserToGHL(
     portalRole: string;
   }
 ) {
-  // Get GHL credentials
-  const { data: locationSetting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_location_id")
+  // Get tenant's association_id first
+  const { data: tenant, error: tenantError } = await supabase
+    .from("tenants")
+    .select("association_id, name")
+    .eq("id", params.tenantId)
     .single();
 
-  const { data: tokenSetting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_access_token")
-    .single();
-
-  if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("GHL not configured, skipping user sync");
+  if (tenantError || !tenant?.association_id) {
+    console.log("[GHL Accept] No association found for tenant:", params.tenantId);
     return;
   }
 
-  // Get tenant info
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("name")
-    .eq("id", params.tenantId)
-    .single();
+  console.log("[GHL Accept] Using association_id:", tenant.association_id);
+
+  // Get GHL credentials from association_ghl_credentials (per-association)
+  const { data: credentials, error: credsError } = await supabase
+    .from("association_ghl_credentials")
+    .select("*")
+    .eq("association_id", tenant.association_id)
+    .maybeSingle();
+
+  if (credsError) {
+    console.log("[GHL Accept] Error fetching credentials:", credsError.message);
+    return;
+  }
+
+  if (!credentials) {
+    console.log("[GHL Accept] No GHL credentials found for association:", tenant.association_id);
+    return;
+  }
+
+  // Get access token and location ID
+  const accessToken = credentials.access_token;
+  const locationId = credentials.location_id;
+
+  if (!accessToken || !locationId) {
+    console.log("[GHL Accept] GHL credentials incomplete");
+    return;
+  }
+
+  console.log("[GHL Accept] GHL configured - locationId:", locationId);
 
   // Call GHL API to create/update contact
   // Try v2 first, fall back to v1
@@ -209,13 +226,13 @@ async function sendUserToGHL(
     const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Version": "2021-07-28",
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        locationId: params.tenantId,
+        locationId: locationId,
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
@@ -230,16 +247,16 @@ async function sendUserToGHL(
     });
 
     if (v2Response.ok) {
-      console.log("User synced to GHL v2 successfully");
+      console.log("[GHL Accept] User synced to GHL v2 successfully");
       return;
     }
 
     // Fall back to v1
-    console.log("GHL v2 failed, trying v1...");
+    console.log("[GHL Accept] GHL v2 failed, trying v1...");
     const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

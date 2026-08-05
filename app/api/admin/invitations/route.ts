@@ -184,35 +184,51 @@ async function sendGHLInvitation(
     portalRole?: string;
   }
 ) {
-  // Get GHL credentials
-  const { data: locationSetting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_location_id")
-    .single();
-
-  const { data: tokenSetting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "ghl_access_token")
-    .single();
-
-  if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("[GHL Invitation] GHL not configured - location:", locationSetting?.value, "token:", tokenSetting?.value ? "exists" : "missing");
-    return;
-  }
-
-  console.log("[GHL Invitation] GHL configured - locationId:", locationSetting.value);
-
-  // Get tenant info
-  const { data: tenant } = await supabase
+  // Get tenant's association_id first
+  const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
-    .select("name")
+    .select("association_id, name")
     .eq("id", params.tenantId)
     .single();
 
+  if (tenantError || !tenant?.association_id) {
+    console.log("[GHL Invitation] No association found for tenant:", params.tenantId);
+    return;
+  }
+
+  console.log("[GHL Invitation] Using association_id:", tenant.association_id);
+
+  // Get GHL credentials from association_ghl_credentials (per-association)
+  const { data: credentials, error: credsError } = await supabase
+    .from("association_ghl_credentials")
+    .select("*")
+    .eq("association_id", tenant.association_id)
+    .maybeSingle();
+
+  if (credsError) {
+    console.log("[GHL Invitation] Error fetching credentials:", credsError.message);
+    return;
+  }
+
+  if (!credentials) {
+    console.log("[GHL Invitation] No GHL credentials found for association:", tenant.association_id);
+    return;
+  }
+
+  // Get access token and location ID
+  const accessToken = credentials.access_token;
+  const locationId = credentials.location_id;
+
+  if (!accessToken || !locationId) {
+    console.log("[GHL Invitation] GHL credentials incomplete - access_token:", accessToken ? "exists" : "missing", "location_id:", locationId ? "exists" : "missing");
+    return;
+  }
+
+  console.log("[GHL Invitation] GHL configured - locationId:", locationId);
+
   const tenantName = tenant?.name || "Associos Property Management";
   const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${params.token}`;
+  const tenantName = tenant?.name || "Associos Property Management";
 
   // First, create/update contact in GHL with "invited" tag
   console.log(`[GHL Invitation] Creating/updating contact for ${params.email}`);
@@ -222,13 +238,13 @@ async function sendGHLInvitation(
     const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Version": "2021-07-28",
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        locationId: locationSetting.value,
+        locationId: locationId,
         email: params.email,
         firstName: params.firstName || "",
         lastName: params.lastName || "",
@@ -259,7 +275,7 @@ async function sendGHLInvitation(
         await supabase.from("ghl_contact_mappings").upsert({
           email: params.email,
           ghl_contact_id: result.contact.id,
-          ghl_location_id: locationSetting.value,
+          ghl_location_id: locationId,
           tenant_id: params.tenantId,
           status: "invited",
           invitation_token: params.token,
@@ -279,7 +295,7 @@ async function sendGHLInvitation(
     const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -310,7 +326,7 @@ async function sendGHLInvitation(
         await supabase.from("ghl_contact_mappings").upsert({
           email: params.email,
           ghl_contact_id: result.contact.id,
-          ghl_location_id: locationSetting.value,
+          ghl_location_id: locationId,
           tenant_id: params.tenantId,
           status: "invited",
           invitation_token: params.token,
