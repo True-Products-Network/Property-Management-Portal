@@ -87,23 +87,25 @@ export async function GET(
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
 
-    // Get auth user details using service client (admin access required for auth.users)
+    // Get auth user details using service client (same approach as View page)
     const userIds = tenantUsers?.map((tu: { user_id: string }) => tu.user_id) || [];
-    let authUsers: { id: string; email: string; user_metadata: any }[] = [];
+    let userDetails: Record<string, { email?: string; full_name?: string; first_name?: string; last_name?: string }> = {};
     
     if (userIds.length > 0) {
       try {
-        // Use service role to access auth.users
         const serviceClient = createServiceClient();
-        const { data: authData, error: authError } = await serviceClient
-          .from("auth.users")
-          .select("id, email, user_metadata")
-          .in("id", userIds);
-        
-        if (authError) {
-          console.error("[Tenant Users API] Error fetching auth users:", authError);
-        } else {
-          authUsers = authData || [];
+        const { data: usersData } = await serviceClient.auth.admin.listUsers();
+        if (usersData?.users) {
+          usersData.users.forEach((u: { id: string; email?: string; user_metadata?: { full_name?: string; first_name?: string; last_name?: string } }) => {
+            if (userIds.includes(u.id)) {
+              userDetails[u.id] = {
+                email: u.email,
+                full_name: u.user_metadata?.full_name,
+                first_name: u.user_metadata?.first_name,
+                last_name: u.user_metadata?.last_name,
+              };
+            }
+          });
         }
       } catch (authFetchError) {
         console.error("[Tenant Users API] Failed to fetch auth users:", authFetchError);
@@ -111,16 +113,13 @@ export async function GET(
     }
 
     // Merge auth user data with tenant users
-    console.log(`[Tenant Users API] Merging ${tenantUsers?.length || 0} tenant users with ${authUsers.length} auth users`);
-    
     const mergedUsers = tenantUsers?.map((tu: { user_id: string; [key: string]: any }) => {
-      const authUser = authUsers.find((au: { id: string }) => au.id === tu.user_id);
-      console.log(`[Tenant Users API] User ${tu.user_id}: authEmail=${authUser?.email}, tuEmail=${tu.email}, metadata=`, authUser?.user_metadata);
+      const details = userDetails[tu.user_id];
       return {
         ...tu,
-        email: authUser?.email || tu.email,
-        first_name: tu.first_name || authUser?.user_metadata?.first_name,
-        last_name: tu.last_name || authUser?.user_metadata?.last_name,
+        email: details?.email || tu.email,
+        first_name: tu.first_name || details?.first_name || details?.full_name?.split(' ')[0],
+        last_name: tu.last_name || details?.last_name || details?.full_name?.split(' ').slice(1).join(' '),
       };
     });
 
