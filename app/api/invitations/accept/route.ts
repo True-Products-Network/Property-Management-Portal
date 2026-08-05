@@ -211,7 +211,8 @@ async function sendUserToGHL(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email: params.email,\        firstName: params.firstName,
+        email: params.email,
+        firstName: params.firstName,
         lastName: params.lastName,
         tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`],
         customField: {
