@@ -489,7 +489,24 @@ async function pushToGHL(
         if (existingContact?.id) {
           console.log("[GHL Push] Found existing contact:", existingContact.id);
           
-          // Update existing contact - only send fields that can be updated
+          // Merge existing tags with new tags (avoid duplicates)
+          const existingTags = existingContact.tags || [];
+          const newTags = [
+            "portal_user",
+            params.isNewUser ? "status_invited" : "status_active",
+            `role_${params.role}`,
+            `tenant_${tenantName}`,
+            "source_associos_portal"
+          ];
+          const mergedTags = [...new Set([...existingTags, ...newTags])];
+          
+          // Build invitation URL and expiry for existing contacts too
+          const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login?tenant=${params.tenantId}`;
+          const expiryDays = 7;
+          
+          console.log("[GHL Push] Merging tags:", existingTags, "+", newTags);
+          
+          // Update existing contact - merge tags and include all fields
           const updateResponse = await fetch(`https://services.leadconnectorhq.com/contacts/${existingContact.id}`, {
             method: "PUT",
             headers: {
@@ -499,10 +516,20 @@ async function pushToGHL(
               "Accept": "application/json",
             },
             body: JSON.stringify({
-              firstName: params.firstName,
-              lastName: params.lastName,
-              tags: contactData.tags,
-              customFields: contactData.customFields,
+              firstName: params.firstName || existingContact.firstName,
+              lastName: params.lastName || existingContact.lastName,
+              tags: mergedTags,
+              customFields: [
+                { key: "portal_role", field_value: params.role },
+                { key: "tenant_name", field_value: tenantName },
+                { key: "tenant_id", field_value: params.tenantId },
+                { key: "invited_by_name", field_value: "Platform Admin" },
+                { key: "invitation_url", field_value: invitationUrl },
+                { key: "invitation_expiry_days", field_value: expiryDays },
+                { key: "source", field_value: "Associos Portal" },
+                { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
+                { key: "created_by_platform", field_value: "true" },
+              ],
             }),
           });
 
