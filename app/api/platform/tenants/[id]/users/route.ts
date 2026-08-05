@@ -489,7 +489,7 @@ async function pushToGHL(
         if (existingContact?.id) {
           console.log("[GHL Push] Found existing contact:", existingContact.id);
           
-          // Update existing contact
+          // Update existing contact - only send fields that can be updated
           const updateResponse = await fetch(`https://services.leadconnectorhq.com/contacts/${existingContact.id}`, {
             method: "PUT",
             headers: {
@@ -499,8 +499,10 @@ async function pushToGHL(
               "Accept": "application/json",
             },
             body: JSON.stringify({
-              ...contactData,
-              id: existingContact.id,
+              firstName: params.firstName,
+              lastName: params.lastName,
+              tags: contactData.tags,
+              customFields: contactData.customFields,
             }),
           });
 
@@ -508,42 +510,14 @@ async function pushToGHL(
             console.log("[GHL Push] Contact updated in GHL v2:", existingContact.id);
             return;
           } else {
-            console.error("[GHL Push] Update failed:", await updateResponse.text());
+            const updateError = await updateResponse.text();
+            console.error("[GHL Push] Update failed:", updateResponse.status, updateError);
           }
         }
       }
     }
 
-    console.log("[GHL Push] V2 create/update failed, trying V1...");
-
-    // Fall back to v1 - try create first
-    const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: params.email,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        tags: contactData.tags,
-        customFields: [
-          { id: "portal_role", value: params.role },
-          { id: "tenant_name", value: tenantName },
-          { id: "tenant_id", value: params.tenantId },
-          { id: "source", value: "Associos Portal" },
-          { id: "portal_user_type", value: params.isNewUser ? "invited" : "active" },
-          { id: "created_by_platform", value: "true" },
-        ],
-      }),
-    });
-
-    if (v1Response.ok) {
-      console.log("[GHL Push] Contact created in GHL v1");
-    } else {
-      console.error("[GHL Push] V1 failed:", v1Response.status, await v1Response.text());
-    }
+    console.log("[GHL Push] V2 create/update failed, no fallback available");
   } catch (error) {
     console.error("[GHL Push] Error:", error);
   }
