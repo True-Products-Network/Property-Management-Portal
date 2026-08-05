@@ -361,21 +361,26 @@ async function pushToGHL(
     isNewUser: boolean;
   }
 ) {
+  console.log("[GHL Push] Starting GHL push for:", params.email);
+  
   // Get GHL credentials
-  const { data: locationSetting } = await supabase
+  const { data: locationSetting, error: locationError } = await supabase
     .from("app_settings")
     .select("value")
     .eq("key", "ghl_location_id")
     .single();
 
-  const { data: tokenSetting } = await supabase
+  const { data: tokenSetting, error: tokenError } = await supabase
     .from("app_settings")
     .select("value")
     .eq("key", "ghl_access_token")
     .single();
 
+  console.log("[GHL Push] Location setting:", locationSetting?.value ? "found" : "missing", "Error:", locationError?.message);
+  console.log("[GHL Push] Token setting:", tokenSetting?.value ? "found" : "missing", "Error:", tokenError?.message);
+
   if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("[GHL Push] GHL not configured");
+    console.log("[GHL Push] GHL not configured - missing credentials");
     return;
   }
 
