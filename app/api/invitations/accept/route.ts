@@ -219,10 +219,12 @@ async function sendUserToGHL(
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
-        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`],
+        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, "source_associos_portal"],
         customFields: [
           { key: "portal_role", field_value: params.portalRole },
           { key: "tenant_name", field_value: tenant?.name || "" },
+          { key: "source", field_value: "Associos Portal" },
+          { key: "portal_user_type", field_value: "registered" },
         ],
       }),
     });
@@ -244,10 +246,12 @@ async function sendUserToGHL(
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
-        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`],
+        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, "source_associos_portal"],
         customFields: [
           { id: "portal_role", value: params.portalRole },
           { id: "tenant_name", value: tenant?.name || "" },
+          { id: "source", value: "Associos Portal" },
+          { id: "portal_user_type", value: "registered" },
         ],
       }),
     });

@@ -73,11 +73,13 @@ export async function POST(request: NextRequest) {
       let locationData: { id?: string; name?: string; companyId?: string } = {};
       let testSuccess = false;
       let testError = "";
+      let apiVersionUsed = "";
       
       try {
         const testLocationId = providedLocationId || "me";
         
-        // Try v2 API with specific location ID
+        // Try v2 API first (new OAuth-based API)
+        console.log("Trying GHL v2 API...");
         let testResponse = await fetch(`https://services.leadconnectorhq.com/locations/${testLocationId}`, {
           method: "GET",
           headers: {
@@ -87,18 +89,6 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // If v2 fails with 401/403, try v1 API
-        if (!testResponse.ok && (testResponse.status === 401 || testResponse.status === 403)) {
-          console.log("V2 API failed, trying v1 API...");
-          testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${accessToken}`,
-              "Accept": "application/json",
-            },
-          });
-        }
-
         if (testResponse.ok) {
           const data = await testResponse.json();
           locationData = {
@@ -107,9 +97,35 @@ export async function POST(request: NextRequest) {
             companyId: data.companyId || data.location?.companyId,
           };
           testSuccess = true;
+          apiVersionUsed = "v2";
+          console.log("GHL v2 API connection successful");
         } else {
-          testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
-          console.warn("GHL OAuth test failed:", testError);
+          const v2Error = await testResponse.text();
+          console.log("V2 API failed, trying v1 API...", v2Error);
+          
+          // If v2 fails, try v1 API (legacy)
+          testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Accept": "application/json",
+            },
+          });
+
+          if (testResponse.ok) {
+            const data = await testResponse.json();
+            locationData = {
+              id: data.id || data.location?.id,
+              name: data.name || data.location?.name,
+              companyId: data.companyId || data.location?.companyId,
+            };
+            testSuccess = true;
+            apiVersionUsed = "v1";
+            console.log("GHL v1 API connection successful");
+          } else {
+            testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
+            console.warn("GHL OAuth test failed:", testError);
+          }
         }
       } catch (apiError) {
         testError = apiError instanceof Error ? apiError.message : "Network error";
@@ -159,12 +175,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: testSuccess 
-          ? "Connected successfully via OAuth" 
+          ? `Connected successfully via OAuth (${apiVersionUsed || 'unknown'} API)` 
           : "Credentials saved but connection test failed. The token may be expired or invalid.",
         connectionType: "oauth",
         locationId: locationData.id,
         locationName: locationData.name,
         companyId: locationData.companyId,
+        apiVersion: apiVersionUsed,
         testSuccess,
         testError: testError || undefined,
       });
@@ -192,24 +209,53 @@ export async function POST(request: NextRequest) {
       let locationData: { id?: string; name?: string } = {};
       let testSuccess = false;
       let testError = "";
+      let apiVersionUsed = "";
       
       try {
         const testLocationId = providedLocationId || "me";
         
-        const testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
+        // Try v2 API first
+        console.log("Trying GHL v2 API with API key...");
+        let testResponse = await fetch(`https://services.leadconnectorhq.com/locations/${testLocationId}`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
+            "Version": "2021-07-28",
             "Accept": "application/json",
           },
         });
 
         if (testResponse.ok) {
-          locationData = await testResponse.json();
+          const data = await testResponse.json();
+          locationData = {
+            id: data.id || data.location?.id,
+            name: data.name || data.location?.name,
+          };
           testSuccess = true;
+          apiVersionUsed = "v2";
+          console.log("GHL v2 API connection successful");
         } else {
-          testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
-          console.warn("GHL API key test failed:", testError);
+          const v2Error = await testResponse.text();
+          console.log("V2 API failed, trying v1 API...", v2Error);
+          
+          // Try v1 API as fallback
+          testResponse = await fetch(`https://rest.gohighlevel.com/v1/locations/${testLocationId}`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Accept": "application/json",
+            },
+          });
+
+          if (testResponse.ok) {
+            locationData = await testResponse.json();
+            testSuccess = true;
+            apiVersionUsed = "v1";
+            console.log("GHL v1 API connection successful");
+          } else {
+            testError = `HTTP ${testResponse.status}: ${await testResponse.text()}`;
+            console.warn("GHL API key test failed:", testError);
+          }
         }
       } catch (apiError) {
         testError = apiError instanceof Error ? apiError.message : "Network error";
@@ -251,11 +297,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: testSuccess 
-          ? "Connected successfully via API Key" 
+          ? `Connected successfully via API Key (${apiVersionUsed || 'unknown'} API)` 
           : "Credentials saved but connection test failed. The API key may be invalid.",
         connectionType: "api_key",
         locationId: locationData.id,
         locationName: locationData.name,
+        apiVersion: apiVersionUsed,
         testSuccess,
         testError: testError || undefined,
       });

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           email: payload.email,
           firstName: payload.firstName || "",
           lastName: payload.lastName || "",
-          tags: ["portal_invited", "portal_user"],
+          tags: ["portal_invited", "portal_user", "source_associos_portal"],
           customFields: [
             {
               key: "invitation_token",
@@ -79,6 +79,14 @@ export async function POST(request: Request) {
             {
               key: "tenant_name",
               field_value: payload.tenantName,
+            },
+            {
+              key: "source",
+              field_value: "Associos Portal",
+            },
+            {
+              key: "portal_user_type",
+              field_value: "invited",
             },
           ],
         }),
@@ -109,7 +117,7 @@ export async function POST(request: Request) {
           email: payload.email,
           firstName: payload.firstName || "",
           lastName: payload.lastName || "",
-          tags: ["portal_invited", "portal_user"],
+          tags: ["portal_invited", "portal_user", "source_associos_portal"],
           customFields: [
             {
               id: "invitation_token",
@@ -118,6 +126,14 @@ export async function POST(request: Request) {
             {
               id: "tenant_name",
               value: payload.tenantName,
+            },
+            {
+              id: "source",
+              value: "Associos Portal",
+            },
+            {
+              id: "portal_user_type",
+              value: "invited",
             },
           ],
         }),

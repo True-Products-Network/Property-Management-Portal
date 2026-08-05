@@ -889,7 +889,7 @@ export default function AdminIntegrationsContent() {
                         </button>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        Generate in GHL Settings → API Keys
+                        Get this from GHL → Settings → Private Integrations → Create New Integration. Required scopes: locations.readonly, contacts.write, contacts.readonly
                       </p>
                     </div>
                   ) : (
