@@ -52,14 +52,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get all user IDs first
+    const { data: allUsers } = await supabase.from("portal_users").select("id");
+    const userIds = (allUsers as { id: string }[] || []).map((u: { id: string }) => u.id);
+
     // Get user's roles for role information
     const { data: userRoles } = await supabase
       .from("user_roles")
       .select("user_id, role")
-      .in("user_id", (await supabase.from("portal_users").select("id")).data?.map(u => u.id) || []);
+      .in("user_id", userIds);
 
     // Build role map
-    const roleMap = new Map(userRoles?.map(ur => [ur.user_id, ur.role]) || []);
+    const roleMap = new Map((userRoles as { user_id: string; role: string }[] || []).map((ur: { user_id: string; role: string }) => [ur.user_id, ur.role]));
 
     // Get all portal users
     const { data: users, error } = await supabase
