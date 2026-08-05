@@ -45,7 +45,6 @@ import {
   Search,
   UserX,
   UserCheck,
-  Mail,
   Shield,
   Users,
   Loader2,
@@ -87,13 +86,7 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
 
-  // Invite dialog state
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteFirstName, setInviteFirstName] = useState("");
-  const [inviteLastName, setInviteLastName] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
-  const [inviteLoading, setInviteLoading] = useState(false);
+
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -129,41 +122,7 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  async function handleInviteUser(e: React.FormEvent) {
-    e.preventDefault();
-    setInviteLoading(true);
 
-    try {
-      const res = await fetch(`/api/platform/tenants/${tenantId}/users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: inviteEmail,
-          firstName: inviteFirstName,
-          lastName: inviteLastName,
-          role: inviteRole,
-          sendInviteEmail: true,
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to invite user");
-      }
-
-      // Refresh users list
-      await fetchTenantAndUsers();
-      setInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteFirstName("");
-      setInviteLastName("");
-      setInviteRole("member");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to invite user");
-    } finally {
-      setInviteLoading(false);
-    }
-  }
 
   async function handleDeleteUser() {
     if (!userToDelete) return;
@@ -278,10 +237,12 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
         </div>
-        <Button onClick={() => setInviteDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Invite User
-        </Button>
+        <Link href={`/platform/tenants/${tenantId}/users/invite`}>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Invite User
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -443,81 +404,6 @@ export default function TenantUsersPage({ params }: { params: Promise<{ id: stri
           )}
         </CardContent>
       </Card>
-
-      {/* Invite Dialog */}
-      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Invite User</DialogTitle>
-            <DialogDescription>
-              Send an invitation to join {tenant?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleInviteUser}>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">First Name</label>
-                  <Input
-                    value={inviteFirstName}
-                    onChange={(e) => setInviteFirstName(e.target.value)}
-                    placeholder="John"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Last Name</label>
-                  <Input
-                    value={inviteLastName}
-                    onChange={(e) => setInviteLastName(e.target.value)}
-                    placeholder="Doe"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <Input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Role</label>
-                <Select value={inviteRole} onValueChange={setInviteRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setInviteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={inviteLoading}>
-                {inviteLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Mail className="mr-2 h-4 w-4" />
-                )}
-                Send Invitation
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
