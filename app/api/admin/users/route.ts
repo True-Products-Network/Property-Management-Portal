@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     const associationId = searchParams.get("associationId");
 
     // Check if current user is admin
-    console.log("[Admin Users API] Checking admin status for user:", authUser.id);
+    console.log("[Admin Users API] Checking admin status for user ID:", authUser.id);
     
     const { data: currentUser, error: adminCheckError } = await supabase
       .from("portal_users")
