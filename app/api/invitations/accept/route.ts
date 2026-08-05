@@ -203,8 +203,38 @@ async function sendUserToGHL(
     .single();
 
   // Call GHL API to create/update contact
+  // Try v2 first, fall back to v1
   try {
-    const ghlResponse = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
+    // Try GHL v2 API
+    const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Version": "2021-07-28",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        locationId: params.tenantId,
+        email: params.email,
+        firstName: params.firstName,
+        lastName: params.lastName,
+        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`],
+        customFields: [
+          { key: "portal_role", field_value: params.portalRole },
+          { key: "tenant_name", field_value: tenant?.name || "" },
+        ],
+      }),
+    });
+
+    if (v2Response.ok) {
+      console.log("User synced to GHL v2 successfully");
+      return;
+    }
+
+    // Fall back to v1
+    console.log("GHL v2 failed, trying v1...");
+    const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${tokenSetting.value}`,
@@ -215,17 +245,17 @@ async function sendUserToGHL(
         firstName: params.firstName,
         lastName: params.lastName,
         tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`],
-        customField: {
-          "portal_role": params.portalRole,
-          "tenant_name": tenant?.name || "",
-        },
+        customFields: [
+          { id: "portal_role", value: params.portalRole },
+          { id: "tenant_name", value: tenant?.name || "" },
+        ],
       }),
     });
 
-    if (!ghlResponse.ok) {
-      console.error("GHL API error:", await ghlResponse.text());
+    if (!v1Response.ok) {
+      console.error("GHL API error (v1):", await v1Response.text());
     } else {
-      console.log("User synced to GHL successfully");
+      console.log("User synced to GHL v1 successfully");
     }
   } catch (error) {
     console.error("Error sending user to GHL:", error);

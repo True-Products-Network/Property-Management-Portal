@@ -166,7 +166,7 @@ export default function GHLIntegrationPage() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">GoHighLevel (GHL) Integration</h1>
           <p className="text-gray-500 mt-1">
-            Configure GHL API credentials for email sending and CRM integration
+            Configure GHL API v2 credentials for email sending and CRM integration
           </p>
         </div>
         <div className="flex gap-2">
@@ -209,7 +209,7 @@ export default function GHLIntegrationPage() {
               placeholder="Enter your GHL API token"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Get this from GHL → Settings → Private Integrations → Create New Integration
+              Get this from GHL → Settings → Private Integrations → Create New Integration. Required scopes: locations.readonly, contacts.write, contacts.readonly
             </p>
           </div>
 

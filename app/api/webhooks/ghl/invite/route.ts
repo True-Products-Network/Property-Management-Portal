@@ -49,54 +49,100 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create or update contact in GHL
-    const contactResponse = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${tokenSetting.value}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: payload.email,
-        firstName: payload.firstName || "",
-        lastName: payload.lastName || "",
-        tags: ["portal_invited", "portal_user"],
-        customFields: [
-          {
-            id: "invitation_token",
-            value: payload.invitationToken,
-          },
-          {
-            id: "tenant_name",
-            value: payload.tenantName,
-          },
-        ],
-      }),
-    });
+    const token = tokenSetting.value;
+    const locationId = locationSetting.value;
 
-    if (!contactResponse.ok) {
-      const errorText = await contactResponse.text();
-      console.error("GHL API error creating contact:", errorText);
-      return NextResponse.json(
-        { success: false, error: "Failed to create contact in GHL" },
-        { status: 500 }
-      );
+    // Try GHL v2 API first
+    let contactId: string | null = null;
+    let v2Success = false;
+
+    try {
+      const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Version": "2021-07-28",
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          locationId: locationId,
+          email: payload.email,
+          firstName: payload.firstName || "",
+          lastName: payload.lastName || "",
+          tags: ["portal_invited", "portal_user"],
+          customFields: [
+            {
+              key: "invitation_token",
+              field_value: payload.invitationToken,
+            },
+            {
+              key: "tenant_name",
+              field_value: payload.tenantName,
+            },
+          ],
+        }),
+      });
+
+      if (v2Response.ok) {
+        const v2Data = await v2Response.json();
+        contactId = v2Data.contact?.id || v2Data.id;
+        v2Success = true;
+        console.log("Contact created in GHL v2:", contactId);
+      } else {
+        const v2Error = await v2Response.text();
+        console.log("GHL v2 failed, trying v1:", v2Error);
+      }
+    } catch (v2Error) {
+      console.log("GHL v2 error, trying v1:", v2Error);
     }
 
-    const contactData = await contactResponse.json();
-    console.log("Contact created in GHL:", contactData.contact?.id);
+    // If v2 failed, try v1 API
+    if (!v2Success) {
+      const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: payload.email,
+          firstName: payload.firstName || "",
+          lastName: payload.lastName || "",
+          tags: ["portal_invited", "portal_user"],
+          customFields: [
+            {
+              id: "invitation_token",
+              value: payload.invitationToken,
+            },
+            {
+              id: "tenant_name",
+              value: payload.tenantName,
+            },
+          ],
+        }),
+      });
 
-    // Send email via GHL
-    // Option 1: Trigger a workflow
-    // Option 2: Send direct email (if GHL supports it)
-    
-    // For now, we'll return success and let the admin trigger emails via GHL workflows
-    // The contact is created with tags that can trigger workflows
+      if (!v1Response.ok) {
+        const errorText = await v1Response.text();
+        console.error("GHL API error creating contact (v1):", errorText);
+        return NextResponse.json(
+          { success: false, error: "Failed to create contact in GHL. Please ensure you're using a valid v2 API token with contacts.write scope." },
+          { status: 500 }
+        );
+      }
 
+      const v1Data = await v1Response.json();
+      contactId = v1Data.contact?.id;
+      console.log("Contact created in GHL v1:", contactId);
+    }
+
+    // Return success
     return NextResponse.json({
       success: true,
       message: "Contact created in GHL successfully",
-      contactId: contactData.contact?.id,
+      contactId: contactId,
+      apiVersion: v2Success ? "v2" : "v1",
       note: "Email will be sent via GHL workflow triggered by 'portal_invited' tag",
     });
   } catch (error) {
