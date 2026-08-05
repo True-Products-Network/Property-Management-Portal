@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Building2, Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -263,5 +263,18 @@ export default function AcceptInvitationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function AcceptInvitationPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--primary-navy)] flex items-center justify-center p-4">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    }>
+      <AcceptInvitationForm />
+    </Suspense>
   );
 }
