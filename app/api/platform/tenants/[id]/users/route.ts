@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getGhlCredentials } from "@/lib/ghl/credentials";
 import { z } from "zod";
 
 // Validation schema for inviting a user
@@ -367,63 +368,28 @@ async function pushToGHL(
   try {
     console.log("[GHL Push] Starting GHL push for:", params.email);
     
-    // Get GHL credentials from association_ghl_credentials table (where connect stores them)
-    // First get the tenant's association
-    const { data: tenantAssoc } = await supabase
-      .from("tenants")
-      .select("association_id")
-      .eq("id", params.tenantId)
-      .single();
+    // Get GHL credentials using the proper helper (handles decryption)
+    const ghlCreds = await getGhlCredentials();
     
-    console.log("[GHL Push] Tenant association_id:", tenantAssoc?.association_id);
-
-    let ghlCreds = null;
+    console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no");
     
-    if (tenantAssoc?.association_id) {
-      const { data: assocCreds, error: assocError } = await supabase
-        .from("association_ghl_credentials")
-        .select("*")
-        .eq("association_id", tenantAssoc.association_id)
-        .maybeSingle();
-      
-      console.log("[GHL Push] Association credentials error:", assocError?.message || "none");
-      console.log("[GHL Push] Association credentials found:", assocCreds ? "yes" : "no");
-      ghlCreds = assocCreds;
-    }
-    
-    // Fallback to global ghl_credentials if no association-specific credentials
     if (!ghlCreds) {
-      console.log("[GHL Push] Trying global ghl_credentials table...");
-      const { data: globalCredsList, error: globalError } = await supabase
-        .from("ghl_credentials")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1);
-      
-      console.log("[GHL Push] Global credentials error:", globalError?.message || "none");
-      console.log("[GHL Push] Global credentials list length:", globalCredsList?.length || 0);
-      
-      if (globalCredsList && globalCredsList.length > 0) {
-        ghlCreds = globalCredsList[0];
-      }
-    }
-
-    console.log("[GHL Push] Final credentials found:", ghlCreds ? "yes" : "no");
-
-    if (!ghlCreds) {
-      console.log("[GHL Push] GHL not configured - no credentials found in association_ghl_credentials or ghl_credentials");
+      console.log("[GHL Push] GHL not configured - no credentials found in ghl_credentials table");
       return;
     }
+    
+    console.log("[GHL Push] Credentials type:", ghlCreds.type);
+    console.log("[GHL Push] Location ID:", ghlCreds.locationId);
 
     // Get the access token and location_id
-    const accessToken = ghlCreds.access_token;
-    const locationId = ghlCreds.location_id;
+    const accessToken = ghlCreds.type === "oauth" ? ghlCreds.accessToken : ghlCreds.apiKey;
+    const locationId = ghlCreds.locationId;
 
     console.log("[GHL Push] Access token present:", accessToken ? "yes" : "no");
     console.log("[GHL Push] Location ID present:", locationId ? "yes" : "no");
 
     if (!accessToken || !locationId) {
-      console.log("[GHL Push] GHL not configured - missing access_token or location_id");
+      console.log("[GHL Push] GHL not configured - missing access_token/location_id");
       return;
     }
 
