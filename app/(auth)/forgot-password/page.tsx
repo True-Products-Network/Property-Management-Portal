@@ -25,20 +25,28 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      console.log("[Forgot Password] Sending reset email to:", email);
+      console.log("[Forgot Password] Redirect URL:", `${window.location.origin}/reset-password`);
+      
+      const { error: resetError, data } = await supabase.auth.resetPasswordForEmail(
         email,
         {
           redirectTo: `${window.location.origin}/reset-password`,
         }
       );
 
+      console.log("[Forgot Password] Supabase response:", { error: resetError, data });
+
       if (resetError) {
+        console.error("[Forgot Password] Error:", resetError);
         setError(resetError.message);
         return;
       }
 
+      console.log("[Forgot Password] Email sent successfully");
       setSuccess(true);
-    } catch {
+    } catch (err) {
+      console.error("[Forgot Password] Exception:", err);
       setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
