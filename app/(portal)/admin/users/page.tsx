@@ -18,30 +18,63 @@ interface User {
   status: string;
   createdAt: string;
   lastSignInAt?: string;
+  associationId?: string;
+  associationName?: string;
+}
+
+interface Association {
+  id: string;
+  name: string;
 }
 
 export default function UserMaintenancePage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [associationFilter, setAssociationFilter] = useState("");
+
+  // Fetch associations first
+  useEffect(() => {
+    async function fetchAssociations() {
+      try {
+        const res = await fetch("/api/user/associations");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setAssociations(data.data || []);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching associations:", err);
+      }
+    }
+    fetchAssociations();
+  }, []);
 
   useEffect(() => {
     async function fetchUsers() {
       try {
         setLoading(true);
         
-        // Fetch users from admin API
-        const usersRes = await fetch("/api/admin/users");
+        // Build query URL with association filter
+        let url = "/api/admin/users";
+        if (associationFilter) {
+          url += `?associationId=${associationFilter}`;
+        }
+        
+        const usersRes = await fetch(url);
 
         if (!usersRes.ok) {
           if (usersRes.status === 401) {
             router.push("/access-denied");
             return;
           }
-          throw new Error("Failed to fetch users");
+          const errorData = await usersRes.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to fetch users");
         }
 
         const usersData = await usersRes.json();
@@ -61,9 +94,9 @@ export default function UserMaintenancePage() {
     }
 
     fetchUsers();
-  }, [router]);
+  }, [router, associationFilter]);
 
-  // Filter users based on search and filters
+  // Filter users based on search (client-side)
   const filteredUsers = users.filter((user) => {
     const matchesSearch = 
       !searchQuery || 
@@ -187,6 +220,17 @@ export default function UserMaintenancePage() {
               </div>
             </div>
             <select 
+              className="input w-48"
+              value={associationFilter}
+              onChange={(e) => setAssociationFilter(e.target.value)}
+            >
+              <option value="">All Associations</option>
+              <option value="tenant-level">Tenant Level (No Association)</option>
+              {associations.map((assoc) => (
+                <option key={assoc.id} value={assoc.id}>{assoc.name}</option>
+              ))}
+            </select>
+            <select 
               className="input w-40"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -215,6 +259,7 @@ export default function UserMaintenancePage() {
               <thead>
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">User</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Association</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Role</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Last Sign In</th>
@@ -234,6 +279,9 @@ export default function UserMaintenancePage() {
                           <p className="text-sm text-[var(--secondary-text)]">{user.email}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
+                      {user.associationName || (user.associationId ? 'Loading...' : 'Tenant Level')}
                     </td>
                     <td className="py-3 px-4">
                       <Badge className={getRoleBadgeClass(user.role)}>
