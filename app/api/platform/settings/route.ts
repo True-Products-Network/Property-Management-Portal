@@ -18,7 +18,7 @@ async function checkPlatformAdmin(supabase: any, user: any) {
 
   // Also check user_metadata fallback
   const isMetadataAdmin = user.user_metadata?.is_platform_admin === true;
-  const isDbAdmin = platformRole?.role === 'admin';
+  const isDbAdmin = platformRole?.role === 'admin' || platformRole?.role === 'PLATFORM_ADMIN';
   
   console.log("isDbAdmin:", isDbAdmin, "isMetadataAdmin:", isMetadataAdmin);
   

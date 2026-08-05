@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       .is("revoked_at", null)
       .maybeSingle();
 
-    const isPlatformAdmin = platformRole?.role === 'admin' || user.user_metadata?.is_platform_admin === true;
+    const isPlatformAdmin = platformRole?.role === 'admin' || platformRole?.role === 'PLATFORM_ADMIN' || user.user_metadata?.is_platform_admin === true;
     
     if (!isPlatformAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden - Platform admin required" }, { status: 403 });
