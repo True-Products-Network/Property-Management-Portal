@@ -74,7 +74,9 @@ export default function UserMaintenancePage() {
             return;
           }
           const errorData = await usersRes.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to fetch users");
+          // Pass through the full error message if available
+          const errorMessage = errorData.message || errorData.error || `Failed to fetch users (${usersRes.status})`;
+          throw new Error(errorMessage);
         }
 
         const usersData = await usersRes.json();
@@ -160,6 +162,7 @@ export default function UserMaintenancePage() {
   }
 
   if (error) {
+    const isSetupError = error.includes("Account setup incomplete");
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -167,10 +170,42 @@ export default function UserMaintenancePage() {
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
               User Maintenance
             </h1>
-            <p className="text-[var(--error)] mt-1">{error}</p>
           </div>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
+        <Card className={isSetupError ? "border-amber-300" : ""}>
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-full ${isSetupError ? "bg-amber-100" : "bg-red-100"}`}>
+                {isSetupError ? (
+                  <Users className="h-6 w-6 text-amber-600" />
+                ) : (
+                  <UserX className="h-6 w-6 text-red-600" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className={`text-lg font-semibold ${isSetupError ? "text-amber-800" : "text-red-800"}`}>
+                  {isSetupError ? "Account Setup Required" : "Error Loading Users"}
+                </h3>
+                <p className="text-[var(--secondary-text)] mt-2 whitespace-pre-wrap">
+                  {error}
+                </p>
+                {isSetupError && (
+                  <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      <strong>Next steps:</strong>
+                    </p>
+                    <ul className="text-sm text-amber-700 mt-2 list-disc list-inside">
+                      <li>Contact your system administrator</li>
+                      <li>Or sign out and complete the registration process</li>
+                      <li>Or recreate your account through Platform Admin</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -52,7 +52,12 @@ export async function GET(request: NextRequest) {
     if (!currentUser) {
       console.error("[Admin Users API] User not found in portal_users:", authUser.id);
       return NextResponse.json(
-        { success: false, error: "User not found in portal_users" },
+        { 
+          success: false, 
+          error: "Account setup incomplete",
+          message: "Your user account exists but is missing required portal data. Please contact support or recreate your account through the proper registration flow.",
+          userId: authUser.id
+        },
         { status: 403 }
       );
     }
