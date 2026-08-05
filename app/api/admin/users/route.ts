@@ -39,13 +39,26 @@ export async function GET(request: NextRequest) {
     const associationId = searchParams.get("associationId");
 
     // Check if current user is admin
-    const { data: currentUser } = await supabase
+    console.log("[Admin Users API] Checking admin status for user:", authUser.id);
+    
+    const { data: currentUser, error: adminCheckError } = await supabase
       .from("portal_users")
-      .select("is_admin, status")
+      .select("id, email, is_admin, status")
       .eq("id", authUser.id)
       .maybeSingle();
 
-    if (!currentUser?.is_admin) {
+    console.log("[Admin Users API] Current user lookup result:", { currentUser, error: adminCheckError });
+
+    if (!currentUser) {
+      console.error("[Admin Users API] User not found in portal_users:", authUser.id);
+      return NextResponse.json(
+        { success: false, error: "User not found in portal_users" },
+        { status: 403 }
+      );
+    }
+
+    if (!currentUser.is_admin) {
+      console.error("[Admin Users API] User is not admin:", authUser.id, "is_admin:", currentUser.is_admin);
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
