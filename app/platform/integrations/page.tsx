@@ -221,12 +221,20 @@ export default function IntegrationsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Association Integrations</h1>
           <p className="text-gray-500">Manage GoHighLevel integrations across all associations</p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/platform/integrations/logs">
-            <ExternalLink className="mr-2 h-4 w-4" />
-            View Sync Logs
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/platform/integrations/ghl">
+              <Link2 className="mr-2 h-4 w-4" />
+              GHL Configuration
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/platform/integrations/logs">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              View Sync Logs
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {error && (
