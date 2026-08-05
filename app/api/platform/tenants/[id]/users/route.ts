@@ -368,12 +368,13 @@ async function pushToGHL(
     console.log("[GHL Push] Starting GHL push for:", params.email);
     
     // Get GHL credentials from ghl_credentials table (same as test/status endpoints)
-    const { data: ghlCreds, error: credsError } = await supabase
+    const { data: ghlCredsList, error: credsError } = await supabase
       .from("ghl_credentials")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    
+    const ghlCreds = ghlCredsList && ghlCredsList.length > 0 ? ghlCredsList[0] : null;
 
     console.log("[GHL Push] Credentials query error:", credsError?.message || "none");
     console.log("[GHL Push] Credentials found:", ghlCreds ? "yes" : "no", "Type:", ghlCreds?.type);
