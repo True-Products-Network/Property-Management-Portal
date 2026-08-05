@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     });
 
-    // Send invitation email via GHL (if configured)
+    // Push contact to GHL and send invitation (if configured)
     // This is async - don't wait for it
     sendGHLInvitation(supabase, {
       email,
@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
       lastName,
       token,
       tenantId,
+      role,
+      portalRole,
     }).catch(console.error);
 
     return NextResponse.json({
@@ -164,7 +166,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function to send invitation via GHL
+// Helper function to push contact to GHL and send invitation
 async function sendGHLInvitation(
   supabase: any,
   params: {
@@ -173,6 +175,8 @@ async function sendGHLInvitation(
     lastName: string;
     token: string;
     tenantId: string;
+    role?: string;
+    portalRole?: string;
   }
 ) {
   // Get GHL credentials
@@ -189,7 +193,7 @@ async function sendGHLInvitation(
     .single();
 
   if (!locationSetting?.value || !tokenSetting?.value) {
-    console.log("GHL not configured, skipping invitation webhook");
+    console.log("GHL not configured, skipping invitation sync");
     return;
   }
 
@@ -200,20 +204,116 @@ async function sendGHLInvitation(
     .eq("id", params.tenantId)
     .single();
 
-  // Call GHL webhook/API to send invitation
-  // This would trigger a GHL workflow that sends the email
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/ghl/invite`;
-  
-  await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      email: params.email,
-      firstName: params.firstName,
-      lastName: params.lastName,
-      invitationToken: params.token,
-      tenantName: tenant?.name || "Associos Property Management",
-      invitationUrl: `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${params.token}`,
-    }),
-  });
+  const tenantName = tenant?.name || "Associos Property Management";
+  const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/accept-invitation?token=${params.token}`;
+
+  // First, create/update contact in GHL with "invited" tag
+  console.log(`[GHL Invitation] Creating/updating contact for ${params.email}`);
+
+  try {
+    // Try GHL v2 API first
+    const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Version": "2021-07-28",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        locationId: locationSetting.value,
+        email: params.email,
+        firstName: params.firstName || "",
+        lastName: params.lastName || "",
+        tags: [
+          "portal_user",
+          "status_invited",
+          `role_${params.portalRole || params.role || 'member'}`,
+          `tenant_${tenantName}`,
+          "source_associos_portal"
+        ],
+        customFields: [
+          { key: "portal_role", field_value: params.portalRole || params.role || "member" },
+          { key: "tenant_name", field_value: tenantName },
+          { key: "source", field_value: "Associos Portal" },
+          { key: "portal_user_type", field_value: "invited" },
+          { key: "invitation_token", field_value: params.token },
+          { key: "invitation_url", field_value: invitationUrl },
+        ],
+      }),
+    });
+
+    if (v2Response.ok) {
+      const result = await v2Response.json();
+      console.log("[GHL Invitation] Contact created/updated in GHL v2:", result.contact?.id);
+      
+      // Store GHL contact ID for future updates
+      if (result.contact?.id) {
+        await supabase.from("ghl_contact_mappings").upsert({
+          email: params.email,
+          ghl_contact_id: result.contact.id,
+          ghl_location_id: locationSetting.value,
+          tenant_id: params.tenantId,
+          status: "invited",
+          invitation_token: params.token,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "email" });
+      }
+      
+      return;
+    }
+
+    // If v2 fails, try v1 API
+    console.log("[GHL Invitation] V2 failed, trying V1...");
+    const errorText = await v2Response.text();
+    console.log("[GHL Invitation] V2 error:", errorText);
+
+    // Try v1 API
+    const v1Response = await fetch("https://rest.gohighlevel.com/v1/contacts/", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenSetting.value}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: params.email,
+        firstName: params.firstName || "",
+        lastName: params.lastName || "",
+        tags: [
+          "portal_user",
+          "status_invited",
+          `role_${params.portalRole || params.role || 'member'}`,
+          `tenant_${tenantName}`,
+          "source_associos_portal"
+        ],
+        customFields: [
+          { id: "portal_role", value: params.portalRole || params.role || "member" },
+          { id: "tenant_name", value: tenantName },
+          { id: "source", value: "Associos Portal" },
+          { id: "portal_user_type", value: "invited" },
+        ],
+      }),
+    });
+
+    if (v1Response.ok) {
+      const result = await v1Response.json();
+      console.log("[GHL Invitation] Contact created in GHL v1:", result.contact?.id);
+      
+      if (result.contact?.id) {
+        await supabase.from("ghl_contact_mappings").upsert({
+          email: params.email,
+          ghl_contact_id: result.contact.id,
+          ghl_location_id: locationSetting.value,
+          tenant_id: params.tenantId,
+          status: "invited",
+          invitation_token: params.token,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "email" });
+      }
+    } else {
+      console.error("[GHL Invitation] V1 API error:", await v1Response.text());
+    }
+  } catch (error) {
+    console.error("[GHL Invitation] Error pushing to GHL:", error);
+  }
 }
