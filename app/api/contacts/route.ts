@@ -27,20 +27,32 @@ const createSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const user = await getSession();
-    if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+      console.error("Contacts API: No user session found");
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
-    const result = await getContacts({
+    const queryParams = {
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       search: searchParams.get("search") || undefined,
       sortBy: searchParams.get("sortBy") || "last_name",
       sortOrder: (searchParams.get("sortOrder") || "asc") as "asc" | "desc",
-    });
+    };
+    
+    console.log("Contacts API: Fetching with params:", queryParams);
+    const result = await getContacts(queryParams);
 
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    if (!result.success) {
+      console.error("Contacts API: getContacts failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
+    
+    console.log("Contacts API: Success, returned", result.data?.data?.length || 0, "contacts");
     return NextResponse.json(result);
   } catch (error) {
+    console.error("Contacts API: Unexpected error:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

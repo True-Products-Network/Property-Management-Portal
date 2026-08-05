@@ -6,6 +6,9 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
 import { mapContact } from "./mappers";
 
+// Re-export mapContact for use in API routes
+export { mapContact };
+
 export interface Contact {
   id: string;
   contactId: string;
@@ -86,10 +89,13 @@ export async function getContacts(
       return { success: false, error: error.message };
     }
     
+    // Map the database rows to Contact interface with camelCase properties
+    const mappedContacts = (data || []).map(mapContact);
+    
     return {
       success: true,
       data: {
-        data: data || [],
+        data: mappedContacts,
         total: count || 0,
         page,
         pageSize,
