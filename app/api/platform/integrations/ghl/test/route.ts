@@ -12,8 +12,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is platform admin
-    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    // Check if user is platform admin via platform_user_roles table
+    const { data: platformRole } = await supabase
+      .from("platform_user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .is("revoked_at", null)
+      .maybeSingle();
+
+    const isPlatformAdmin = platformRole?.role === 'admin' || user.user_metadata?.is_platform_admin === true;
+    
     if (!isPlatformAdmin) {
       return NextResponse.json({ success: false, error: "Forbidden - Platform admin required" }, { status: 403 });
     }

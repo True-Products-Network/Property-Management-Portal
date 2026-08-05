@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Helper function to check if user is platform admin
+async function checkPlatformAdmin(supabase: any, user: any) {
+  // Check platform_user_roles table
+  const { data: platformRole } = await supabase
+    .from("platform_user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .is("revoked_at", null)
+    .maybeSingle();
+
+  // Also check user_metadata fallback
+  const isMetadataAdmin = user.user_metadata?.is_platform_admin === true;
+  
+  return platformRole?.role === 'admin' || isMetadataAdmin;
+}
+
 // GET /api/platform/settings?category=xxx - Get settings by category
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    const isPlatformAdmin = await checkPlatformAdmin(supabase, user);
     if (!isPlatformAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -61,7 +77,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    const isPlatformAdmin = await checkPlatformAdmin(supabase, user);
     if (!isPlatformAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
