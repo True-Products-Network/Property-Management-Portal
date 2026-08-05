@@ -332,6 +332,15 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
                 <div className="space-y-3">
                   {tenantUsers.map((tu: { id: string; user_id: string; role: string; is_primary_admin: boolean; invited_at?: string }) => {
                     const userDetail = userDetails[tu.user_id];
+                    // Helper to get display role name
+                    const getDisplayRole = (role: string, isPrimary: boolean): string => {
+                      if (isPrimary) return "Admin";
+                      const roleMap: Record<string, string> = {
+                        "admin": "Manager",
+                        "member": "Member",
+                      };
+                      return roleMap[role] || role;
+                    };
                     return (
                       <div key={tu.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
@@ -344,8 +353,8 @@ export default async function TenantDetailPage({ params }: TenantDetailPageProps
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={tu.role === "admin" ? "default" : "secondary"}>
-                            {tu.role}
+                          <Badge variant={tu.role === "admin" || tu.is_primary_admin ? "default" : "secondary"}>
+                            {getDisplayRole(tu.role, tu.is_primary_admin)}
                           </Badge>
                           {tu.is_primary_admin && (
                             <Badge variant="outline" className="text-blue-600">Primary</Badge>
