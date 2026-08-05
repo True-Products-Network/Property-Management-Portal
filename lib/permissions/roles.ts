@@ -5,8 +5,12 @@ export const ROLE_HIERARCHY: PortalRole[] = [
   "VENDOR",
   "RESIDENT",
   "OWNER",
+  "STAFF",
+  "FINANCE_USER",
   "BOARD_MEMBER",
-  "MANAGEMENT_STAFF",
+  "PROPERTY_MANAGER",
+  "ASSOCIATION_MANAGER",
+  "PORTFOLIO_MANAGER",
   "ADMIN_USER",
 ];
 
@@ -27,7 +31,12 @@ export function isAdmin(userRoles: PortalRole[]): boolean {
 }
 
 export function isManagement(userRoles: PortalRole[]): boolean {
-  return userRoles.includes("MANAGEMENT_STAFF") || userRoles.includes("ADMIN_USER");
+  return userRoles.includes("STAFF") || 
+         userRoles.includes("ADMIN_USER") ||
+         userRoles.includes("PORTFOLIO_MANAGER") ||
+         userRoles.includes("ASSOCIATION_MANAGER") ||
+         userRoles.includes("PROPERTY_MANAGER") ||
+         userRoles.includes("FINANCE_USER");
 }
 
 export function isBoard(userRoles: PortalRole[]): boolean {

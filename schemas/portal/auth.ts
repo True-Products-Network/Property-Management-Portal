@@ -58,14 +58,18 @@ export const invitationSchema = z.object({
 
 export type InvitationInput = z.infer<typeof invitationSchema>;
 
-// Portal roles
+// Portal roles - all 10 standard roles
 export const portalRoleSchema = z.enum([
   "ADMIN_USER",
-  "MANAGEMENT_STAFF",
-  "OWNER",
-  "RESIDENT",
+  "PORTFOLIO_MANAGER",
+  "ASSOCIATION_MANAGER",
+  "PROPERTY_MANAGER",
   "BOARD_MEMBER",
   "VENDOR",
+  "RESIDENT",
+  "OWNER",
+  "STAFF",
+  "FINANCE_USER",
 ]);
 
 export type PortalRole = z.infer<typeof portalRoleSchema>;
