@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Settings, AlertTriangle } from "lucide-react";
+import { MoreHorizontal, Eye, Settings, AlertTriangle, Users } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -130,6 +130,10 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
                       <DropdownMenuItem onClick={() => router.push(`/platform/tenants/${tenant.id}/edit`)}>
                         <Settings className="mr-2 h-4 w-4" />
                         Edit Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/platform/tenants/${tenant.id}/users`)}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Manage Users
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
