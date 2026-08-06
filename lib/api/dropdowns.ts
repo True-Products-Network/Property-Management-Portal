@@ -58,7 +58,8 @@ export async function getDropdownValues(
 
 // Get all dropdown settings (for admin)
 export async function getAllDropdownSettings(
-  params: QueryParams = {}
+  params: QueryParams = {},
+  tenantId?: string
 ): Promise<ApiResponse<DropdownSetting[]>> {
   try {
     const supabase = await createClient();
@@ -66,6 +67,11 @@ export async function getAllDropdownSettings(
     let query = supabase
       .from("dropdown_settings")
       .select("*");
+
+    // Filter by tenant_id if provided
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
 
     if (params.filters?.recordType) {
       query = query.eq("record_type", params.filters.recordType);
@@ -93,7 +99,9 @@ export async function getAllDropdownSettings(
 }
 
 // Get dropdown settings grouped by record type and field (for admin UI)
-export async function getDropdownSettingsGrouped(): Promise<
+export async function getDropdownSettingsGrouped(
+  tenantId?: string
+): Promise<
   ApiResponse<
     Record<
       string,
@@ -104,12 +112,19 @@ export async function getDropdownSettingsGrouped(): Promise<
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("dropdown_settings")
       .select("*")
       .order("record_type")
       .order("field_name")
       .order("sort_order");
+
+    // Filter by tenant_id if provided
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
@@ -142,10 +157,22 @@ export async function getDropdownSettingsGrouped(): Promise<
 // Create new dropdown value
 export async function createDropdownSetting(
   input: CreateDropdownInput,
-  userId: string
+  userId: string,
+  tenantId?: string
 ): Promise<ApiResponse<DropdownSetting>> {
   try {
     const supabase = await createClient();
+
+    // Get tenant_id if not provided
+    let effectiveTenantId = tenantId;
+    if (!effectiveTenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      effectiveTenantId = tenantUser?.tenant_id;
+    }
 
     const { data, error } = await supabase
       .from("dropdown_settings")
@@ -156,6 +183,7 @@ export async function createDropdownSetting(
         label: input.label,
         sort_order: input.sortOrder || 0,
         is_default: input.isDefault || false,
+        tenant_id: effectiveTenantId,
         created_by: userId,
         updated_by: userId,
       })

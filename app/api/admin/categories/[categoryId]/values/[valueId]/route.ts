@@ -22,7 +22,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { label, description, sortOrder, isActive } = body;
+    const { label, sortOrder, isActive } = body;
 
     // Get current value for audit
     const { data: currentValue } = await supabase
@@ -36,7 +36,6 @@ export async function PUT(
       .from("dropdown_settings")
       .update({
         label: label?.trim(),
-        description: description?.trim(),
         sort_order: sortOrder,
         is_active: isActive,
         updated_at: new Date().toISOString(),
