@@ -51,7 +51,7 @@ export async function PUT(
         portal_invitation_status: status.toUpperCase(),
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", id)
+      .eq("portal_user_id", id)
       .select()
       .single();
 

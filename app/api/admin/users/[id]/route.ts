@@ -64,7 +64,7 @@ export async function DELETE(
     const { error: contactError } = await supabase
       .from("contacts")
       .delete()
-      .eq("user_id", id);
+      .eq("portal_user_id", id);
 
     if (contactError) {
       console.error("Error deleting contact:", contactError);
@@ -137,7 +137,7 @@ export async function GET(
         *,
         user_roles!inner(role_id, roles(name))
       `)
-      .eq("user_id", id)
+      .eq("portal_user_id", id)
       .single();
 
     if (contactError || !contact) {
