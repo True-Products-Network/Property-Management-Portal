@@ -193,6 +193,16 @@ export async function updateUnit(
   try {
     const supabase = await createClient();
     
+    // Get the contact ID for this user (for FK constraints)
+    const { data: userContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+    
+    const contactId = userContact?.id || userId;
+    console.log("[updateUnit] Using contactId:", contactId, "for userId:", userId);
+    
     const { data, error } = await supabase
       .from("units")
       .update({
@@ -207,7 +217,7 @@ export async function updateUnit(
         storage_unit: input.storageUnit,
         mailing_address: input.mailingAddress,
         access_notes: input.accessNotes,
-        updated_by: userId,
+        updated_by: contactId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
