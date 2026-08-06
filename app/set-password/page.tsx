@@ -111,15 +111,32 @@ function SetPasswordContent() {
         }
       }
 
-      setSuccess(true);
+      // Sign out the recovery session and sign in with new password
+      await supabase.auth.signOut();
       
-      // Redirect to login after a delay
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email!,
+        password: password,
+      });
+
+      if (signInError) {
+        console.error("Auto sign-in failed:", signInError);
+        // Still show success, but they'll need to manually log in
+        setSuccess(true);
+        setTimeout(() => {
+          const loginUrl = tenantSlug 
+            ? `/sign-in?tenant=${tenantSlug}`
+            : "/sign-in";
+          router.push(loginUrl);
+        }, 3000);
+        return;
+      }
+
+      // Successfully signed in, redirect to portal
+      setSuccess(true);
       setTimeout(() => {
-        const loginUrl = tenantSlug 
-          ? `/sign-in?tenant=${tenantSlug}`
-          : "/sign-in";
-        router.push(loginUrl);
-      }, 3000);
+        router.push("/");
+      }, 1500);
     } catch (err) {
       console.error("Error setting password:", err);
       setError(err instanceof Error ? err.message : "Failed to set password");
@@ -175,10 +192,10 @@ function SetPasswordContent() {
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </div>
                 <p className="text-gray-600">
-                  Your password has been set successfully!
+                  Your password has been set and you&apos;re now signed in!
                 </p>
                 <p className="text-sm text-gray-500">
-                  Redirecting you to sign in...
+                  Redirecting you to the portal...
                 </p>
               </div>
             ) : (
