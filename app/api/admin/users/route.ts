@@ -6,11 +6,10 @@ interface Association {
   name: string;
 }
 
+// Portal users data structure (names come from contacts table)
 interface PortalUser {
   id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
   ghl_contact_id: string | null;
   is_admin: boolean;
   status: string;
@@ -88,8 +87,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         email,
-        first_name,
-        last_name,
         ghl_contact_id,
         is_admin,
         status,
@@ -97,6 +94,17 @@ export async function GET(request: NextRequest) {
         updated_at
       `)
       .order("created_at", { ascending: false });
+
+    // Get names from contacts table
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("id, user_id, first_name, last_name");
+    
+    interface ContactInfo {
+      first_name?: string;
+      last_name?: string;
+    }
+    const contactMap = new Map<string, ContactInfo>((contacts || []).map((c: any) => [c.user_id, c]));
 
     if (error) {
       console.error("[Admin Users API] Error fetching users:", error);
@@ -114,21 +122,27 @@ export async function GET(request: NextRequest) {
 
     const associationMap = new Map((associations as Association[] || []).map((a: Association) => [a.id, a.name]));
 
-    // Map users with role information
-    const mappedUsers = (users as PortalUser[] || []).map((u: PortalUser) => ({
-      id: u.id,
-      email: u.email,
-      firstName: u.first_name,
-      lastName: u.last_name,
-      name: u.first_name && u.last_name 
-        ? `${u.first_name} ${u.last_name}` 
-        : u.email,
-      role: roleMap.get(u.id) || (u.is_admin ? "admin" : "user"),
-      status: u.status?.toLowerCase() || "active",
-      ghlContactId: u.ghl_contact_id,
-      createdAt: u.created_at,
-      lastSignInAt: u.updated_at, // Using updated_at as proxy for last activity
-    }));
+    // Map users with role information and contact names
+    const mappedUsers = (users || []).map((u: any) => {
+      const contact = contactMap.get(u.id);
+      const firstName = contact?.first_name;
+      const lastName = contact?.last_name;
+      
+      return {
+        id: u.id,
+        email: u.email,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        name: firstName && lastName 
+          ? `${firstName} ${lastName}` 
+          : u.email,
+        role: roleMap.get(u.id) || (u.is_admin ? "admin" : "user"),
+        status: u.status?.toLowerCase() || "active",
+        ghlContactId: u.ghl_contact_id,
+        createdAt: u.created_at,
+        lastSignInAt: u.updated_at,
+      };
+    });
 
     return NextResponse.json({
       success: true,
