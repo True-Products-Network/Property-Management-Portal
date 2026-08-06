@@ -38,11 +38,8 @@ export default function SiteSettingsPage() {
       const response = await fetch("/api/platform/settings?category=site");
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
-          const settingsMap: Record<string, string> = {};
-          result.data.forEach((s: { key: string; value: string }) => {
-            settingsMap[s.key] = s.value;
-          });
+        if (result.success && result.settings) {
+          const settingsMap = result.settings;
           setSettings({
             portal_url: settingsMap.site_portal_url || "https://portal.trueproductsnetwork.com",
             app_name: settingsMap.site_app_name || "Associos",
