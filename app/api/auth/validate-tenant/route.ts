@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 // GET /api/auth/validate-tenant?slug=<tenant-id>
 // Public endpoint to validate a tenant ID exists
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     // Look up tenant by ID
     const { data: tenant, error } = await supabase

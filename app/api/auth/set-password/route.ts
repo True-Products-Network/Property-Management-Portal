@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
 
     console.log("[SetPassword] Found user:", user.id);
 
-    // Find tenant by ID (subdomain field doesn't exist in schema)
-    const { data: tenant, error: tenantError } = await supabase
+    // Find tenant by ID using service client (bypasses RLS)
+    const { data: tenant, error: tenantError } = await serviceClient
       .from("tenants")
       .select("id, name")
       .eq("id", tenantSlug)
