@@ -40,11 +40,31 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
     
     const isPlatformAdmin = platformRole?.role === "PLATFORM_ADMIN" || authUser.user_metadata?.is_platform_admin === true;
+    
+    // Check tenant_users for admin role
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("role, is_primary_admin")
+      .eq("user_id", authUser.id)
+      .maybeSingle();
+    
+    const isTenantAdmin = tenantUser?.role === "admin" || tenantUser?.is_primary_admin === true;
+    
+    // Check user metadata for portal role
+    const portalRole = authUser.user_metadata?.portal_role;
+    const isAdminRole = portalRole === "admin_user" || portalRole === "ADMIN_USER";
 
-    console.log("[Admin Users API] Current user lookup result:", { currentUser, isPlatformAdmin });
+    console.log("[Admin Users API] Current user lookup result:", { 
+      currentUser, 
+      isPlatformAdmin, 
+      tenantUser, 
+      isTenantAdmin, 
+      portalRole,
+      isAdminRole 
+    });
 
-    // Allow access if user is in portal_users as admin OR is platform admin
-    if (!currentUser?.is_admin && !isPlatformAdmin) {
+    // Allow access if user is admin in any context
+    if (!currentUser?.is_admin && !isPlatformAdmin && !isTenantAdmin && !isAdminRole) {
       console.error("[Admin Users API] User is not admin:", authUser.id);
       return NextResponse.json(
         { success: false, error: "Admin access required" },
