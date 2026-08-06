@@ -72,14 +72,18 @@ export async function GET(request: NextRequest) {
     const { data: allUsers } = await supabase.from("portal_users").select("id");
     const userIds = (allUsers as { id: string }[] || []).map((u: { id: string }) => u.id);
 
-    // Get user's roles for role information
+    // Get user's roles for role information (from new user_roles table with role_id)
     const { data: userRoles } = await supabase
       .from("user_roles")
-      .select("user_id, role")
+      .select("user_id, role_id, roles(name)")
       .in("user_id", userIds);
 
-    // Build role map
-    const roleMap = new Map((userRoles as { user_id: string; role: string }[] || []).map((ur: { user_id: string; role: string }) => [ur.user_id, ur.role]));
+    // Build role map - use role name from roles table
+    const roleMap = new Map<string, string>();
+    (userRoles || []).forEach((ur: any) => {
+      const roleName = ur.roles?.name || ur.role_id;
+      roleMap.set(ur.user_id, roleName);
+    });
 
     // Get all portal users
     const { data: users, error } = await supabase
