@@ -15,7 +15,7 @@ export async function checkEntitlementServer(
     .from("tenant_entitlements")
     .select("*")
     .eq("tenant_id", tenantId)
-    .eq("feature_key", featureKey)
+    .eq("feature_id", featureKey)
     .single();
 
   if (error && error.code !== "PGRST116") {
@@ -34,7 +34,7 @@ export async function checkEntitlementServer(
   const { data: planFeature } = await supabase
     .from("plan_features")
     .select("*")
-    .eq("feature_key", featureKey)
+    .eq("feature_id", featureKey)
     .eq("plans.tenant_subscriptions.tenant_id", tenantId)
     .single();
 
@@ -54,7 +54,7 @@ export async function incrementEntitlementUsage(
     .from("tenant_entitlements")
     .select("current_usage")
     .eq("tenant_id", tenantId)
-    .eq("feature_key", featureKey)
+    .eq("feature_id", featureKey)
     .single();
 
   if (entitlement) {
@@ -65,6 +65,6 @@ export async function incrementEntitlementUsage(
         updated_at: new Date().toISOString(),
       })
       .eq("tenant_id", tenantId)
-      .eq("feature_key", featureKey);
+      .eq("feature_id", featureKey);
   }
 }
