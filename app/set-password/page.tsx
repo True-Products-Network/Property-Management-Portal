@@ -137,15 +137,17 @@ function SetPasswordContent() {
         }
       }
 
-      // Sign out just this session and sign in with new password
-      // Note: We don't use signOut() as that kills ALL sessions globally
-      // Instead we just sign in with the new credentials
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      // Sign out the current session locally (don't kill other sessions)
+      // Use scope: 'local' to only sign out this device/session
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Now sign in with the new password
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email!,
         password: password,
       });
 
-      if (signInError) {
+      if (signInError || !signInData.session) {
         console.error("Auto sign-in failed:", signInError);
         // Still show success, but they'll need to manually log in
         setSuccess(true);
@@ -159,6 +161,7 @@ function SetPasswordContent() {
       }
 
       // Successfully signed in, redirect to portal
+      console.log("[SetPassword] Auto sign-in successful, redirecting to portal");
       setSuccess(true);
       setTimeout(() => {
         router.push("/");
