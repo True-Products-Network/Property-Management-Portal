@@ -9,6 +9,7 @@ export interface Property {
   id: string;
   propertyId: string;
   associationId: string;
+  associationName?: string;
   name: string;
   addressStreet: string;
   addressCity?: string;
@@ -54,7 +55,7 @@ export async function getProperties(
     
     let query = supabase
       .from("properties")
-      .select("*", { count: "exact" });
+      .select(`*, associations!inner(name)`, { count: "exact" });
     
     if (params.associationId) {
       query = query.eq("association_id", params.associationId);

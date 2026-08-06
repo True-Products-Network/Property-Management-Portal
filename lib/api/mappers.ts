@@ -64,6 +64,7 @@ export function mapProperty(row: any): Property {
     id: row.id,
     propertyId: row.property_id,
     associationId: row.association_id,
+    associationName: row.associations?.name,
     name: row.name,
     addressStreet: row.address_street,
     addressCity: row.address_city,
