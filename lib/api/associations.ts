@@ -176,6 +176,14 @@ export async function createAssociation(
   try {
     const supabase = await createClient();
 
+    // Look up the creator's contact record for created_by
+    // The created_by field references contacts(id), not auth.users
+    const { data: creatorContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+
     // Generate association_id
     const associationId = `ASSOC-${Date.now()}`;
 
@@ -208,8 +216,8 @@ export async function createAssociation(
         emergency_instructions: input.emergencyInstructions,
         general_notes: input.generalNotes,
         business_id: businessId,
-        created_by: userId,
-        updated_by: userId,
+        created_by: creatorContact?.id || null,
+        updated_by: creatorContact?.id || null,
       })
       .select()
       .single();

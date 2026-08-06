@@ -279,7 +279,7 @@ export async function POST(
       }
     }
 
-    // Create contact record (only use columns that exist in the table)
+    // Create contact record with portal_user_id link and tenant_id
     const { data: contact, error: contactError } = await supabase
       .from("contacts")
       .insert({
@@ -289,6 +289,9 @@ export async function POST(
         email: validation.data.email,
         phone: validation.data.phone,
         email_permission: true,
+        tenant_id: tenantId,
+        portal_user_id: userId,
+        allow_login: true, // Admin users get login access by default
       })
       .select()
       .single();
