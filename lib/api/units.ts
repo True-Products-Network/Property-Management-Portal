@@ -131,6 +131,16 @@ export async function createUnit(
   try {
     const supabase = await createClient();
     
+    // Get the contact ID for this user (for FK constraints)
+    const { data: userContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+    
+    const contactId = userContact?.id || userId;
+    console.log("[createUnit] Using contactId:", contactId, "for userId:", userId);
+    
     const unitId = `UNIT-${Date.now()}`;
     
     const { data, error } = await supabase
@@ -149,8 +159,8 @@ export async function createUnit(
         storage_unit: input.storageUnit,
         mailing_address: input.mailingAddress,
         access_notes: input.accessNotes,
-        created_by: userId,
-        updated_by: userId,
+        created_by: contactId,
+        updated_by: contactId,
       })
       .select()
       .single();
