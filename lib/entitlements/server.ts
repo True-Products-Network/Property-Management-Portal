@@ -10,12 +10,26 @@ export async function checkEntitlementServer(
 ): Promise<{ enabled: boolean; limit?: number; currentUsage?: number }> {
   const supabase = await createClient();
 
+  // First, look up the feature UUID from the code
+  const { data: feature } = await supabase
+    .from("features")
+    .select("id")
+    .eq("code", featureKey)
+    .single();
+
+  if (!feature) {
+    console.log(`[Entitlements] Feature not found: ${featureKey}`);
+    return { enabled: false };
+  }
+
+  const featureId = feature.id;
+
   // Check tenant entitlements
   const { data: entitlement, error } = await supabase
     .from("tenant_entitlements")
     .select("*")
     .eq("tenant_id", tenantId)
-    .eq("feature_id", featureKey)
+    .eq("feature_id", featureId)
     .single();
 
   if (error && error.code !== "PGRST116") {
@@ -33,8 +47,8 @@ export async function checkEntitlementServer(
   // Check plan features
   const { data: planFeature } = await supabase
     .from("plan_features")
-    .select("*")
-    .eq("feature_id", featureKey)
+    .select("*, plans!inner(tenant_subscriptions!inner(tenant_id))")
+    .eq("feature_id", featureId)
     .eq("plans.tenant_subscriptions.tenant_id", tenantId)
     .single();
 
@@ -50,11 +64,25 @@ export async function incrementEntitlementUsage(
 ): Promise<void> {
   const supabase = await createClient();
 
+  // First, look up the feature UUID from the code
+  const { data: feature } = await supabase
+    .from("features")
+    .select("id")
+    .eq("code", featureKey)
+    .single();
+
+  if (!feature) {
+    console.log(`[Entitlements] Feature not found for usage increment: ${featureKey}`);
+    return;
+  }
+
+  const featureId = feature.id;
+
   const { data: entitlement } = await supabase
     .from("tenant_entitlements")
     .select("current_usage")
     .eq("tenant_id", tenantId)
-    .eq("feature_id", featureKey)
+    .eq("feature_id", featureId)
     .single();
 
   if (entitlement) {
@@ -65,6 +93,6 @@ export async function incrementEntitlementUsage(
         updated_at: new Date().toISOString(),
       })
       .eq("tenant_id", tenantId)
-      .eq("feature_id", featureKey);
+      .eq("feature_id", featureId);
   }
 }
