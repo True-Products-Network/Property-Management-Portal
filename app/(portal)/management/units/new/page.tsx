@@ -336,14 +336,14 @@ export default function NewUnitPage() {
                   className="input w-full"
                 >
                   <option value="">Select Type</option>
-                  <option value="studio">Studio</option>
-                  <option value="1_bedroom">1 Bedroom</option>
-                  <option value="2_bedroom">2 Bedroom</option>
-                  <option value="3_bedroom">3 Bedroom</option>
-                  <option value="4_bedroom">4+ Bedroom</option>
-                  <option value="penthouse">Penthouse</option>
-                  <option value="loft">Loft</option>
-                  <option value="townhouse">Townhouse</option>
+                  <option value="Studio">Studio</option>
+                  <option value="1 Bedroom">1 Bedroom</option>
+                  <option value="2 Bedroom">2 Bedroom</option>
+                  <option value="3 Bedroom">3 Bedroom</option>
+                  <option value="4+ Bedroom">4+ Bedroom</option>
+                  <option value="Penthouse">Penthouse</option>
+                  <option value="Loft">Loft</option>
+                  <option value="Townhouse">Townhouse</option>
                 </select>
               </div>
               <div>

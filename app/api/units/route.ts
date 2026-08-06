@@ -8,7 +8,7 @@ const createSchema = z.object({
   propertyId: z.string().uuid(),
   unitNumber: z.string().min(1),
   displayName: z.string().optional(),
-  type: z.enum(["Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Penthouse", "Loft", "Townhouse", "studio", "1_bedroom", "2_bedroom", "3_bedroom", "4_bedroom", "penthouse", "loft", "townhouse"]).optional(),
+  type: z.enum(["Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Penthouse", "Loft", "Townhouse"]).optional(),
   status: z.string().optional(),
   squareFeet: z.number().optional(),
   bedrooms: z.number().optional(),
