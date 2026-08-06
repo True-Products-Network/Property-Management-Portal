@@ -374,6 +374,7 @@ export default function RolesAndPermissionsPage() {
             <thead>
               <tr className="border-b border-[var(--border-color)]">
                 <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Role</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Menu Access</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Users</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">MFA</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
@@ -383,7 +384,7 @@ export default function RolesAndPermissionsPage() {
             <tbody>
               {filteredRoles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-[var(--secondary-text)]">
+                  <td colSpan={6} className="py-8 text-center text-[var(--secondary-text)]">
                     No roles found. {roles.length > 0 ? `${roles.length} roles loaded but filtered out.` : "Check console for errors."}
                   </td>
                 </tr>
@@ -399,6 +400,23 @@ export default function RolesAndPermissionsPage() {
                           <p className="font-medium text-[var(--main-text)]">{role.name}</p>
                           <p className="text-xs text-[var(--secondary-text)]">{role.description}</p>
                         </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {role.permissions?.filter((p: Permission) => p.read).slice(0, 4).map((p: Permission) => (
+                          <Badge key={p.module} variant="outline" className="text-xs">
+                            {p.module}
+                          </Badge>
+                        ))}
+                        {role.permissions?.filter((p: Permission) => p.read).length > 4 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{role.permissions.filter((p: Permission) => p.read).length - 4} more
+                          </Badge>
+                        )}
+                        {role.permissions?.filter((p: Permission) => p.read).length === 0 && (
+                          <span className="text-xs text-gray-400">No menu access</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -501,12 +519,19 @@ export default function RolesAndPermissionsPage() {
 
               {/* Permissions Matrix */}
               <div>
-                <h3 className="font-medium mb-4">Permissions</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium">Permissions</h3>
+                  <p className="text-xs text-[var(--secondary-text)]">
+                    <span className="font-medium text-green-600">Menu Access</span> controls which items appear in the sidebar. 
+                    Read permission must be enabled for menu visibility.
+                  </p>
+                </div>
                 <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-[var(--page-background)]">
                       <tr>
                         <th className="text-left py-2 px-4 text-sm font-medium">Module</th>
+                        <th className="text-center py-2 px-4 text-sm font-medium">Menu Access</th>
                         <th className="text-center py-2 px-4 text-sm font-medium">Read</th>
                         <th className="text-center py-2 px-4 text-sm font-medium">Write</th>
                         <th className="text-center py-2 px-4 text-sm font-medium">Delete</th>
@@ -522,6 +547,21 @@ export default function RolesAndPermissionsPage() {
                               <div className="flex items-center gap-2">
                                 <module.icon className="h-4 w-4 text-[var(--secondary-text)]" />
                                 <span className="text-sm">{module.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-2 px-4 text-center">
+                              <div className="flex items-center justify-center">
+                                <button
+                                  onClick={() => togglePermission(module.id, "read")}
+                                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                    perm?.read 
+                                      ? "bg-green-100 text-green-700 border border-green-200" 
+                                      : "bg-gray-100 text-gray-500 border border-gray-200"
+                                  }`}
+                                  title={perm?.read ? "Visible in menu" : "Hidden from menu"}
+                                >
+                                  {perm?.read ? "Visible" : "Hidden"}
+                                </button>
                               </div>
                             </td>
                             <td className="py-2 px-4 text-center">
