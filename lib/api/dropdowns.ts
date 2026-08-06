@@ -119,6 +119,11 @@ export async function getDropdownSettingsGrouped(
       .order("field_name")
       .order("sort_order");
 
+    // Filter by tenant_id if provided
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -152,10 +157,22 @@ export async function getDropdownSettingsGrouped(
 // Create new dropdown value
 export async function createDropdownSetting(
   input: CreateDropdownInput,
-  userId: string
+  userId: string,
+  tenantId?: string
 ): Promise<ApiResponse<DropdownSetting>> {
   try {
     const supabase = await createClient();
+
+    // Get tenant_id if not provided
+    let effectiveTenantId = tenantId;
+    if (!effectiveTenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      effectiveTenantId = tenantUser?.tenant_id;
+    }
 
     const { data, error } = await supabase
       .from("dropdown_settings")
@@ -166,6 +183,7 @@ export async function createDropdownSetting(
         label: input.label,
         sort_order: input.sortOrder || 0,
         is_default: input.isDefault || false,
+        tenant_id: effectiveTenantId,
         created_by: userId,
         updated_by: userId,
       })
