@@ -14,13 +14,15 @@ import {
   Building2,
   Mail,
   Phone,
-  ArrowRight,
+  Eye,
+  Pencil,
   Loader2,
   User,
   UserCog,
   Trash2,
   AlertTriangle,
   X,
+  Key,
 } from "lucide-react";
 
 interface Contact {
@@ -37,6 +39,7 @@ interface Contact {
   emailPermission: boolean;
   smsPermission: boolean;
   portalInvitationStatus: string;
+  role?: string;
   createdAt: string;
 }
 
@@ -78,6 +81,32 @@ export default function PeoplePage() {
   async function handleDelete(contact: Contact) {
     setContactToDelete(contact);
     setDeleteModalOpen(true);
+  }
+
+  async function handleTogglePortalAccess(contact: Contact) {
+    try {
+      const newStatus = contact.portalInvitationStatus === "active" ? "suspended" : "active";
+      const response = await fetch(`/api/contacts/${contact.id}/portal-access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update portal access");
+      }
+
+      // Update local state
+      setContacts(contacts.map(c => 
+        c.id === contact.id 
+          ? { ...c, portalInvitationStatus: newStatus }
+          : c
+      ));
+    } catch (error) {
+      console.error("Error updating portal access:", error);
+      alert(error instanceof Error ? error.message : "Failed to update portal access");
+    }
   }
 
   async function confirmDelete() {
@@ -289,6 +318,9 @@ export default function PeoplePage() {
                     Name
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
+                    Role
+                  </th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Contact Info
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
@@ -318,6 +350,13 @@ export default function PeoplePage() {
                       >
                         {contact.firstName} {contact.lastName}
                       </Link>
+                    </td>
+                    <td className="py-3 px-4">
+                      {contact.role && (
+                        <Badge className="bg-gray-100 text-gray-700">
+                          {contact.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </Badge>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-sm">
@@ -360,15 +399,30 @@ export default function PeoplePage() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Link href={`/management/people/${contact.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <ArrowRight className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" title="View">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/management/people/${contact.id}/edit`}>
+                          <Button variant="ghost" size="sm" title="Edit">
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          onClick={() => handleTogglePortalAccess(contact)}
+                          title={contact.portalInvitationStatus === "active" ? "Disable Portal Access" : "Enable Portal Access"}
+                          className={contact.portalInvitationStatus === "active" ? "text-amber-500" : "text-green-500"}
+                        >
+                          <Key className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
                           onClick={() => handleDelete(contact)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
