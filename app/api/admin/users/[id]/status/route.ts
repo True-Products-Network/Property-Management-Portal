@@ -44,6 +44,15 @@ export async function PUT(
       return NextResponse.json({ error: "Status is required" }, { status: 400 });
     }
 
+    // Map frontend status to database values
+    // Common values: PENDING, INVITED, ACTIVE, SUSPENDED, REVOKED
+    const validStatuses = ['PENDING', 'INVITED', 'ACTIVE', 'SUSPENDED', 'REVOKED', 'INACTIVE'];
+    const upperStatus = status.toUpperCase();
+    
+    if (!validStatuses.includes(upperStatus)) {
+      return NextResponse.json({ error: `Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}` }, { status: 400 });
+    }
+
     // Try to update by portal_user_id first, then by contact id
     let contact = null;
     let contactError = null;
@@ -52,7 +61,7 @@ export async function PUT(
     const { data: contactByPortalId, error: errorByPortalId } = await supabase
       .from("contacts")
       .update({
-        portal_invitation_status: status.toUpperCase(),
+        portal_invitation_status: upperStatus,
         updated_at: new Date().toISOString(),
       })
       .eq("portal_user_id", id)
@@ -66,7 +75,7 @@ export async function PUT(
       const { data: contactById, error: errorById } = await supabase
         .from("contacts")
         .update({
-          portal_invitation_status: status.toUpperCase(),
+          portal_invitation_status: upperStatus,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
@@ -87,7 +96,7 @@ export async function PUT(
       const { error: portalError } = await supabase
         .from("portal_users")
         .update({
-          status: status.toUpperCase(),
+          status: upperStatus,
           updated_at: new Date().toISOString(),
         })
         .eq("id", contact.portal_user_id);
