@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Truck, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import ContactLookup from "@/components/ContactLookup";
 
 interface FormData {
   companyName: string;
   doingBusinessAs: string;
   category: string;
   status: string;
+  primaryContactId: string;
   primaryContactName: string;
   email: string;
   phone: string;
@@ -58,6 +60,7 @@ function NewVendorForm() {
     doingBusinessAs: "",
     category: "",
     status: "active",
+    primaryContactId: "",
     primaryContactName: "",
     email: "",
     phone: "",
@@ -86,6 +89,7 @@ function NewVendorForm() {
                 doingBusinessAs: vendor.doingBusinessAs || "",
                 category: vendor.category || "",
                 status: vendor.status || "active",
+                primaryContactId: vendor.primaryContactId || "",
                 primaryContactName: vendor.primaryContactName || "",
                 email: vendor.email || "",
                 phone: vendor.phone || "",
@@ -152,6 +156,7 @@ function NewVendorForm() {
           doingBusinessAs: formData.doingBusinessAs || undefined,
           category: formData.category,
           status: formData.status,
+          primaryContactId: formData.primaryContactId || undefined,
           primaryContactName: formData.primaryContactName || undefined,
           email: formData.email,
           phone: formData.phone,
@@ -300,16 +305,22 @@ function NewVendorForm() {
             <CardTitle>Contact Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                Primary Contact Name
-              </label>
-              <Input
-                value={formData.primaryContactName}
-                onChange={(e) => handleChange("primaryContactName", e.target.value)}
-                placeholder="e.g., John Smith"
-              />
-            </div>
+            <ContactLookup
+              label="Primary Contact"
+              value={formData.primaryContactId}
+              displayName={formData.primaryContactName}
+              onChange={(contactId, contactName, contactData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  primaryContactId: contactId,
+                  primaryContactName: contactName,
+                  email: contactData.email || prev.email,
+                  phone: contactData.phone || prev.phone,
+                }));
+              }}
+              placeholder="Search or create primary contact..."
+              roleFilter="vendor_contact"
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
