@@ -91,6 +91,33 @@ export async function POST(request: NextRequest) {
       const phone = metadata.phone || null;
       const isAdmin = tu.role === 'admin' || tu.is_primary_admin;
 
+      // Check if portal_user exists, create if not
+      const { data: existingPortalUser } = await serviceClient
+        .from('portal_users')
+        .select('id')
+        .eq('id', tu.user_id)
+        .maybeSingle();
+
+      if (!existingPortalUser) {
+        // Create portal_user record first
+        const { error: puError } = await serviceClient
+          .from('portal_users')
+          .insert({
+            id: tu.user_id,
+            email: user.email,
+            ghl_contact_id: `GHL-${Date.now()}`,
+            status: 'ACTIVE',
+          });
+        
+        if (puError) {
+          console.error(`[Migration] Failed to create portal_user for ${user.email}:`, puError);
+          errors.push(`Failed portal_user ${user.email}: ${puError.message}`);
+          failed++;
+          continue;
+        }
+        console.log(`[Migration] Created portal_user for ${user.email}`);
+      }
+
       const { error: insertError } = await serviceClient
         .from('contacts')
         .insert({
