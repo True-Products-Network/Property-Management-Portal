@@ -254,13 +254,12 @@ export default function NewAssociationPage() {
     }
   }
 
-  // Format phone number as user types
+  // Format phone number as user types - allows any input
   function formatPhoneNumber(value: string): string {
-    const numbers = value.replace(/\D/g, "");
-    if (numbers.length === 0) return "";
-    if (numbers.length <= 3) return `+1 (${numbers}`;
-    if (numbers.length <= 6) return `+1 (${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
-    return `+1 (${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6, 10)}`;
+    // Just strip non-numeric characters and limit to 10 digits
+    // Let the user type freely without forcing a mask
+    const numbers = value.replace(/\D/g, "").slice(0, 10);
+    return numbers;
   }
 
   return (
