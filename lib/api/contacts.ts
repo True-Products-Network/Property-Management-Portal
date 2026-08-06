@@ -141,6 +141,14 @@ export async function createContact(
     
     const contactId = `CONT-${Date.now()}`;
     
+    // Look up the current user's contact record for created_by
+    // The created_by field references contacts(id), not auth.users
+    const { data: creatorContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+    
     const { data, error } = await supabase
       .from("contacts")
       .insert({
@@ -162,8 +170,8 @@ export async function createContact(
         emergency_contact_name: input.emergencyContactName,
         emergency_contact_phone: input.emergencyContactPhone,
         emergency_contact_relationship: input.emergencyContactRelationship,
-        created_by: userId,
-        updated_by: userId,
+        created_by: creatorContact?.id || null,
+        updated_by: creatorContact?.id || null,
       })
       .select()
       .single();
