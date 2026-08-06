@@ -77,7 +77,14 @@ export default function AdminHomePage() {
         method: "POST",
       });
       const result = await response.json();
-      setMigrationResult(result);
+      if (!response.ok) {
+        setMigrationResult({
+          success: false,
+          error: result.error || `HTTP ${response.status}: ${response.statusText}`,
+        });
+      } else {
+        setMigrationResult(result);
+      }
       // Refresh stats after migration
       fetchStats();
     } catch (error) {

@@ -31,9 +31,13 @@ export async function POST(request: NextRequest) {
     const serviceClient = createServiceClient();
 
     // Get all tenant_users
+    console.log("[Migration] Starting migration, checking auth...");
+
     const { data: tenantUsers, error: tuError } = await serviceClient
       .from('tenant_users')
       .select('user_id, tenant_id, role, is_primary_admin');
+
+    console.log("[Migration] Tenant users:", tenantUsers?.length, "Error:", tuError);
 
     if (tuError) {
       return NextResponse.json({ success: false, error: tuError.message }, { status: 500 });
@@ -103,9 +107,11 @@ export async function POST(request: NextRequest) {
         });
 
       if (insertError) {
-        errors.push(`Failed ${user.email}: ${insertError.message}`);
+        console.error(`[Migration] Failed to create contact for ${user.email}:`, insertError);
+        errors.push(`Failed ${user.email}: ${insertError.message} (code: ${insertError.code})`);
         failed++;
       } else {
+        console.log(`[Migration] Created contact for ${user.email}`);
         created++;
       }
     }
