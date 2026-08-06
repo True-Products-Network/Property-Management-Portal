@@ -27,42 +27,15 @@ function SetPasswordContent() {
   const [tenantName, setTenantName] = useState<string | null>(null);
   const [validating, setValidating] = useState(true);
 
-  // Validate the recovery token and get tenant info
+  // Get tenant info
   useEffect(() => {
-    async function validateAndLoad() {
+    async function loadTenant() {
       if (!email || !tenantSlug) {
-        setError("Invalid invitation link. Please request a new invitation.");
+        setError("Invalid invitation link. Missing email or tenant information.");
         setValidating(false);
         return;
       }
 
-      // Check for access_token in URL hash (from Supabase recovery link)
-      const hash = window.location.hash;
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-      
-      console.log("[SetPassword] URL hash:", hash);
-      console.log("[SetPassword] Access token present:", !!accessToken);
-      
-      if (accessToken) {
-        // Set the session from the recovery link
-        const { error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || "",
-        });
-        
-        if (sessionError) {
-          console.error("[SetPassword] Error setting session:", sessionError);
-          setError("Your invitation link has expired. Please request a new one.");
-          setValidating(false);
-          return;
-        }
-        
-        console.log("[SetPassword] Session established from recovery link");
-      }
-
-      // Get tenant info
       try {
         const { data: tenant } = await supabase
           .from("tenants")
@@ -80,7 +53,7 @@ function SetPasswordContent() {
       setValidating(false);
     }
     
-    validateAndLoad();
+    loadTenant();
   }, [email, tenantSlug, supabase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,45 +76,24 @@ function SetPasswordContent() {
     }
 
     try {
-      // Get the current session (should be set from the recovery link)
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setError("Your invitation link has expired. Please request a new one.");
-        setLoading(false);
-        return;
-      }
-
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: password,
+      // Call API to set password and activate user
+      const response = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          tenantSlug,
+          password,
+        }),
       });
 
-      if (updateError) {
-        throw updateError;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to set password");
       }
 
-      // Activate the user for the tenant
-      if (tenantSlug && email) {
-        const response = await fetch("/api/invitations/activate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email,
-            tenantSlug,
-          }),
-        });
-
-        if (!response.ok) {
-          console.error("Error activating user for tenant");
-        }
-      }
-
-      // Sign out the current session locally (don't kill other sessions)
-      // Use scope: 'local' to only sign out this device/session
-      await supabase.auth.signOut({ scope: 'local' });
-      
-      // Now sign in with the new password
+      // Password set successfully, now sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: email!,
         password: password,
@@ -149,19 +101,19 @@ function SetPasswordContent() {
 
       if (signInError || !signInData.session) {
         console.error("Auto sign-in failed:", signInError);
-        // Still show success, but they'll need to manually log in
+        // Show success but redirect to login
         setSuccess(true);
         setTimeout(() => {
           const loginUrl = tenantSlug 
             ? `/sign-in?tenant=${tenantSlug}`
             : "/sign-in";
           router.push(loginUrl);
-        }, 3000);
+        }, 2000);
         return;
       }
 
-      // Successfully signed in, redirect to portal
-      console.log("[SetPassword] Auto sign-in successful, redirecting to portal");
+      // Successfully signed in
+      console.log("[SetPassword] Sign-in successful, redirecting to portal");
       setSuccess(true);
       setTimeout(() => {
         router.push("/");
@@ -221,7 +173,7 @@ function SetPasswordContent() {
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </div>
                 <p className="text-gray-600">
-                  Your password has been set and you&apos;re now signed in!
+                  Your password has been set successfully!
                 </p>
                 <p className="text-sm text-gray-500">
                   Redirecting you to the portal...
@@ -268,7 +220,7 @@ function SetPasswordContent() {
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Setting Password..." : "Set Password & Activate Account"}
+                    {loading ? "Setting Password..." : "Set Password & Sign In"}
                   </Button>
                 </form>
               </>

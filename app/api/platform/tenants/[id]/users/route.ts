@@ -248,7 +248,7 @@ export async function POST(
       userId = newUser.user.id;
       isNewUser = true;
 
-      // Send password reset email (acts as invite)
+      // Send invitation email with direct link (no recovery token needed)
       if (validation.data.sendInviteEmail) {
         // Get tenant details for the email
         const { data: tenant } = await supabase
@@ -260,18 +260,22 @@ export async function POST(
         const tenantSlug = tenant?.subdomain || tenantId;
         const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/set-password?tenant=${tenantSlug}&email=${encodeURIComponent(validation.data.email)}`;
         
-        const { error: inviteError } = await serviceClient.auth.admin.generateLink({
-          type: "recovery",
+        // Store invitation token for verification (optional security)
+        const invitationToken = `inv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await supabase.from("user_invitations").insert({
           email: validation.data.email,
-          options: {
-            redirectTo: inviteUrl,
-          },
+          tenant_id: tenantId,
+          user_id: userId,
+          token: invitationToken,
+          status: "pending",
+          invited_by: currentUser?.id,
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
         });
-
-        if (inviteError) {
-          console.error("Error sending invite email:", inviteError);
-          // Don't fail the operation, just log the error
-        }
+        
+        // TODO: Send actual email here
+        // For now, just log the invitation URL
+        console.log("[Invitation] Invitation URL for", validation.data.email, ":", inviteUrl);
+        console.log("[Invitation] Invitation token:", invitationToken);
       }
     }
 
