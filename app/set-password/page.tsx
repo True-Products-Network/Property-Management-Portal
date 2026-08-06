@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Lock, AlertCircle, CheckCircle2, Building2 } from "lucide-react";
+import { Lock, AlertCircle, CheckCircle2, Building2, Mail, Building } from "lucide-react";
 import Link from "next/link";
 
 function SetPasswordContent() {
@@ -16,50 +16,86 @@ function SetPasswordContent() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   
-  const tenantSlug = searchParams.get("tenant");
-  const email = searchParams.get("email");
+  // Get values from URL if provided
+  const tenantSlugFromUrl = searchParams.get("tenant");
+  const emailFromUrl = searchParams.get("email");
   
+  // Form state
+  const [email, setEmail] = useState(emailFromUrl || "");
+  const [tenantSlug, setTenantSlug] = useState(tenantSlugFromUrl || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [tenantName, setTenantName] = useState<string | null>(null);
-  const [validating, setValidating] = useState(true);
+  const [tenantValidated, setTenantValidated] = useState(false);
+  const [validatingTenant, setValidatingTenant] = useState(false);
 
-  // Get tenant info
+  // Auto-validate tenant if provided in URL
   useEffect(() => {
-    async function loadTenant() {
-      if (!email || !tenantSlug) {
-        setError("Invalid invitation link. Missing email or tenant information.");
-        setValidating(false);
-        return;
-      }
-
-      try {
-        const { data: tenant } = await supabase
-          .from("tenants")
-          .select("name, id, subdomain")
-          .or(`subdomain.eq.${tenantSlug},id.eq.${tenantSlug}`)
-          .single();
-        
-        if (tenant) {
-          setTenantName(tenant.name);
-        }
-      } catch (err) {
-        console.error("Error loading tenant:", err);
-      }
-      
-      setValidating(false);
+    if (tenantSlugFromUrl) {
+      validateTenant(tenantSlugFromUrl);
     }
+  }, [tenantSlugFromUrl]);
+
+  async function validateTenant(slug: string) {
+    if (!slug) return;
     
-    loadTenant();
-  }, [email, tenantSlug, supabase]);
+    setValidatingTenant(true);
+    try {
+      const { data: tenant, error } = await supabase
+        .from("tenants")
+        .select("name, id, subdomain")
+        .or(`subdomain.eq.${slug},id.eq.${slug}`)
+        .single();
+      
+      if (tenant && !error) {
+        setTenantName(tenant.name);
+        setTenantValidated(true);
+      } else {
+        setTenantName(null);
+        setTenantValidated(false);
+        if (tenantSlugFromUrl) {
+          setError("Invalid tenant ID. Please check your invitation email.");
+        }
+      }
+    } catch (err) {
+      console.error("Error validating tenant:", err);
+      setTenantName(null);
+      setTenantValidated(false);
+    } finally {
+      setValidatingTenant(false);
+    }
+  }
+
+  function handleTenantBlur() {
+    if (tenantSlug && !tenantValidated) {
+      validateTenant(tenantSlug);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validate required fields
+    if (!email || !tenantSlug) {
+      setError("Please enter both your email and tenant ID");
+      setLoading(false);
+      return;
+    }
+
+    // Validate tenant
+    if (!tenantValidated) {
+      await validateTenant(tenantSlug);
+      if (!tenantValidated) {
+        setError("Please enter a valid tenant ID");
+        setLoading(false);
+        return;
+      }
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -95,7 +131,7 @@ function SetPasswordContent() {
 
       // Password set successfully, now sign in
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: email!,
+        email: email,
         password: password,
       });
 
@@ -126,13 +162,7 @@ function SetPasswordContent() {
     }
   };
 
-  if (validating) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const showPasswordForm = tenantValidated && email;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -147,7 +177,9 @@ function SetPasswordContent() {
               <h1 className="text-xl font-semibold text-gray-900">
                 {tenantName || "Property Portal"}
               </h1>
-              <p className="text-sm text-gray-500">Set Your Password</p>
+              <p className="text-sm text-gray-500">
+                {tenantValidated ? "Set Your Password" : "Account Setup"}
+              </p>
             </div>
           </div>
         </div>
@@ -157,7 +189,9 @@ function SetPasswordContent() {
             <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
               <Lock className="h-8 w-8 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl">Create Your Password</CardTitle>
+            <CardTitle className="text-2xl">
+              {tenantValidated ? "Create Your Password" : "Enter Your Details"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {error && (
@@ -180,50 +214,106 @@ function SetPasswordContent() {
                 </p>
               </div>
             ) : (
-              <>
-                <p className="text-center text-gray-600">
-                  Welcome! Please create a password for your account.
-                  {email && (
-                    <span className="block mt-2 text-sm text-gray-500">
-                      {email}
-                    </span>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                    disabled={!!emailFromUrl}
+                    className={emailFromUrl ? "bg-gray-50" : ""}
+                  />
+                  {emailFromUrl && (
+                    <p className="text-xs text-gray-500">Prefilled from invitation link</p>
                   )}
-                </p>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      required
-                      minLength={8}
-                    />
+                {/* Tenant ID Field */}
+                <div className="space-y-2">
+                  <Label htmlFor="tenant" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Tenant ID
+                  </Label>
+                  <Input
+                    id="tenant"
+                    type="text"
+                    value={tenantSlug}
+                    onChange={(e) => {
+                      setTenantSlug(e.target.value);
+                      setTenantValidated(false);
+                      setTenantName(null);
+                    }}
+                    onBlur={handleTenantBlur}
+                    placeholder="Enter your tenant ID"
+                    required
+                    disabled={!!tenantSlugFromUrl || validatingTenant}
+                    className={tenantSlugFromUrl ? "bg-gray-50" : ""}
+                  />
+                  {validatingTenant && (
+                    <p className="text-xs text-gray-500">Validating tenant...</p>
+                  )}
+                  {tenantValidated && tenantName && (
+                    <p className="text-xs text-green-600">✓ Valid: {tenantName}</p>
+                  )}
+                  {tenantSlugFromUrl && (
+                    <p className="text-xs text-gray-500">Prefilled from invitation link</p>
+                  )}
+                  {!tenantSlugFromUrl && !tenantValidated && (
                     <p className="text-xs text-gray-500">
-                      Must be at least 8 characters
+                      Find your Tenant ID in your invitation email
                     </p>
-                  </div>
+                  )}
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm your password"
-                      required
-                    />
-                  </div>
+                {/* Password Fields - Only show when tenant is validated */}
+                {showPasswordForm && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Create a password"
+                        required
+                        minLength={8}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Must be at least 8 characters
+                      </p>
+                    </div>
 
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Setting Password..." : "Set Password & Sign In"}
-                  </Button>
-                </form>
-              </>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm your password"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full" 
+                  disabled={loading || (!showPasswordForm && tenantSlug && !tenantValidated)}
+                >
+                  {loading ? "Processing..." : !showPasswordForm ? "Continue" : "Set Password & Sign In"}
+                </Button>
+              </form>
             )}
           </CardContent>
         </Card>
