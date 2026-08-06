@@ -39,10 +39,10 @@ export interface CreateUnitInput {
   bedrooms?: number;
   bathrooms?: number;
   floor?: string;
-  parkingSpot?: string;
-  storageUnit?: string;
-  mailingAddress?: string;
-  accessNotes?: string;
+  parkingSpot?: string | null;
+  storageUnit?: string | null;
+  mailingAddress?: string | null;
+  accessNotes?: string | null;
   occupancyStatus?: string;
   rentalStatus?: string;
   moveInDate?: string;

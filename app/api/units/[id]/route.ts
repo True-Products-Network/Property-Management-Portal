@@ -20,8 +20,8 @@ const updateSchema = z.object({
   storageUnit: z.string().optional(),
   moveInDate: z.string().optional(),
   moveOutDate: z.string().optional(),
-  mailingAddress: z.string().optional(),
-  accessNotes: z.string().optional(),
+  mailingAddress: z.string().nullable().optional(),
+  accessNotes: z.string().nullable().optional(),
 });
 
 export async function GET(
