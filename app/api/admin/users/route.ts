@@ -85,9 +85,10 @@ export async function GET(request: NextRequest) {
     // Get query params
     const { searchParams } = new URL(request.url);
     const associationId = searchParams.get("associationId");
+    const tenantIdParam = searchParams.get("tenantId");
 
     // Get contacts filtered by tenant
-    // Platform admins can see all, tenant admins only see their tenant's contacts
+    // Platform admins can see all (or filter by tenantId), tenant admins only see their tenant's contacts
     let contactsQuery = supabase
       .from("contacts")
       .select(`
@@ -105,8 +106,12 @@ export async function GET(request: NextRequest) {
       `)
       .order("created_at", { ascending: false });
     
-    // Filter by tenant unless platform admin
-    if (!isPlatformAdmin && userTenantIds.length > 0) {
+    // Filter by tenant
+    if (isPlatformAdmin && tenantIdParam) {
+      // Platform admin can filter by specific tenant
+      contactsQuery = contactsQuery.eq("tenant_id", tenantIdParam);
+    } else if (!isPlatformAdmin && userTenantIds.length > 0) {
+      // Tenant admins only see their own tenants
       contactsQuery = contactsQuery.in("tenant_id", userTenantIds);
     }
 
@@ -147,6 +152,14 @@ export async function GET(request: NextRequest) {
 
     const associationMap = new Map((associations as Association[] || []).map((a: Association) => [a.id, a.name]));
 
+    // Get tenants for context
+    const { data: tenants } = await supabase
+      .from("tenants")
+      .select("id, name")
+      .limit(100);
+
+    const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t.name]));
+
     // Map contacts to users
     const mappedUsers = (contacts || []).map((contact: any) => {
       const firstName = contact.first_name;
@@ -168,6 +181,8 @@ export async function GET(request: NextRequest) {
         ghlContactId: contact.contact_id,
         createdAt: contact.created_at,
         lastSignInAt: contact.updated_at,
+        tenantId: contact.tenant_id,
+        tenantName: tenantMap.get(contact.tenant_id) || null,
       };
     });
 

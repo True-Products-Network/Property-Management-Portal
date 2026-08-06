@@ -20,9 +20,16 @@ interface User {
   lastSignInAt?: string;
   associationId?: string;
   associationName?: string;
+  tenantId?: string;
+  tenantName?: string;
 }
 
 interface Association {
+  id: string;
+  name: string;
+}
+
+interface Tenant {
   id: string;
   name: string;
 }
@@ -31,11 +38,14 @@ export default function UserMaintenancePage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [associationFilter, setAssociationFilter] = useState("");
+  const [tenantFilter, setTenantFilter] = useState("");
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -100,7 +110,7 @@ export default function UserMaintenancePage() {
     }
   }
 
-  // Fetch associations first
+  // Fetch associations and check if platform admin
   useEffect(() => {
     async function fetchAssociations() {
       try {
@@ -116,17 +126,59 @@ export default function UserMaintenancePage() {
       }
     }
     fetchAssociations();
+
+    // Check if user is platform admin
+    async function checkAdmin() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          const roles = data.user?.user_metadata?.roles || [];
+          setIsPlatformAdmin(roles.includes("PLATFORM_ADMIN") || data.user?.user_metadata?.is_platform_admin);
+        }
+      } catch (err) {
+        console.error("Error checking admin status:", err);
+      }
+    }
+    checkAdmin();
   }, []);
+
+  // Fetch tenants for platform admin
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    
+    async function fetchTenants() {
+      try {
+        const res = await fetch("/api/platform/tenants");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setTenants(data.data || []);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching tenants:", err);
+      }
+    }
+    fetchTenants();
+  }, [isPlatformAdmin]);
 
   useEffect(() => {
     async function fetchUsers() {
       try {
         setLoading(true);
         
-        // Build query URL with association filter
+        // Build query URL with filters
         let url = "/api/admin/users";
+        const params = new URLSearchParams();
         if (associationFilter) {
-          url += `?associationId=${associationFilter}`;
+          params.append("associationId", associationFilter);
+        }
+        if (tenantFilter) {
+          params.append("tenantId", tenantFilter);
+        }
+        if (params.toString()) {
+          url += `?${params.toString()}`;
         }
         
         const usersRes = await fetch(url);
@@ -159,7 +211,7 @@ export default function UserMaintenancePage() {
     }
 
     fetchUsers();
-  }, [router, associationFilter]);
+  }, [router, associationFilter, tenantFilter]);
 
   // Filter users based on search (client-side)
   const filteredUsers = users.filter((user) => {
@@ -317,6 +369,18 @@ export default function UserMaintenancePage() {
                 />
               </div>
             </div>
+            {isPlatformAdmin && (
+              <select 
+                className="input w-48"
+                value={tenantFilter}
+                onChange={(e) => setTenantFilter(e.target.value)}
+              >
+                <option value="">All Tenants</option>
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>{tenant.name}</option>
+                ))}
+              </select>
+            )}
             <select 
               className="input w-48"
               value={associationFilter}
@@ -357,6 +421,9 @@ export default function UserMaintenancePage() {
               <thead>
                 <tr>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">User</th>
+                  {isPlatformAdmin && (
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Tenant</th>
+                  )}
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Association</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Role</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">Status</th>
@@ -378,6 +445,11 @@ export default function UserMaintenancePage() {
                         </div>
                       </div>
                     </td>
+                    {isPlatformAdmin && (
+                      <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
+                        {user.tenantName || (user.tenantId ? 'Loading...' : 'No Tenant')}
+                      </td>
+                    )}
                     <td className="py-3 px-4 text-sm text-[var(--secondary-text)]">
                       {user.associationName || (user.associationId ? 'Loading...' : 'Tenant Level')}
                     </td>
