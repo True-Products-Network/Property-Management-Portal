@@ -87,8 +87,11 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
+    console.log("[Contacts API] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Contacts API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
@@ -104,8 +107,13 @@ export async function POST(request: NextRequest) {
       tenantId = tenantUser?.tenant_id;
     }
 
+    console.log("[Contacts API] Creating contact with data:", validation.data, "userId:", user.id, "tenantId:", tenantId);
     const result = await createContact(validation.data, user.id, tenantId);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Contacts API] createContact result:", result);
+    if (!result.success) {
+      console.error("[Contacts API] createContact failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
 
     // Check if GHL is connected
     const ghlConnected = await isGhlConnected();
