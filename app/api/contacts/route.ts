@@ -25,6 +25,14 @@ const createSchema = z.object({
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   emergencyContactRelationship: z.string().optional(),
+  // Extended fields for people form
+  roles: z.array(z.string()).optional(),
+  boardPosition: z.string().optional(),
+  status: z.string().optional(),
+  associationId: z.string().optional(),
+  propertyId: z.string().optional(),
+  unitId: z.string().optional(),
+  isPrimaryContact: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {

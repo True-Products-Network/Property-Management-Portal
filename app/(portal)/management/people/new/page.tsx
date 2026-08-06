@@ -55,7 +55,7 @@ interface FormData {
 const CONTACT_ROLES = [
   { value: "owner", label: "Owner" },
   { value: "co_owner", label: "Co-Owner" },
-  { value: "tenant", label: "Tenant" },
+  { value: "resident", label: "Resident" },
   { value: "occupant", label: "Occupant" },
   { value: "board_president", label: "Board President" },
   { value: "board_treasurer", label: "Board Treasurer" },
