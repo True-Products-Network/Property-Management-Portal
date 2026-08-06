@@ -52,14 +52,23 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+    console.log("[Contacts PUT API] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = updateSchema.safeParse(body);
 
     if (!validation.success) {
+      console.error("[Contacts PUT API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Contacts PUT API] Updating contact:", id, "with data:", validation.data);
     const result = await updateContact(id, validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Contacts PUT API] Result:", result);
+    
+    if (!result.success) {
+      console.error("[Contacts PUT API] Failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

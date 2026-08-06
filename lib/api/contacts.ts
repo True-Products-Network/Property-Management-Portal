@@ -215,6 +215,16 @@ export async function updateContact(
   try {
     const supabase = await createClient();
     
+    // Get the contact ID for this user (for FK constraints)
+    const { data: userContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+    
+    const contactId = userContact?.id || userId;
+    console.log("[updateContact] Using contactId:", contactId, "for userId:", userId);
+    
     const { data, error } = await supabase
       .from("contacts")
       .update({
@@ -235,7 +245,7 @@ export async function updateContact(
         emergency_contact_name: input.emergencyContactName,
         emergency_contact_phone: input.emergencyContactPhone,
         emergency_contact_relationship: input.emergencyContactRelationship,
-        updated_by: userId,
+        updated_by: contactId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
