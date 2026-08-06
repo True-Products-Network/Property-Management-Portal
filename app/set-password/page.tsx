@@ -309,7 +309,7 @@ function SetPasswordContent() {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={loading || (!showPasswordForm && tenantSlug && !tenantValidated)}
+                  disabled={loading || Boolean(!showPasswordForm && tenantSlug && !tenantValidated)}
                 >
                   {loading ? "Processing..." : !showPasswordForm ? "Continue" : "Set Password & Sign In"}
                 </Button>
