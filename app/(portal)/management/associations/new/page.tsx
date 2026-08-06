@@ -249,11 +249,11 @@ export default function NewAssociationPage() {
 
       if (!response.ok || !result.success) {
         // Show detailed validation errors
-        if (result.details) {
+        if (result.details && Array.isArray(result.details)) {
           const errorMessages = result.details.map((err: any) => `${err.path}: ${err.message}`).join("\n");
           throw new Error(`Validation failed:\n${errorMessages}`);
         }
-        throw new Error(result.error || "Failed to create association");
+        throw new Error(result.error || result.message || "Failed to create association");
       }
 
       // Show success message with Association ID
