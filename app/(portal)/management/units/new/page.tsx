@@ -87,13 +87,14 @@ export default function NewUnitPage() {
       const response = await fetch("/api/admin/dropdowns");
       if (response.ok) {
         const result = await response.json();
+        console.log("[Unit Form] Dropdowns response:", result);
         if (result.success && result.data) {
-          // Get unit types from dropdown settings
-          const unitTypeDropdowns = result.data.find(
-            (d: any) => d.recordType === 'unit' && d.fieldName === 'type'
-          );
-          if (unitTypeDropdowns?.values) {
-            setUnitTypes(unitTypeDropdowns.values);
+          // API returns grouped data: { unit: { type: [...] } }
+          const unitDropdowns = result.data['unit'];
+          if (unitDropdowns && unitDropdowns['type']) {
+            setUnitTypes(unitDropdowns['type']);
+          } else {
+            console.log("[Unit Form] No unit type dropdowns found");
           }
         }
       }
