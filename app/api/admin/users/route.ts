@@ -121,6 +121,7 @@ export async function GET(request: NextRequest) {
       return {
         id: contact.portal_user_id || contact.id,
         contactId: contact.id,
+        portalUserId: contact.portal_user_id,
         email: contact.email,
         firstName: firstName || null,
         lastName: lastName || null,

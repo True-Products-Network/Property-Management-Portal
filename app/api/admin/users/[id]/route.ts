@@ -41,39 +41,62 @@ export async function DELETE(
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
     }
 
-    // Get user info for audit log before deletion
-    const { data: contact } = await supabase
+    // Find the contact first (by portal_user_id or contact id)
+    let contact = null;
+    
+    // Try by portal_user_id
+    const { data: contactByPortalId } = await supabase
       .from("contacts")
-      .select("email, first_name, last_name")
-      .eq("user_id", id)
-      .single();
+      .select("id, portal_user_id, email, first_name, last_name")
+      .eq("portal_user_id", id)
+      .maybeSingle();
+    
+    if (contactByPortalId) {
+      contact = contactByPortalId;
+    } else {
+      // Try by contact id
+      const { data: contactById } = await supabase
+        .from("contacts")
+        .select("id, portal_user_id, email, first_name, last_name")
+        .eq("id", id)
+        .maybeSingle();
+      
+      contact = contactById;
+    }
+
+    if (!contact) {
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
+
+    const contactId = contact.id;
+    const portalUserId = contact.portal_user_id;
 
     // Delete from user_roles first (cleanup)
-    await supabase
-      .from("user_roles")
-      .delete()
-      .eq("user_id", id);
+    if (portalUserId) {
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", portalUserId);
+    }
 
     // Delete from portal_users
-    await supabase
-      .from("portal_users")
-      .delete()
-      .eq("id", id);
+    if (portalUserId) {
+      await supabase
+        .from("portal_users")
+        .delete()
+        .eq("id", portalUserId);
+    }
 
     // Delete from contacts
     const { error: contactError } = await supabase
       .from("contacts")
       .delete()
-      .eq("portal_user_id", id);
+      .eq("id", contactId);
 
     if (contactError) {
       console.error("Error deleting contact:", contactError);
       return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
     }
-
-    // Optionally delete from auth.users (requires admin privileges)
-    // This is commented out as it requires service role key
-    // const { error: authError } = await supabase.auth.admin.deleteUser(id);
 
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
@@ -130,17 +153,36 @@ export async function GET(
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    // Get contact with user details
-    const { data: contact, error: contactError } = await supabase
+    // Find contact by portal_user_id or contact id
+    let contact = null;
+    
+    // Try by portal_user_id
+    const { data: contactByPortalId } = await supabase
       .from("contacts")
       .select(`
         *,
         user_roles!inner(role_id, roles(name))
       `)
       .eq("portal_user_id", id)
-      .single();
+      .maybeSingle();
+    
+    if (contactByPortalId) {
+      contact = contactByPortalId;
+    } else {
+      // Try by contact id
+      const { data: contactById } = await supabase
+        .from("contacts")
+        .select(`
+          *,
+          user_roles!inner(role_id, roles(name))
+        `)
+        .eq("id", id)
+        .maybeSingle();
+      
+      contact = contactById;
+    }
 
-    if (contactError || !contact) {
+    if (!contact) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

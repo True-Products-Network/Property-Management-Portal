@@ -44,8 +44,12 @@ export async function PUT(
       return NextResponse.json({ error: "Status is required" }, { status: 400 });
     }
 
-    // Update contact's portal invitation status
-    const { data: contact, error: contactError } = await supabase
+    // Try to update by portal_user_id first, then by contact id
+    let contact = null;
+    let contactError = null;
+
+    // Try portal_user_id
+    const { data: contactByPortalId, error: errorByPortalId } = await supabase
       .from("contacts")
       .update({
         portal_invitation_status: status.toUpperCase(),
@@ -53,25 +57,45 @@ export async function PUT(
       })
       .eq("portal_user_id", id)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (contactError) {
-      console.error("Error updating contact status:", contactError);
-      return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
+    if (contactByPortalId) {
+      contact = contactByPortalId;
+    } else {
+      // Try by contact id
+      const { data: contactById, error: errorById } = await supabase
+        .from("contacts")
+        .update({
+          portal_invitation_status: status.toUpperCase(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .maybeSingle();
+      
+      contact = contactById;
+      contactError = errorById;
     }
 
-    // Also update portal_users status if exists
-    const { error: portalError } = await supabase
-      .from("portal_users")
-      .update({
-        status: status.toUpperCase(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    if (!contact) {
+      console.error("Error updating contact status:", contactError);
+      return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+    }
 
-    if (portalError) {
-      console.error("Error updating portal user status:", portalError);
-      // Don't fail if portal_users update fails, contact is the main record
+    // Also update portal_users status if exists (only if we have a portal_user_id)
+    if (contact.portal_user_id) {
+      const { error: portalError } = await supabase
+        .from("portal_users")
+        .update({
+          status: status.toUpperCase(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", contact.portal_user_id);
+
+      if (portalError) {
+        console.error("Error updating portal user status:", portalError);
+        // Don't fail if portal_users update fails, contact is the main record
+      }
     }
 
     // Create audit log entry
