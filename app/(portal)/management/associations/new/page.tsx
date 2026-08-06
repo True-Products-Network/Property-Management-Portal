@@ -123,22 +123,35 @@ export default function NewAssociationPage() {
     assignedManagerName: "",
   });
 
-  // Search for existing contacts
-  async function searchContacts(query: string) {
-    if (!query || query.length < 2) return;
-    
+  // Load all contacts for the tenant (pick list)
+  async function loadContacts() {
     setIsSearching(true);
     try {
-      const response = await fetch(`/api/contacts?search=${encodeURIComponent(query)}&limit=10`);
+      const response = await fetch(`/api/contacts?limit=100`);
       const result = await response.json();
       if (result.success) {
-        setExistingContacts(result.data || []);
+        setExistingContacts(result.data?.data || []);
       }
     } catch (error) {
-      console.error("Error searching contacts:", error);
+      console.error("Error loading contacts:", error);
     } finally {
       setIsSearching(false);
     }
+  }
+
+  // Search/filter contacts locally
+  function filterContacts(query: string) {
+    if (!query || query.length < 2) {
+      // Show all contacts if no search
+      return;
+    }
+    const lowerQuery = query.toLowerCase();
+    const filtered = existingContacts.filter((c: Contact) =>
+      c.firstName?.toLowerCase().includes(lowerQuery) ||
+      c.lastName?.toLowerCase().includes(lowerQuery) ||
+      c.email?.toLowerCase().includes(lowerQuery)
+    );
+    setExistingContacts(filtered);
   }
 
   // Handle selecting an existing contact as manager
@@ -737,19 +750,29 @@ export default function NewAssociationPage() {
                         value={managerSearchQuery}
                         onChange={(e) => {
                           setManagerSearchQuery(e.target.value);
-                          searchContacts(e.target.value);
+                          filterContacts(e.target.value);
                         }}
                         className="pl-10"
                       />
                     </div>
 
-                    {/* Search results */}
-                    {isSearching ? (
+                    {/* Load contacts button / Contact list */}
+                    {existingContacts.length === 0 && !isSearching ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={loadContacts}
+                      >
+                        <Search className="h-4 w-4 mr-2" />
+                        Load Contacts
+                      </Button>
+                    ) : isSearching ? (
                       <div className="text-center py-4">
                         <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                       </div>
                     ) : existingContacts.length > 0 ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         <p className="text-sm text-gray-500">Select from existing contacts:</p>
                         {existingContacts.map((contact) => (
                           <button
