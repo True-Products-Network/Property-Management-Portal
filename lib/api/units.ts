@@ -34,6 +34,7 @@ export interface CreateUnitInput {
   unitNumber: string;
   displayName?: string;
   type?: string;
+  status?: string;
   squareFeet?: number;
   bedrooms?: number;
   bathrooms?: number;
@@ -42,6 +43,10 @@ export interface CreateUnitInput {
   storageUnit?: string;
   mailingAddress?: string;
   accessNotes?: string;
+  occupancyStatus?: string;
+  rentalStatus?: string;
+  moveInDate?: string;
+  moveOutDate?: string;
 }
 
 export async function getUnits(
@@ -151,6 +156,7 @@ export async function createUnit(
         unit_number: input.unitNumber,
         display_name: input.displayName,
         type: input.type,
+        status: input.status || 'active',
         square_feet: input.squareFeet,
         bedrooms: input.bedrooms,
         bathrooms: input.bathrooms,
@@ -159,6 +165,10 @@ export async function createUnit(
         storage_unit: input.storageUnit,
         mailing_address: input.mailingAddress,
         access_notes: input.accessNotes,
+        occupancy_status: input.occupancyStatus,
+        rental_status: input.rentalStatus,
+        move_in_date: input.moveInDate,
+        move_out_date: input.moveOutDate,
         created_by: contactId,
         updated_by: contactId,
       })

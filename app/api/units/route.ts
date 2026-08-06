@@ -8,7 +8,8 @@ const createSchema = z.object({
   propertyId: z.string().uuid(),
   unitNumber: z.string().min(1),
   displayName: z.string().optional(),
-  type: z.enum(["Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Penthouse", "Loft", "Townhouse"]).optional(),
+  type: z.enum(["Studio", "1 Bedroom", "2 Bedroom", "3 Bedroom", "4+ Bedroom", "Penthouse", "Loft", "Townhouse", "studio", "1_bedroom", "2_bedroom", "3_bedroom", "4_bedroom", "penthouse", "loft", "townhouse"]).optional(),
+  status: z.string().optional(),
   squareFeet: z.number().optional(),
   bedrooms: z.number().optional(),
   bathrooms: z.number().optional(),
@@ -17,6 +18,10 @@ const createSchema = z.object({
   storageUnit: z.string().optional(),
   mailingAddress: z.string().optional(),
   accessNotes: z.string().optional(),
+  occupancyStatus: z.string().optional(),
+  rentalStatus: z.string().optional(),
+  moveInDate: z.string().optional(),
+  moveOutDate: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
