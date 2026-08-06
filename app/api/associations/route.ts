@@ -16,7 +16,7 @@ import { z } from "zod";
 const createAssociationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   legalName: z.string().optional(),
-  type: z.enum(["Condominium", "HOA", "Cooperative", "Commercial", "Other"]),
+  type: z.enum(["condominium", "hoa", "cooperative", "commercial", "mixed_use", "other"]),
   addressStreet: z.string().optional(),
   addressCity: z.string().optional(),
   addressState: z.string().optional(),

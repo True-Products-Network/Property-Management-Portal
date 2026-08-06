@@ -21,25 +21,36 @@ export async function checkEntityLimit(
 ): Promise<EntityLimitCheck> {
   const supabase = await createClient();
 
-  // Call the database function
-  const { data, error } = await supabase
-    .rpc("check_entity_limit", {
-      p_tenant_id: tenantId,
-      p_entity_type: entityType,
-    });
+  try {
+    // Call the database function
+    const { data, error } = await supabase
+      .rpc("check_entity_limit", {
+        p_tenant_id: tenantId,
+        p_entity_type: entityType,
+      });
 
-  if (error) {
-    console.error("Error checking entity limit:", error);
-    // Default to allowing if check fails
+    if (error) {
+      console.error("Error checking entity limit:", error);
+      // Default to allowing if check fails (function may not exist or has errors)
+      return { allowed: true, currentCount: 0, limit: 999999, remaining: 999999 };
+    }
+
+    // Handle case where data is null or undefined
+    if (!data || !data[0]) {
+      return { allowed: true, currentCount: 0, limit: 999999, remaining: 999999 };
+    }
+
+    return {
+      allowed: data[0].allowed,
+      currentCount: data[0].current_count,
+      limit: data[0].limit_count,
+      remaining: data[0].remaining,
+    };
+  } catch (err) {
+    console.error("Exception checking entity limit:", err);
+    // Default to allowing on any error
     return { allowed: true, currentCount: 0, limit: 999999, remaining: 999999 };
   }
-
-  return {
-    allowed: data[0].allowed,
-    currentCount: data[0].current_count,
-    limit: data[0].limit_count,
-    remaining: data[0].remaining,
-  };
 }
 
 /**
