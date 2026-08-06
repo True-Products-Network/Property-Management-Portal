@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users, ArrowLeft } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users, ArrowLeft, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,69 @@ export default function UserMaintenancePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [associationFilter, setAssociationFilter] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownOpen) {
+        setDropdownOpen(null);
+      }
+    }
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [dropdownOpen]);
+
+  async function updateUserStatus(userId: string, status: string) {
+    setActionLoading(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      
+      if (response.ok) {
+        // Refresh user list
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update user status');
+      }
+    } catch (err) {
+      console.error('Error updating user status:', err);
+      alert('Failed to update user status');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function deleteUser(userId: string) {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+    
+    setActionLoading(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Refresh user list
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      alert('Failed to delete user');
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   // Fetch associations first
   useEffect(() => {
@@ -332,31 +395,54 @@ export default function UserMaintenancePage() {
                       {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 relative">
                         <button 
                           className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--teal)] rounded-lg hover:bg-[var(--page-background)]"
                           title="Send email"
+                          onClick={() => window.location.href = `mailto:${user.email}`}
                         >
                           <Mail className="h-4 w-4" />
                         </button>
-                        <button 
-                          className="p-1.5 text-[var(--secondary-text)] hover:text-green-600 rounded-lg hover:bg-[var(--page-background)]"
-                          title="Activate user"
-                        >
-                          <UserCheck className="h-4 w-4" />
-                        </button>
-                        <button 
-                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--error)] rounded-lg hover:bg-[var(--page-background)]"
-                          title="Deactivate user"
-                        >
-                          <UserX className="h-4 w-4" />
-                        </button>
-                        <button 
-                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--main-text)] rounded-lg hover:bg-[var(--page-background)]"
-                          title="More options"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
+                        {user.status !== 'active' && (
+                          <button 
+                            className="p-1.5 text-[var(--secondary-text)] hover:text-green-600 rounded-lg hover:bg-[var(--page-background)]"
+                            title="Activate user"
+                            onClick={() => updateUserStatus(user.id, 'active')}
+                            disabled={actionLoading === user.id}
+                          >
+                            {actionLoading === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+                          </button>
+                        )}
+                        {user.status === 'active' && (
+                          <button 
+                            className="p-1.5 text-[var(--secondary-text)] hover:text-amber-600 rounded-lg hover:bg-[var(--page-background)]"
+                            title="Suspend user"
+                            onClick={() => updateUserStatus(user.id, 'suspended')}
+                            disabled={actionLoading === user.id}
+                          >
+                            {actionLoading === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
+                          </button>
+                        )}
+                        <div className="relative">
+                          <button 
+                            className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--main-text)] rounded-lg hover:bg-[var(--page-background)]"
+                            title="More options"
+                            onClick={() => setDropdownOpen(dropdownOpen === user.id ? null : user.id)}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                          {dropdownOpen === user.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-[var(--border-color)] z-50 py-1">
+                              <button
+                                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                onClick={() => { deleteUser(user.id); setDropdownOpen(null); }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Delete User
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
