@@ -145,19 +145,18 @@ export async function PUT(
       return NextResponse.json({ error: "Role not found" }, { status: 404 });
     }
 
-    // Cannot edit system roles
-    if (existingRole.is_system_role) {
-      return NextResponse.json({ error: "Cannot edit system roles" }, { status: 403 });
-    }
-
+    // For system roles, only allow editing permissions and requires_mfa
+    // Don't allow changing name, description, or is_active
+    const isSystemRole = existingRole.is_system_role;
+    
     // Update role
     const { data: role, error: roleError } = await supabase
       .from("roles")
       .update({
-        name: name?.trim(),
-        description: description?.trim(),
+        name: isSystemRole ? existingRole.name : name?.trim(),
+        description: isSystemRole ? existingRole.description : description?.trim(),
         permissions: permissions,
-        is_active: is_active,
+        is_active: isSystemRole ? existingRole.is_active : is_active,
         requires_mfa: requires_mfa,
         updated_at: new Date().toISOString(),
         updated_by: user.id,

@@ -6,19 +6,7 @@ interface Association {
   name: string;
 }
 
-// Portal users data structure (names come from contacts table)
-interface PortalUser {
-  id: string;
-  email: string;
-  ghl_contact_id: string | null;
-  is_admin: boolean;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// GET /api/admin/users - Get all portal users
-// Supports filtering by associationId (future enhancement)
+// GET /api/admin/users - Get all users from contacts table
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -33,15 +21,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get query params
-    const { searchParams } = new URL(request.url);
-    const associationId = searchParams.get("associationId");
-
-    // Check if current user is admin (portal_users or platform_user_roles)
+    // Check if current user is admin
     console.log("[Admin Users API] Checking admin status for user ID:", authUser.id);
     
     // Check portal_users first
-    const { data: currentUser, error: adminCheckError } = await supabase
+    const { data: currentUser } = await supabase
       .from("portal_users")
       .select("id, email, is_admin, status")
       .eq("id", authUser.id)
@@ -68,57 +52,58 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all user IDs first
-    const { data: allUsers } = await supabase.from("portal_users").select("id");
-    const userIds = (allUsers as { id: string }[] || []).map((u: { id: string }) => u.id);
+    // Get query params
+    const { searchParams } = new URL(request.url);
+    const associationId = searchParams.get("associationId");
 
-    // Get user's roles for role information (from user_roles table joining with roles)
-    const { data: userRoles } = await supabase
-      .from("user_roles")
-      .select("user_id, role_id, roles(name)")
-      .in("user_id", userIds);
-
-    // Build role map - use role name from roles table
-    const roleMap = new Map<string, string>();
-    (userRoles || []).forEach((ur: any) => {
-      const roleName = ur.roles?.name || "Unknown";
-      roleMap.set(ur.user_id, roleName);
-    });
-
-    // Get all portal users
-    const { data: users, error } = await supabase
-      .from("portal_users")
+    // Get all contacts (these are the users)
+    let contactsQuery = supabase
+      .from("contacts")
       .select(`
         id,
+        user_id,
+        contact_id,
+        first_name,
+        last_name,
         email,
-        ghl_contact_id,
-        is_admin,
-        status,
+        phone,
+        portal_invitation_status,
+        portal_user_id,
         created_at,
         updated_at
       `)
       .order("created_at", { ascending: false });
 
-    // Get names from contacts table
-    const { data: contacts } = await supabase
-      .from("contacts")
-      .select("id, user_id, first_name, last_name");
-    
-    interface ContactInfo {
-      first_name?: string;
-      last_name?: string;
-    }
-    const contactMap = new Map<string, ContactInfo>((contacts || []).map((c: any) => [c.user_id, c]));
+    const { data: contacts, error: contactsError } = await contactsQuery;
 
-    if (error) {
-      console.error("[Admin Users API] Error fetching users:", error);
+    if (contactsError) {
+      console.error("[Admin Users API] Error fetching contacts:", contactsError);
       return NextResponse.json(
-        { success: false, error: "Failed to fetch users: " + error.message },
+        { success: false, error: "Failed to fetch users: " + contactsError.message },
         { status: 500 }
       );
     }
 
-    // Get associations for context (if needed for filtering)
+    // Get user IDs from contacts
+    const userIds = (contacts || [])
+      .map((c: any) => c.user_id)
+      .filter((id: string | null): id is string => !!id);
+
+    // Get user's roles for role information
+    let roleMap = new Map<string, string>();
+    if (userIds.length > 0) {
+      const { data: userRoles } = await supabase
+        .from("user_roles")
+        .select("user_id, role_id, roles(name)")
+        .in("user_id", userIds);
+
+      (userRoles || []).forEach((ur: any) => {
+        const roleName = ur.roles?.name || "Unknown";
+        roleMap.set(ur.user_id, roleName);
+      });
+    }
+
+    // Get associations for context
     const { data: associations } = await supabase
       .from("associations")
       .select("id, name")
@@ -126,25 +111,26 @@ export async function GET(request: NextRequest) {
 
     const associationMap = new Map((associations as Association[] || []).map((a: Association) => [a.id, a.name]));
 
-    // Map users with role information and contact names
-    const mappedUsers = (users || []).map((u: any) => {
-      const contact = contactMap.get(u.id);
-      const firstName = contact?.first_name;
-      const lastName = contact?.last_name;
+    // Map contacts to users
+    const mappedUsers = (contacts || []).map((contact: any) => {
+      const firstName = contact.first_name;
+      const lastName = contact.last_name;
+      const fullName = firstName && lastName 
+        ? `${firstName} ${lastName}` 
+        : firstName || lastName || contact.email;
       
       return {
-        id: u.id,
-        email: u.email,
+        id: contact.user_id || contact.id,
+        contactId: contact.id,
+        email: contact.email,
         firstName: firstName || null,
         lastName: lastName || null,
-        name: firstName && lastName 
-          ? `${firstName} ${lastName}` 
-          : u.email,
-        role: roleMap.get(u.id) || (u.is_admin ? "admin" : "user"),
-        status: u.status?.toLowerCase() || "active",
-        ghlContactId: u.ghl_contact_id,
-        createdAt: u.created_at,
-        lastSignInAt: u.updated_at,
+        name: fullName,
+        role: contact.user_id ? roleMap.get(contact.user_id) || "User" : "Contact",
+        status: contact.portal_invitation_status?.toLowerCase() || "none",
+        ghlContactId: contact.contact_id,
+        createdAt: contact.created_at,
+        lastSignInAt: contact.updated_at,
       };
     });
 
