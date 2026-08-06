@@ -48,23 +48,20 @@ function SetPasswordContent() {
     console.log("[SetPassword] Validating tenant slug:", slug);
     
     try {
-      // Look up tenant by ID (the URL uses tenant UUID since subdomain field doesn't exist)
-      const { data: tenant, error } = await supabase
-        .from("tenants")
-        .select("name, id")
-        .eq("id", slug)
-        .maybeSingle();
+      // Use API endpoint to validate tenant (bypasses RLS)
+      const response = await fetch(`/api/auth/validate-tenant?slug=${encodeURIComponent(slug)}`);
+      const result = await response.json();
       
-      console.log("[SetPassword] Tenant lookup result:", { tenant, error });
+      console.log("[SetPassword] Tenant lookup result:", { result, status: response.status });
       
-      if (tenant && !error) {
-        setTenantName(tenant.name);
+      if (response.ok && result.success) {
+        setTenantName(result.tenant.name);
         setTenantValidated(true);
-        console.log("[SetPassword] Tenant validated:", tenant.name);
+        console.log("[SetPassword] Tenant validated:", result.tenant.name);
       } else {
         setTenantName(null);
         setTenantValidated(false);
-        console.error("[SetPassword] Tenant validation failed:", { slug, error });
+        console.error("[SetPassword] Tenant validation failed:", { slug, result });
         if (tenantSlugFromUrl) {
           setError(`Invalid tenant ID "${slug}". Please check your invitation email or contact support.`);
         }
