@@ -51,10 +51,11 @@ export async function GET(request: NextRequest) {
     // Use tenant_id from tenantUser or a default for platform admins
     const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
 
-    // Fetch all portal roles (system-wide, no tenant filtering)
+    // Fetch all roles (system-wide and tenant-specific)
     const { data: roles, error: rolesError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .select("*")
+      .order("is_system_role", { ascending: false })
       .order("name");
 
     if (rolesError) {
@@ -63,27 +64,27 @@ export async function GET(request: NextRequest) {
     }
 
     // Format roles with permissions from JSONB
-    interface PortalRole {
+    interface Role {
       id: string;
       name: string;
       description: string | null;
       permissions: any;
-      is_default: boolean;
+      is_system_role: boolean;
       requires_mfa: boolean;
-      status: string;
+      is_active: boolean;
       user_count: number;
       created_at: string;
       updated_at: string;
     }
-    const rolesWithPermissions = (roles || []).map((role: PortalRole) => {
-      // permissions are already in JSONB format
+    
+    const rolesWithPermissions = (roles || []).map((role: Role) => {
       return {
         id: role.id,
         name: role.name,
         description: role.description || "",
-        is_system_role: role.is_default,
-        is_active: role.status === 'active',
-        requires_mfa: role.requires_mfa,
+        is_system_role: role.is_system_role,
+        is_active: role.is_active,
+        requires_mfa: role.requires_mfa || false,
         permissions: role.permissions || [],
         user_count: role.user_count || 0,
         created_at: role.created_at,
@@ -111,8 +112,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is platform admin
-    const isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
     
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     // Get user's tenant
     const { data: tenantUser } = await supabase
       .from("tenant_users")
@@ -130,17 +144,18 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { name, description, permissions, is_active } = body;
+    const { name, description, permissions, is_active, requires_mfa } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Role name is required" }, { status: 400 });
     }
 
-    // Check if role name already exists
+    // Check if role name already exists for this tenant
     const { data: existingRole } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .select("id")
       .eq("name", name.trim())
+      .eq("tenant_id", tenantId || 'system')
       .limit(1)
       .single();
 
@@ -148,17 +163,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Role with this name already exists" }, { status: 400 });
     }
 
-    // Insert role into portal_roles
+    // Insert role into roles table
     const { data: role, error: roleError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .insert({
         name: name.trim(),
         description: description?.trim() || "",
         permissions: permissions || [],
-        is_default: false,
-        requires_mfa: false,
-        status: is_active !== false ? 'active' : 'inactive',
-        user_count: 0,
+        is_system_role: false,
+        requires_mfa: requires_mfa || false,
+        is_active: is_active !== false,
+        tenant_id: tenantId,
         created_by: user.id,
       })
       .select()
@@ -171,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
-      tenant_id: tenantId,
+      tenant_id: tenantId || '00000000-0000-0000-0000-000000000000',
       event_type: "ROLE_CREATED",
       entity_type: "role",
       entity_id: role.id,
@@ -188,8 +203,8 @@ export async function POST(request: NextRequest) {
         id: role.id,
         name: role.name,
         description: role.description,
-        is_system_role: role.is_default,
-        is_active: role.status === 'active',
+        is_system_role: role.is_system_role,
+        is_active: role.is_active,
         requires_mfa: role.requires_mfa,
         permissions: role.permissions || [],
         user_count: 0,

@@ -50,9 +50,9 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
-    // Fetch role from portal_roles
+    // Fetch role from roles table
     const { data: role, error: roleError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .select("*")
       .eq("id", id)
       .single();
@@ -67,8 +67,8 @@ export async function GET(
         id: role.id,
         name: role.name,
         description: role.description || "",
-        is_system_role: role.is_default,
-        is_active: role.status === 'active',
+        is_system_role: role.is_system_role,
+        is_active: role.is_active,
         requires_mfa: role.requires_mfa,
         permissions: role.permissions || [],
         user_count: role.user_count || 0,
@@ -136,7 +136,7 @@ export async function PUT(
 
     // Check if role exists
     const { data: existingRole, error: existingError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .select("*")
       .eq("id", id)
       .single();
@@ -146,20 +146,21 @@ export async function PUT(
     }
 
     // Cannot edit system roles
-    if (existingRole.is_default) {
+    if (existingRole.is_system_role) {
       return NextResponse.json({ error: "Cannot edit system roles" }, { status: 403 });
     }
 
     // Update role
     const { data: role, error: roleError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .update({
         name: name?.trim(),
         description: description?.trim(),
         permissions: permissions,
-        status: is_active ? 'active' : 'inactive',
+        is_active: is_active,
         requires_mfa: requires_mfa,
         updated_at: new Date().toISOString(),
+        updated_by: user.id,
       })
       .eq("id", id)
       .select()
@@ -241,7 +242,7 @@ export async function DELETE(
 
     // Check if role exists
     const { data: role, error: roleError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .select("*")
       .eq("id", id)
       .single();
@@ -251,21 +252,30 @@ export async function DELETE(
     }
 
     // Cannot delete system roles
-    if (role.is_default) {
+    if (role.is_system_role) {
       return NextResponse.json({ error: "Cannot delete system roles" }, { status: 403 });
     }
 
     // Check if role is in use
-    if (role.user_count > 0) {
+    const { count, error: countError } = await supabase
+      .from("user_roles")
+      .select("*", { count: "exact", head: true })
+      .eq("role_id", id);
+
+    if (countError) {
+      console.error("Error checking role usage:", countError);
+    }
+
+    if (count && count > 0) {
       return NextResponse.json(
-        { error: `Cannot delete role that is assigned to ${role.user_count} user(s)` },
+        { error: `Cannot delete role that is assigned to ${count} user(s)` },
         { status: 400 }
       );
     }
 
     // Delete role
     const { error: deleteError } = await supabase
-      .from("portal_roles")
+      .from("roles")
       .delete()
       .eq("id", id);
 
