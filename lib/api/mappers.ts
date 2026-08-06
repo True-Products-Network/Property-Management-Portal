@@ -134,6 +134,7 @@ export function mapContact(row: any): Contact {
     emergencyContactRelationship: row.emergency_contact_relationship,
     portalInvitationStatus: row.portal_invitation_status,
     portalInvitedAt: row.portal_invited_at,
+    allowLogin: row.allow_login,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

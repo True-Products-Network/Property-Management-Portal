@@ -246,6 +246,9 @@ export default function NewAssociationPage() {
         unitCount: formData.unitCount ? parseInt(formData.unitCount.toString()) : undefined,
       };
 
+      console.log("[Association Create] Sending data:", apiData);
+      console.log("[Association Create] Manager ID:", formData.assignedManagerId);
+
       const response = await fetch("/api/associations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

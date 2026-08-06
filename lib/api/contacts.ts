@@ -32,6 +32,7 @@ export interface Contact {
   emergencyContactRelationship?: string;
   portalInvitationStatus: string;
   portalInvitedAt?: string;
+  allowLogin?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -189,6 +190,7 @@ export async function createContact(
         emergency_contact_phone: input.emergencyContactPhone,
         emergency_contact_relationship: input.emergencyContactRelationship,
         tenant_id: effectiveTenantId,
+        allow_login: false,
         created_by: creatorContact?.id || null,
         updated_by: creatorContact?.id || null,
       })
@@ -264,6 +266,112 @@ export async function deleteContact(id: string): Promise<ApiResponse<void>> {
     }
     
     return { success: true, message: "Contact deleted successfully" };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+// Enable portal login for a contact
+export async function enableContactLogin(
+  contactId: string,
+  userId: string
+): Promise<ApiResponse<Contact>> {
+  try {
+    const supabase = createServiceClient();
+    
+    // Get contact details
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("id", contactId)
+      .single();
+    
+    if (contactError || !contact) {
+      return { success: false, error: "Contact not found" };
+    }
+    
+    // Check if already has portal access
+    if (contact.portal_user_id) {
+      // Just update allow_login flag
+      const { data, error } = await supabase
+        .from("contacts")
+        .update({ allow_login: true })
+        .eq("id", contactId)
+        .select()
+        .single();
+      
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      
+      return { success: true, data, message: "Login access enabled" };
+    }
+    
+    // Create portal_user record
+    const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase();
+    
+    const { data: portalUser, error: portalError } = await supabase.auth.admin.createUser({
+      email: contact.email,
+      password: tempPassword,
+      email_confirm: false,
+      user_metadata: {
+        first_name: contact.first_name,
+        last_name: contact.last_name,
+        full_name: `${contact.first_name} ${contact.last_name}`,
+        contact_id: contactId,
+      },
+    });
+    
+    if (portalError || !portalUser.user) {
+      return { success: false, error: `Failed to create portal user: ${portalError?.message}` };
+    }
+    
+    // Update contact with portal_user_id and allow_login
+    const { data, error } = await supabase
+      .from("contacts")
+      .update({
+        portal_user_id: portalUser.user.id,
+        allow_login: true,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contactId)
+      .select()
+      .single();
+    
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { 
+      success: true, 
+      data, 
+      message: "Login access enabled. Invitation email sent." 
+    };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+// Disable portal login for a contact
+export async function disableContactLogin(
+  contactId: string
+): Promise<ApiResponse<Contact>> {
+  try {
+    const supabase = createServiceClient();
+    
+    const { data, error } = await supabase
+      .from("contacts")
+      .update({ allow_login: false })
+      .eq("id", contactId)
+      .select()
+      .single();
+    
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true, data, message: "Login access disabled" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
