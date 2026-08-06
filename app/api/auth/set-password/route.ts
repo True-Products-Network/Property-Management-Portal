@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
 
     console.log("[SetPassword] Found user:", user.id);
 
-    // Find tenant
+    // Find tenant by ID (subdomain field doesn't exist in schema)
     const { data: tenant, error: tenantError } = await supabase
       .from("tenants")
       .select("id, name")
-      .or(`subdomain.eq.${tenantSlug},id.eq.${tenantSlug}`)
-      .single();
+      .eq("id", tenantSlug)
+      .maybeSingle();
 
     if (tenantError || !tenant) {
       return NextResponse.json(

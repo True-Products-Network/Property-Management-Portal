@@ -43,27 +43,39 @@ function SetPasswordContent() {
     if (!slug) return;
     
     setValidatingTenant(true);
+    setError("");
+    
+    console.log("[SetPassword] Validating tenant slug:", slug);
+    
     try {
+      // Look up tenant by ID (the URL uses tenant UUID since subdomain field doesn't exist)
       const { data: tenant, error } = await supabase
         .from("tenants")
-        .select("name, id, subdomain")
-        .or(`subdomain.eq.${slug},id.eq.${slug}`)
-        .single();
+        .select("name, id")
+        .eq("id", slug)
+        .maybeSingle();
+      
+      console.log("[SetPassword] Tenant lookup result:", { tenant, error });
       
       if (tenant && !error) {
         setTenantName(tenant.name);
         setTenantValidated(true);
+        console.log("[SetPassword] Tenant validated:", tenant.name);
       } else {
         setTenantName(null);
         setTenantValidated(false);
+        console.error("[SetPassword] Tenant validation failed:", { slug, error });
         if (tenantSlugFromUrl) {
-          setError("Invalid tenant ID. Please check your invitation email.");
+          setError(`Invalid tenant ID "${slug}". Please check your invitation email or contact support.`);
         }
       }
     } catch (err) {
-      console.error("Error validating tenant:", err);
+      console.error("[SetPassword] Error validating tenant:", err);
       setTenantName(null);
       setTenantValidated(false);
+      if (tenantSlugFromUrl) {
+        setError("Error validating tenant. Please try again or contact support.");
+      }
     } finally {
       setValidatingTenant(false);
     }
