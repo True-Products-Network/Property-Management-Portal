@@ -40,6 +40,7 @@ interface MigrationResult {
     needingContacts: number;
     created: number;
     failed: number;
+    errors?: string[];
   };
   error?: string;
 }
@@ -266,6 +267,16 @@ export default function AdminHomePage() {
                     <span className="font-semibold">Created: {migrationResult.data?.created}</span><br />
                     Failed: {migrationResult.data?.failed}
                   </p>
+                  {migrationResult.data?.errors && migrationResult.data.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="font-medium text-red-700">Errors:</p>
+                      <ul className="text-xs list-disc pl-4 space-y-1">
+                        {migrationResult.data.errors.map((err: string, i: number) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p>Error: {migrationResult.error}</p>
