@@ -137,9 +137,9 @@ function SetPasswordContent() {
         }
       }
 
-      // Sign out the recovery session and sign in with new password
-      await supabase.auth.signOut();
-      
+      // Sign out just this session and sign in with new password
+      // Note: We don't use signOut() as that kills ALL sessions globally
+      // Instead we just sign in with the new credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email!,
         password: password,
