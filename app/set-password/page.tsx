@@ -157,11 +157,15 @@ function SetPasswordContent() {
         return;
       }
 
-      // Successfully signed in
-      console.log("[SetPassword] Sign-in successful, redirecting to portal");
+      // Successfully signed in - redirect based on user metadata or default to overview
+      const redirectUrl = signInData.user?.user_metadata?.redirect_url || 
+                          signInData.user?.user_metadata?.portal_role 
+                            ? "/management/overview" 
+                            : "/";
+      console.log("[SetPassword] Sign-in successful, redirecting to:", redirectUrl);
       setSuccess(true);
       setTimeout(() => {
-        router.push("/");
+        router.push(redirectUrl);
       }, 1500);
     } catch (err) {
       console.error("Error setting password:", err);
