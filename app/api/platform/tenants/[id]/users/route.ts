@@ -449,7 +449,9 @@ async function pushToGHL(
 
   // Build URLs - use environment variable or fallback
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://portal.trueproductsnetwork.com";
-  const loginUrl = `${appUrl}/sign-in?tenant=${params.tenantId}`;
+  const tenantSlug = tenantData?.subdomain || params.tenantId;
+  const loginUrl = `${appUrl}/sign-in?tenant=${tenantSlug}`;
+  const invitationUrl = `${appUrl}/set-password?tenant=${tenantSlug}&email=${encodeURIComponent(params.email)}`;
   const expiryDays = 7;
   
   const contactData = {
@@ -470,6 +472,7 @@ async function pushToGHL(
       { key: "tenant_id", field_value: params.tenantId },
       { key: "invited_by_name", field_value: "Platform Admin" },
       { key: "login_url", field_value: loginUrl },
+      { key: "invitation_URL", field_value: invitationUrl },
       { key: "invitation_expiry_days", field_value: expiryDays },
       { key: "portal_source", field_value: "Associos Portal" },
       { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
@@ -555,6 +558,7 @@ async function pushToGHL(
                 { key: "tenant_id", field_value: params.tenantId },
                 { key: "invited_by_name", field_value: "Platform Admin" },
                 { key: "login_url", field_value: loginUrl },
+                { key: "invitation_URL", field_value: invitationUrl },
                 { key: "invitation_expiry_days", field_value: expiryDays },
                 { key: "portal_source", field_value: "Associos Portal" },
                 { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
