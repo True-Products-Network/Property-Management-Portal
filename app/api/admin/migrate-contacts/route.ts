@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           tenant_id: tu.tenant_id,
           portal_user_id: tu.user_id,
           allow_login: isAdmin,
-          portal_invitation_status: isAdmin ? 'ACTIVE' : 'INVITED',
+          portal_invitation_status: isAdmin ? 'active' : 'invited',
         });
 
       if (insertError) {
