@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getContacts, createContact } from "@/lib/api/contacts";
+import { isGhlConnected } from "@/lib/ghl/credentials";
+import { pushToGHL } from "@/lib/ghl/sync-engine";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -96,7 +98,30 @@ export async function POST(request: NextRequest) {
 
     const result = await createContact(validation.data, user.id, tenantId);
     if (!result.success) return NextResponse.json(result, { status: 400 });
-    return NextResponse.json(result, { status: 201 });
+
+    // Check if GHL is connected
+    const ghlConnected = await isGhlConnected();
+    let ghlSyncResult = null;
+    let ghlMessage = null;
+
+    if (ghlConnected && result.data?.id) {
+      // Sync to GHL
+      try {
+        ghlSyncResult = await pushToGHL("contact", result.data.id, tenantId);
+        console.log("[Contacts API] GHL sync result:", ghlSyncResult);
+      } catch (syncError) {
+        console.error("[Contacts API] GHL sync failed:", syncError);
+        ghlSyncResult = { success: false, error: "Sync failed" };
+      }
+    } else if (!ghlConnected) {
+      ghlMessage = "GHL not connected. Contact admin to enable GHL integration for automatic sync.";
+    }
+
+    return NextResponse.json({
+      ...result,
+      ghlSync: ghlSyncResult,
+      ghlMessage: ghlMessage,
+    }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }

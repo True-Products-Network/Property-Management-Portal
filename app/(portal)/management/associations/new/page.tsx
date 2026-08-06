@@ -193,6 +193,11 @@ export default function NewAssociationPage() {
 
       console.log("[CreateManager] Contact created:", result.data);
 
+      // Show GHL message if not connected
+      if (result.ghlMessage) {
+        alert(`Contact created successfully.\n\nNote: ${result.ghlMessage}`);
+      }
+
       // Set the newly created manager - use the correct ID field
       const contactId = result.data?.id || result.data?.contactId;
       if (!contactId) {
