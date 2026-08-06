@@ -454,6 +454,8 @@ async function pushToGHL(
   const invitationUrl = `${appUrl}/set-password?tenant=${tenantSlug}&email=${encodeURIComponent(params.email)}`;
   const expiryDays = 7;
   
+  console.log("[GHL Push] invitationUrl:", invitationUrl);
+  
   const contactData = {
     locationId: locationId,
     email: params.email,
@@ -473,6 +475,7 @@ async function pushToGHL(
       { key: "invited_by_name", field_value: "Platform Admin" },
       { key: "login_url", field_value: loginUrl },
       { key: "invitation_URL", field_value: invitationUrl },
+      { key: "invitation_url", field_value: invitationUrl },
       { key: "invitation_expiry_days", field_value: expiryDays },
       { key: "portal_source", field_value: "Associos Portal" },
       { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
@@ -482,6 +485,9 @@ async function pushToGHL(
 
   try {
     // Try GHL v2 API - create new contact
+    const requestBody = JSON.stringify(contactData);
+    console.log("[GHL Push] Full request body:", requestBody);
+    
     const v2Response = await fetch("https://services.leadconnectorhq.com/contacts/", {
       method: "POST",
       headers: {
@@ -490,20 +496,23 @@ async function pushToGHL(
         "Content-Type": "application/json",
         "Accept": "application/json",
       },
-      body: JSON.stringify(contactData),
+      body: requestBody,
     });
 
+    const v2ResponseText = await v2Response.text();
+    console.log("[GHL Push] V2 response status:", v2Response.status);
+    console.log("[GHL Push] V2 response body:", v2ResponseText);
+
     if (v2Response.ok) {
-      const result = await v2Response.json();
+      const result = JSON.parse(v2ResponseText);
       console.log("[GHL Push] Contact created in GHL v2:", result.contact?.id);
       return;
     }
 
     // Check if it's a duplicate contact error
-    const v2ErrorText = await v2Response.text();
-    console.log("[GHL Push] V2 create failed:", v2Response.status, v2ErrorText);
+    console.log("[GHL Push] V2 create failed:", v2Response.status, v2ResponseText);
 
-    if (v2Response.status === 400 && v2ErrorText.includes("duplicated contacts")) {
+    if (v2Response.status === 400 && v2ResponseText.includes("duplicated contacts")) {
       console.log("[GHL Push] Contact already exists, searching for existing contact...");
       
       // Search for existing contact by email
@@ -559,6 +568,7 @@ async function pushToGHL(
                 { key: "invited_by_name", field_value: "Platform Admin" },
                 { key: "login_url", field_value: loginUrl },
                 { key: "invitation_URL", field_value: invitationUrl },
+                { key: "invitation_url", field_value: invitationUrl },
                 { key: "invitation_expiry_days", field_value: expiryDays },
                 { key: "portal_source", field_value: "Associos Portal" },
                 { key: "portal_user_type", field_value: params.isNewUser ? "invited" : "active" },
