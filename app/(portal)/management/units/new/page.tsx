@@ -15,6 +15,11 @@ interface Property {
   associationName: string;
 }
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
 interface FormData {
   propertyId: string;
   unitNumber: string;
@@ -44,6 +49,7 @@ export default function NewUnitPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [unitTypes, setUnitTypes] = useState<DropdownOption[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [formData, setFormData] = useState<FormData>({
     propertyId: "",
@@ -67,6 +73,7 @@ export default function NewUnitPage() {
 
   useEffect(() => {
     loadProperties();
+    loadDropdowns();
   }, []);
 
   useEffect(() => {
@@ -74,6 +81,26 @@ export default function NewUnitPage() {
       loadUnitData(unitId);
     }
   }, [isEditMode, unitId]);
+
+  async function loadDropdowns() {
+    try {
+      const response = await fetch("/api/admin/dropdowns");
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          // Get unit types from dropdown settings
+          const unitTypeDropdowns = result.data.find(
+            (d: any) => d.recordType === 'unit' && d.fieldName === 'type'
+          );
+          if (unitTypeDropdowns?.values) {
+            setUnitTypes(unitTypeDropdowns.values);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading dropdowns:", error);
+    }
+  }
 
   async function loadProperties() {
     try {
@@ -336,14 +363,11 @@ export default function NewUnitPage() {
                   className="input w-full"
                 >
                   <option value="">Select Type</option>
-                  <option value="Studio">Studio</option>
-                  <option value="1 Bedroom">1 Bedroom</option>
-                  <option value="2 Bedroom">2 Bedroom</option>
-                  <option value="3 Bedroom">3 Bedroom</option>
-                  <option value="4+ Bedroom">4+ Bedroom</option>
-                  <option value="Penthouse">Penthouse</option>
-                  <option value="Loft">Loft</option>
-                  <option value="Townhouse">Townhouse</option>
+                  {unitTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
