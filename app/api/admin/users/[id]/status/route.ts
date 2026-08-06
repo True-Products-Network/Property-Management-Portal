@@ -45,8 +45,8 @@ export async function PUT(
     }
 
     // Map frontend status to database values
-    // Common values: PENDING, INVITED, ACTIVE, SUSPENDED, REVOKED
-    const validStatuses = ['PENDING', 'INVITED', 'ACTIVE', 'SUSPENDED', 'REVOKED', 'INACTIVE'];
+    // Common values: NOT_INVITED, PENDING, INVITED, ACTIVE, SUSPENDED, REVOKED
+    const validStatuses = ['NOT_INVITED', 'PENDING', 'INVITED', 'ACTIVE', 'SUSPENDED', 'REVOKED', 'INACTIVE'];
     const upperStatus = status.toUpperCase();
     
     if (!validStatuses.includes(upperStatus)) {
