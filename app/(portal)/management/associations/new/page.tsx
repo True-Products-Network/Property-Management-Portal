@@ -459,6 +459,7 @@ export default function NewAssociationPage() {
                   Association Phone {!formData.email && <span className="text-red-500">*</span>}
                 </label>
                 <Input
+                  type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
                   placeholder="+1 (555) 123-4567"

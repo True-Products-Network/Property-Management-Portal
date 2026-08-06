@@ -58,11 +58,23 @@ export async function checkRouteEntityLimit(
       return { allowed: false, error: "Unauthorized" };
     }
 
-    const tenantId = user.user_metadata?.tenant_id;
+    // Get tenant_id from user_metadata or look up from tenant_users table
+    let tenantId = user.user_metadata?.tenant_id;
     const isPlatformAdmin = user.user_metadata?.roles?.includes("PLATFORM_ADMIN");
     
     if (isPlatformAdmin) {
       return { allowed: true, tenantId };
+    }
+
+    // If not in metadata, look up from tenant_users
+    if (!tenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      tenantId = tenantUser?.tenant_id;
     }
 
     if (!tenantId) {
