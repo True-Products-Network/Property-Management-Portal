@@ -8,7 +8,7 @@ import { z } from "zod";
 const createSchema = z.object({
   companyName: z.string().min(1),
   doingBusinessAs: z.string().optional(),
-  category: z.enum(["HVAC", "Plumbing", "Electrical", "Landscaping", "Cleaning", "Security", "Pest Control", "Roofing", "Painting", "General Contracting", "Elevator", "Fire Safety", "Pool Service", "Snow Removal", "Other"]).optional(),
+  category: z.string().optional(),
   primaryContactName: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
@@ -53,8 +53,11 @@ export async function POST(request: NextRequest) {
     const user = await getSession();
     if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
+    console.log("[Vendors API] User:", user.id, "businessId:", user.businessId);
+
     // Check entitlements
     const entitlementCheck = await checkRouteEntitlement(request, "vendors");
+    console.log("[Vendors API] Entitlement check:", entitlementCheck);
     if (!entitlementCheck.allowed) {
       return NextResponse.json({ 
         success: false, 
