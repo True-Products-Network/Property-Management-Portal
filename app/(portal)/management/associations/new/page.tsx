@@ -191,10 +191,17 @@ export default function NewAssociationPage() {
         throw new Error(result.error || "Failed to create contact");
       }
 
-      // Set the newly created manager
+      console.log("[CreateManager] Contact created:", result.data);
+
+      // Set the newly created manager - use the correct ID field
+      const contactId = result.data?.id || result.data?.contactId;
+      if (!contactId) {
+        throw new Error("Contact created but no ID returned");
+      }
+
       setFormData({
         ...formData,
-        assignedManagerId: result.data.id,
+        assignedManagerId: contactId,
         assignedManagerName: `${newManager.firstName} ${newManager.lastName}`,
       });
 
@@ -234,7 +241,7 @@ export default function NewAssociationPage() {
         fiscalYear: formData.fiscalYear || undefined,
         annualMeetingMonth: formData.annualMeetingMonth || undefined,
         managementStartDate: formData.managementStartDate || undefined,
-        assignedManagerId: formData.assignedManagerId || undefined,
+        assignedManagerId: formData.assignedManagerId ? formData.assignedManagerId : undefined,
         propertyCount: formData.propertyCount ? parseInt(formData.propertyCount.toString()) : undefined,
         unitCount: formData.unitCount ? parseInt(formData.unitCount.toString()) : undefined,
       };
