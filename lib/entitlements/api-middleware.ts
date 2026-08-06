@@ -133,17 +133,28 @@ export async function checkRouteEntitlement(
       return { allowed: true, tenantId };
     }
 
-    if (!tenantId) {
+    // Look up tenant from tenant_users if not in session
+    let effectiveTenantId = tenantId;
+    if (!effectiveTenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      effectiveTenantId = tenantUser?.tenant_id;
+    }
+
+    if (!effectiveTenantId) {
       return { allowed: false, error: "No tenant assigned" };
     }
 
-    const entitlement = await checkEntitlementServer(tenantId, featureKey);
+    const entitlement = await checkEntitlementServer(effectiveTenantId, featureKey);
 
     if (!entitlement.enabled) {
       return { 
         allowed: false, 
         error: `Feature ${featureKey} is not available in your plan`,
-        tenantId 
+        tenantId: effectiveTenantId 
       };
     }
 
@@ -152,12 +163,12 @@ export async function checkRouteEntitlement(
         return { 
           allowed: false, 
           error: `Usage limit reached: ${entitlement.currentUsage}/${entitlement.limit}`,
-          tenantId 
+          tenantId: effectiveTenantId 
         };
       }
     }
 
-    return { allowed: true, tenantId };
+    return { allowed: true, tenantId: effectiveTenantId };
   } catch (error) {
     console.error("Error checking route entitlement:", error);
     return { allowed: false, error: "Internal server error" };

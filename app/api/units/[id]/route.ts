@@ -52,9 +52,12 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+    console.log("[Units API PUT] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = updateSchema.safeParse(body);
 
     if (!validation.success) {
+      console.error("[Units API PUT] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
