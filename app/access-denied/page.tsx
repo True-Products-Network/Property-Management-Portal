@@ -4,8 +4,11 @@ import Link from "next/link";
 import { ShieldAlert, Home, Mail, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { useSiteSettings } from "@/lib/hooks/useSiteSettings";
 
 export default function AccessDeniedPage() {
+  const { settings, loading } = useSiteSettings();
+
   return (
     <div className="min-h-screen bg-[var(--primary-navy)] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -16,7 +19,7 @@ export default function AccessDeniedPage() {
               <ShieldAlert className="h-7 w-7 text-white" />
             </div>
             <div className="text-white">
-              <h1 className="text-xl font-semibold">Associos</h1>
+              <h1 className="text-xl font-semibold">{loading ? "..." : settings.appName}</h1>
               <p className="text-sm text-white/60">Property Management</p>
             </div>
           </div>
@@ -70,11 +73,11 @@ export default function AccessDeniedPage() {
                 Need help? Contact your administrator or support.
               </p>
               <a 
-                href="mailto:support@trueproductsnetwork.com"
+                href={`mailto:${settings.supportEmail}`}
                 className="inline-flex items-center text-sm text-[var(--teal)] hover:text-[var(--teal-hover)]"
               >
                 <Mail className="mr-1 h-4 w-4" />
-                support@trueproductsnetwork.com
+                {settings.supportEmail}
               </a>
             </div>
           </CardContent>
@@ -82,7 +85,7 @@ export default function AccessDeniedPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-white/60">
-          <p>Powered by Associos</p>
+          <p>Powered by {loading ? "..." : settings.appName}</p>
         </div>
       </div>
     </div>

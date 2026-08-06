@@ -177,6 +177,18 @@ async function sendUserToGHL(
     portalRole: string;
   }
 ) {
+  // Get site settings for app name
+  const { data: siteSettings } = await supabase
+    .from("app_settings")
+    .select("key, value")
+    .like("key", "site_%");
+  
+  const settingsMap: Record<string, string> = {};
+  (siteSettings || []).forEach((s: { key: string; value: string }) => {
+    settingsMap[s.key] = s.value;
+  });
+  const appName = settingsMap.site_app_name || "Associos";
+  
   // Get tenant's association_id first
   const { data: tenant, error: tenantError } = await supabase
     .from("tenants")
@@ -236,11 +248,11 @@ async function sendUserToGHL(
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
-        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, "source_associos_portal"],
+        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, `source_${appName.toLowerCase().replace(/\s+/g, '_')}_portal`],
         customFields: [
           { key: "portal_role", field_value: params.portalRole },
           { key: "tenant_name", field_value: tenant?.name || "" },
-          { key: "source", field_value: "Associos Portal" },
+          { key: "source", field_value: `${appName} Portal` },
           { key: "portal_user_type", field_value: "registered" },
         ],
       }),
@@ -263,11 +275,11 @@ async function sendUserToGHL(
         email: params.email,
         firstName: params.firstName,
         lastName: params.lastName,
-        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, "source_associos_portal"],
+        tags: ["portal_user", `role_${params.portalRole}`, `tenant_${tenant?.name}`, `source_${appName.toLowerCase().replace(/\s+/g, '_')}_portal`],
         customFields: [
           { id: "portal_role", value: params.portalRole },
           { id: "tenant_name", value: tenant?.name || "" },
-          { id: "source", value: "Associos Portal" },
+          { id: "source", value: `${appName} Portal` },
           { id: "portal_user_type", value: "registered" },
         ],
       }),

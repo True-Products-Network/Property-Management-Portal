@@ -1,7 +1,7 @@
 // Platform Console Login - Simplified
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,28 @@ export default function PlatformLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [companyName, setCompanyName] = useState("True Products Network");
+  const [supportEmail, setSupportEmail] = useState("admin@trueproductsnetwork.com");
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchSettings() {
+      try {
+        const response = await fetch("/api/platform/settings?category=site");
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.settings) {
+            setCompanyName(result.settings.site_company_name || "True Products Network");
+            setSupportEmail(result.settings.site_support_email || "admin@trueproductsnetwork.com");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      }
+    }
+    fetchSettings();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +98,7 @@ export default function PlatformLoginPage() {
               <Shield className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">True Products Network</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{companyName}</h1>
           <p className="text-gray-500">Platform Console</p>
           <p className="text-sm text-gray-400">Authorized personnel only</p>
         </div>
@@ -96,7 +116,7 @@ export default function PlatformLoginPage() {
             <Input
               id="email"
               type="email"
-              placeholder="admin@trueproductsnetwork.com"
+              placeholder={supportEmail}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
