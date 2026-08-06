@@ -250,11 +250,21 @@ export async function POST(
 
       // Send password reset email (acts as invite)
       if (validation.data.sendInviteEmail) {
+        // Get tenant details for the email
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("name, subdomain")
+          .eq("id", tenantId)
+          .single();
+        
+        const tenantSlug = tenant?.subdomain || tenantId;
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/set-password?tenant=${tenantSlug}&email=${encodeURIComponent(validation.data.email)}`;
+        
         const { error: inviteError } = await serviceClient.auth.admin.generateLink({
           type: "recovery",
           email: validation.data.email,
           options: {
-            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/login`,
+            redirectTo: inviteUrl,
           },
         });
 
