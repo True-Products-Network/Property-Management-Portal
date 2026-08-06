@@ -36,6 +36,32 @@ function SetPasswordContent() {
         return;
       }
 
+      // Check for access_token in URL hash (from Supabase recovery link)
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      
+      console.log("[SetPassword] URL hash:", hash);
+      console.log("[SetPassword] Access token present:", !!accessToken);
+      
+      if (accessToken) {
+        // Set the session from the recovery link
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || "",
+        });
+        
+        if (sessionError) {
+          console.error("[SetPassword] Error setting session:", sessionError);
+          setError("Your invitation link has expired. Please request a new one.");
+          setValidating(false);
+          return;
+        }
+        
+        console.log("[SetPassword] Session established from recovery link");
+      }
+
       // Get tenant info
       try {
         const { data: tenant } = await supabase
