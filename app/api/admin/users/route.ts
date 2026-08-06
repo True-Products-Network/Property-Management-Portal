@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
       .from("contacts")
       .select(`
         id,
-        user_id,
         contact_id,
         first_name,
         last_name,
@@ -84,18 +83,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user IDs from contacts
-    const userIds = (contacts || [])
-      .map((c: any) => c.user_id)
+    // Get portal user IDs from contacts
+    const portalUserIds = (contacts || [])
+      .map((c: any) => c.portal_user_id)
       .filter((id: string | null): id is string => !!id);
 
     // Get user's roles for role information
     let roleMap = new Map<string, string>();
-    if (userIds.length > 0) {
+    if (portalUserIds.length > 0) {
       const { data: userRoles } = await supabase
         .from("user_roles")
         .select("user_id, role_id, roles(name)")
-        .in("user_id", userIds);
+        .in("user_id", portalUserIds);
 
       (userRoles || []).forEach((ur: any) => {
         const roleName = ur.roles?.name || "Unknown";
@@ -120,13 +119,13 @@ export async function GET(request: NextRequest) {
         : firstName || lastName || contact.email;
       
       return {
-        id: contact.user_id || contact.id,
+        id: contact.portal_user_id || contact.id,
         contactId: contact.id,
         email: contact.email,
         firstName: firstName || null,
         lastName: lastName || null,
         name: fullName,
-        role: contact.user_id ? roleMap.get(contact.user_id) || "User" : "Contact",
+        role: contact.portal_user_id ? roleMap.get(contact.portal_user_id) || "User" : "Contact",
         status: contact.portal_invitation_status?.toLowerCase() || "none",
         ghlContactId: contact.contact_id,
         createdAt: contact.created_at,
