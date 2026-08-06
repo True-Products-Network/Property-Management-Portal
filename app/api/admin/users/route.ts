@@ -72,11 +72,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get user's tenant ID(s) - tenant admins can only see their own tenant's users
+    const { data: userTenants } = await supabase
+      .from("tenant_users")
+      .select("tenant_id")
+      .eq("user_id", authUser.id);
+    
+    const userTenantIds = userTenants?.map((ut: any) => ut.tenant_id) || [];
+    
+    console.log("[Admin Users API] User tenant IDs:", userTenantIds);
+
     // Get query params
     const { searchParams } = new URL(request.url);
     const associationId = searchParams.get("associationId");
 
-    // Get all contacts (these are the users)
+    // Get contacts filtered by tenant
+    // Platform admins can see all, tenant admins only see their tenant's contacts
     let contactsQuery = supabase
       .from("contacts")
       .select(`
@@ -88,10 +99,16 @@ export async function GET(request: NextRequest) {
         phone,
         portal_invitation_status,
         portal_user_id,
+        tenant_id,
         created_at,
         updated_at
       `)
       .order("created_at", { ascending: false });
+    
+    // Filter by tenant unless platform admin
+    if (!isPlatformAdmin && userTenantIds.length > 0) {
+      contactsQuery = contactsQuery.in("tenant_id", userTenantIds);
+    }
 
     const { data: contacts, error: contactsError } = await contactsQuery;
 
