@@ -91,10 +91,10 @@ export async function POST(request: NextRequest) {
 }
 
 async function getRedirectUrl(supabase: any, role: string): Promise<string> {
-  // Fetch role configuration from portal_roles
+  // Fetch role configuration from roles table
   const { data: roleData } = await supabase
-    .from("portal_roles")
-    .select("redirect_url, name")
+    .from("roles")
+    .select("name")
     .eq("name", role)
     .single();
 

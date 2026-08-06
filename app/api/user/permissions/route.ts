@@ -75,14 +75,14 @@ export async function GET(request: NextRequest) {
       roleVariations.push("Finance User");
     }
 
-    // Fetch role details from portal_roles - try different name formats
+    // Fetch role details from roles table - try different name formats
     let roleData = null;
     for (const roleName of roleVariations) {
       const { data, error } = await supabase
-        .from("portal_roles")
+        .from("roles")
         .select("name, description, permissions, requires_mfa")
         .eq("name", roleName)
-        .eq("status", "active")
+        .eq("is_active", true)
         .maybeSingle();
       
       if (data) {
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!roleData) {
-      console.error("Role not found in portal_roles:", primaryRole, "tried:", roleVariations);
+      console.error("Role not found in roles:", primaryRole, "tried:", roleVariations);
       return NextResponse.json({ 
         permissions: [],
         menu: [],

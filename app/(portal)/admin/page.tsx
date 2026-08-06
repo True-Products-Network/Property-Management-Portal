@@ -40,7 +40,7 @@ async function getAdminStats() {
       supabase.from("workflows").select("id", { count: "exact" }),
       supabase.from("audit_logs").select("id", { count: "exact" }),
       supabase.from("app_settings").select("value").eq("key", "ghl_location_id").single(),
-      supabase.from("portal_roles").select("id", { count: "exact" }),
+      supabase.from("roles").select("id", { count: "exact" }),
       supabase.from("ghl_role_mappings").select("id", { count: "exact" }),
     ]);
 
