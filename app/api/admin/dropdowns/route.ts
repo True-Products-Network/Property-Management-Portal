@@ -36,18 +36,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
-    // Get tenant_id for filtering
-    let tenantId = user.user_metadata?.tenant_id;
-    if (!tenantId) {
-      const { data: tenantUser } = await supabase
-        .from("tenant_users")
-        .select("tenant_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      tenantId = tenantUser?.tenant_id;
-    }
-
-    const result = await getDropdownSettingsGrouped(tenantId);
+    // Dropdown settings are global (no tenant filtering)
+    const result = await getDropdownSettingsGrouped();
 
     if (!result.success) {
       console.error("Dropdown settings error:", result.error);
@@ -97,18 +87,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get tenant_id for creating dropdown
-    let tenantId = user.user_metadata?.tenant_id;
-    if (!tenantId) {
-      const { data: tenantUser } = await supabase
-        .from("tenant_users")
-        .select("tenant_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      tenantId = tenantUser?.tenant_id;
-    }
-
-    const result = await createDropdownSetting(validation.data, user.id, tenantId);
+    // Dropdown settings are global (no tenant_id)
+    const result = await createDropdownSetting(validation.data, user.id);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
