@@ -151,6 +151,16 @@ export async function checkRouteEntitlement(
     const entitlement = await checkEntitlementServer(effectiveTenantId, featureKey);
 
     if (!entitlement.enabled) {
+      // Log entitlement denial to audit log
+      const { logAudit } = await import("@/lib/api/audit-logs");
+      await logAudit({
+        userId: user.id,
+        tenantId: effectiveTenantId,
+        action: "ENTITLEMENT_DENIED",
+        entityType: "feature",
+        entityId: featureKey,
+        details: { reason: "Feature not enabled in plan" },
+      });
       return { 
         allowed: false, 
         error: `Feature ${featureKey} is not available in your plan`,
@@ -160,6 +170,19 @@ export async function checkRouteEntitlement(
 
     if (entitlement.limit !== undefined && entitlement.currentUsage !== undefined) {
       if (entitlement.currentUsage >= entitlement.limit) {
+        // Log limit reached to audit log
+        const { logAudit } = await import("@/lib/api/audit-logs");
+        await logAudit({
+          userId: user.id,
+          tenantId: effectiveTenantId,
+          action: "ENTITLEMENT_LIMIT_REACHED",
+          entityType: "feature",
+          entityId: featureKey,
+          details: { 
+            limit: entitlement.limit,
+            currentUsage: entitlement.currentUsage 
+          },
+        });
         return { 
           allowed: false, 
           error: `Usage limit reached: ${entitlement.currentUsage}/${entitlement.limit}`,

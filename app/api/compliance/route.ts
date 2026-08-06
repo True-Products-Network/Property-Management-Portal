@@ -62,13 +62,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Compliance API] Received body:", JSON.stringify(body, null, 2));
+
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Compliance API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Compliance API] Creating with data:", validation.data, "userId:", user.id);
     const result = await createComplianceMatter(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Compliance API] Result:", result);
+
+    if (!result.success) {
+      console.error("[Compliance API] Failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

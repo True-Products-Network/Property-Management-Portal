@@ -57,13 +57,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Approvals API] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Approvals API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Approvals API] Creating with data:", validation.data, "userId:", user.id);
     const result = await createApproval(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Approvals API] Result:", result);
+    
+    if (!result.success) {
+      console.error("[Approvals API] Failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

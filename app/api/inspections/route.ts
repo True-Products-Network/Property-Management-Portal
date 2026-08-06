@@ -57,13 +57,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Inspections API] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Inspections API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Inspections API] Creating with data:", validation.data, "userId:", user.id);
     const result = await createInspection(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Inspections API] Result:", result);
+    
+    if (!result.success) {
+      console.error("[Inspections API] Failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
 
     // Increment usage if entitled
     if (entitlementCheck.tenantId) {

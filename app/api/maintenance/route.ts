@@ -56,13 +56,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Maintenance API] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Maintenance API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Maintenance API] Creating with data:", validation.data, "userId:", user.id);
     const result = await createMaintenanceRequest(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Maintenance API] Result:", result);
+    
+    if (!result.success) {
+      console.error("[Maintenance API] Failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
 
     // Increment usage if entitled
     if (entitlementCheck.tenantId) {
