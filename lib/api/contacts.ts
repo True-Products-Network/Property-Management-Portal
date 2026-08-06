@@ -139,7 +139,8 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
 
 export async function createContact(
   input: CreateContactInput,
-  userId: string
+  userId: string,
+  tenantId?: string
 ): Promise<ApiResponse<Contact>> {
   try {
     // Use service client to bypass RLS for admin operations
@@ -154,6 +155,17 @@ export async function createContact(
       .select("id")
       .eq("portal_user_id", userId)
       .maybeSingle();
+    
+    // Get tenant_id if not provided
+    let effectiveTenantId = tenantId;
+    if (!effectiveTenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      effectiveTenantId = tenantUser?.tenant_id;
+    }
     
     const { data, error } = await supabase
       .from("contacts")
@@ -176,6 +188,7 @@ export async function createContact(
         emergency_contact_name: input.emergencyContactName,
         emergency_contact_phone: input.emergencyContactPhone,
         emergency_contact_relationship: input.emergencyContactRelationship,
+        tenant_id: effectiveTenantId,
         created_by: creatorContact?.id || null,
         updated_by: creatorContact?.id || null,
       })

@@ -82,7 +82,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const result = await createContact(validation.data, user.id);
+    // Get tenant_id for the new contact
+    const supabaseForTenant = await createClient();
+    let tenantId = user.businessId;
+    if (!tenantId) {
+      const { data: tenantUser } = await supabaseForTenant
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      tenantId = tenantUser?.tenant_id;
+    }
+
+    const result = await createContact(validation.data, user.id, tenantId);
     if (!result.success) return NextResponse.json(result, { status: 400 });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
