@@ -57,7 +57,8 @@ export interface CreateContactInput {
 }
 
 export async function getContacts(
-  params: QueryParams = {}
+  params: QueryParams = {},
+  tenantId?: string
 ): Promise<ApiResponse<PaginatedResponse<Contact>>> {
   try {
     const supabase = await createClient();
@@ -70,6 +71,11 @@ export async function getContacts(
     let query = supabase
       .from("contacts")
       .select("*", { count: "exact" });
+    
+    // Filter by tenant_id if provided
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
     
     if (params.search) {
       query = query.or(`first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`);

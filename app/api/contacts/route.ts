@@ -1,6 +1,7 @@
 // Contacts API Routes
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import { getContacts, createContact } from "@/lib/api/contacts";
 import { z } from "zod";
 
@@ -41,8 +42,21 @@ export async function GET(request: NextRequest) {
       sortOrder: (searchParams.get("sortOrder") || "asc") as "asc" | "desc",
     };
     
-    console.log("Contacts API: Fetching with params:", queryParams);
-    const result = await getContacts(queryParams);
+    // Get tenant_id for filtering
+    const supabaseClient = await createClient();
+    const { data: { user: authUser } } = await supabaseClient.auth.getUser();
+    let tenantId = authUser?.user_metadata?.tenant_id;
+    if (!tenantId) {
+      const { data: tenantUser } = await supabaseClient
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      tenantId = tenantUser?.tenant_id;
+    }
+    
+    console.log("Contacts API: Fetching with params:", queryParams, "tenant:", tenantId);
+    const result = await getContacts(queryParams, tenantId);
 
     if (!result.success) {
       console.error("Contacts API: getContacts failed:", result.error);
