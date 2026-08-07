@@ -88,12 +88,37 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     
     console.log("[createApproval] Looking up portal user for auth user:", authUserId);
     
-    // Look up the portal user ID from the auth user ID
-    const { data: portalUser, error: portalUserError } = await supabase
+    // First check if auth user ID exists directly in portal_users
+    const { data: directPortalUser, error: directError } = await supabase
       .from("portal_users")
       .select("id, email")
       .eq("id", authUserId)
       .maybeSingle();
+    
+    console.log("[createApproval] Direct lookup result:", { directPortalUser, directError });
+    
+    // Also try looking up by email via auth
+    const { data: { user: authData } } = await supabase.auth.getUser();
+    console.log("[createApproval] Auth user data:", { email: authData?.email, id: authData?.id });
+    
+    let portalUser = directPortalUser;
+    
+    // If not found by ID, try by email
+    if (!portalUser && authData?.email) {
+      const { data: emailUser, error: emailError } = await supabase
+        .from("portal_users")
+        .select("id, email")
+        .eq("email", authData.email)
+        .maybeSingle();
+      
+      console.log("[createApproval] Email lookup result:", { emailUser, emailError });
+      
+      if (emailUser) {
+        portalUser = emailUser;
+      }
+    }
+    
+    const portalUserError = directError;
     
     console.log("[createApproval] Portal user lookup result:", { portalUser, portalUserError });
     
