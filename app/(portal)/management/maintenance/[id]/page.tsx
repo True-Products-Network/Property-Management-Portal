@@ -381,22 +381,35 @@ export default function MaintenanceRequestDetailPage() {
       // Load reporter - look up by portal_user_id since reportedByContactId is now portal_user ID
       if (requestData.reportedByContactId) {
         try {
+          console.log("[Maintenance View] Loading reporter for ID:", requestData.reportedByContactId);
+          
           // First try to find contact by portal_user_id
           const contactsResponse = await fetch(`/api/contacts?portalUserId=${requestData.reportedByContactId}`);
           const contactsResult = await contactsResponse.json();
+          console.log("[Maintenance View] Contacts by portalUserId result:", contactsResult);
+          
           if (contactsResult.success && contactsResult.data?.length > 0) {
             setReporter(contactsResult.data[0]);
+            console.log("[Maintenance View] Reporter found by portalUserId:", contactsResult.data[0]);
           } else {
             // Fallback: try direct fetch in case it's still a contact ID
+            console.log("[Maintenance View] Trying direct contact fetch...");
             const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
             const contactResult = await contactResponse.json();
+            console.log("[Maintenance View] Direct contact result:", contactResult);
+            
             if (contactResult.success) {
               setReporter(contactResult.data);
+              console.log("[Maintenance View] Reporter found by direct ID:", contactResult.data);
+            } else {
+              console.log("[Maintenance View] Reporter not found");
             }
           }
         } catch (e) {
-          console.error("Error loading reporter:", e);
+          console.error("[Maintenance View] Error loading reporter:", e);
         }
+      } else {
+        console.log("[Maintenance View] No reportedByContactId");
       }
     } finally {
       setIsLoadingRelated(false);
