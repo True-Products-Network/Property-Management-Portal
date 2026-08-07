@@ -27,19 +27,22 @@ interface ContactLookupProps {
 }
 
 const CONTACT_ROLES = [
-  { value: "owner", label: "Owner" },
-  { value: "co_owner", label: "Co-Owner" },
-  { value: "resident", label: "Resident" },
-  { value: "occupant", label: "Occupant" },
-  { value: "board_president", label: "Board President" },
-  { value: "board_treasurer", label: "Board Treasurer" },
-  { value: "board_secretary", label: "Board Secretary" },
+  // 10 Portal Roles
+  { value: "admin_user", label: "Admin User" },
+  { value: "association_manager", label: "Association Manager" },
   { value: "board_member", label: "Board Member" },
+  { value: "finance_user", label: "Finance User" },
+  { value: "owner", label: "Owner" },
+  { value: "portfolio_manager", label: "Portfolio Manager" },
+  { value: "resident", label: "Resident" },
+  { value: "staff", label: "Staff" },
+  { value: "vendor_contractor", label: "Vendor Contractor" },
   { value: "property_manager", label: "Property Manager" },
-  { value: "assistant_manager", label: "Assistant Manager" },
-  { value: "maintenance_staff", label: "Maintenance Staff" },
-  { value: "vendor_contact", label: "Vendor Contact" },
+  // 5 Additional Roles
   { value: "emergency_contact", label: "Emergency Contact" },
+  { value: "inspector", label: "Inspector" },
+  { value: "co_owner", label: "Co-Owner" },
+  { value: "maintenance_contact", label: "Maintenance Contact" },
   { value: "other", label: "Other" },
 ];
 
