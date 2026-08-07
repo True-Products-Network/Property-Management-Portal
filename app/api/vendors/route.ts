@@ -67,13 +67,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Vendors API] Request body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Vendors API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Vendors API] Creating vendor with data:", validation.data);
     const result = await createVendor(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Vendors API] Create result:", result);
+    
+    if (!result.success) {
+      console.error("[Vendors API] Create failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
