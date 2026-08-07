@@ -1,4 +1,4 @@
-// Approvals API
+// Approvals API - Updated Aug 7, 2026
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
