@@ -88,7 +88,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     // Look up the portal user ID from the auth user ID
     const { data: portalUser, error: portalUserError } = await supabase
       .from("portal_users")
-      .select("id, email, first_name, last_name")
+      .select("id, email")
       .eq("id", authUserId)
       .maybeSingle();
     
