@@ -12,7 +12,10 @@ const createSchema = z.object({
   addressCity: z.string().optional().nullable(),
   addressState: z.string().optional().nullable(),
   addressZip: z.string().optional().nullable(),
-  type: z.enum(["Condominium", "Apartment", "Townhouse", "Single Family", "Commercial", "Mixed Use"]),
+  type: z.string().refine((val) => 
+    ['condominium', 'apartment', 'townhouse', 'single family', 'single_family', 'commercial', 'mixed use', 'mixed_use'].includes(val.toLowerCase()),
+    { message: "Invalid property type" }
+  ),
   status: z.enum(["active", "inactive", "under_construction"]).optional().nullable(),
   yearBuilt: z.number().optional().nullable(),
   totalUnits: z.number().optional().nullable(),
