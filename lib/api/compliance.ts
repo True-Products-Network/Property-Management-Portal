@@ -86,6 +86,20 @@ export async function createComplianceMatter(input: CreateComplianceInput, userI
     const supabase = await createClient();
     const matterId = `COMP-${Date.now()}`;
     
+    // Look up portal_user_id from contact if assignedTo is provided
+    let portalUserId = input.assignedTo;
+    if (input.assignedTo) {
+      const { data: contact } = await supabase
+        .from("contacts")
+        .select("portal_user_id")
+        .eq("id", input.assignedTo)
+        .maybeSingle();
+      
+      if (contact?.portal_user_id) {
+        portalUserId = contact.portal_user_id;
+      }
+    }
+    
     const { data, error } = await supabase.from("compliance_matters").insert({
       matter_id: matterId,
       association_id: input.associationId,
@@ -97,7 +111,7 @@ export async function createComplianceMatter(input: CreateComplianceInput, userI
       priority: input.priority,
       identified_date: input.identifiedDate,
       due_date: input.dueDate,
-      assigned_to: input.assignedTo,
+      assigned_to: portalUserId,
       status: "open",
       created_by: userId,
       updated_by: userId,
