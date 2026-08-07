@@ -42,6 +42,7 @@ export async function GET(
 
     const { id } = await params;
     const result = await getAssociation(id);
+    console.log("[Associations API GET] Result:", JSON.stringify(result, null, 2));
 
     if (!result.success) return NextResponse.json(result, { status: 404 });
     return NextResponse.json(result);

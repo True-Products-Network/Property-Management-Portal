@@ -125,7 +125,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create association (with business_id)
+    console.log("[Associations API POST] Creating with data:", JSON.stringify(validation.data, null, 2));
     const result = await createAssociation(validation.data, user.id, user.businessId);
+    console.log("[Associations API POST] Create result:", JSON.stringify(result, null, 2));
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
