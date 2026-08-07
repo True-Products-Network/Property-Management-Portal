@@ -32,18 +32,18 @@ export interface CreatePropertyInput {
   associationId: string;
   name: string;
   addressStreet: string;
-  addressCity?: string;
-  addressState?: string;
-  addressZip?: string;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZip?: string | null;
   type: string;
-  status?: string;
-  yearBuilt?: number;
-  totalUnits?: number;
-  managementStartDate?: string;
-  accessInstructions?: string;
-  emergencyNotes?: string;
-  assignedStaffId?: string;
-  photoUrl?: string;
+  status?: string | null;
+  yearBuilt?: number | null;
+  totalUnits?: number | null;
+  managementStartDate?: string | null;
+  accessInstructions?: string | null;
+  emergencyNotes?: string | null;
+  assignedStaffId?: string | null;
+  photoUrl?: string | null;
 }
 
 export async function getProperties(
