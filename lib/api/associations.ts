@@ -9,6 +9,7 @@ export interface Association {
   id: string;
   associationId: string;
   name: string;
+  shortName?: string;
   legalName?: string;
   type: string;
   status: string;
@@ -16,12 +17,21 @@ export interface Association {
   addressCity?: string;
   addressState?: string;
   addressZip?: string;
+  mailingAddress?: string;
   phone?: string;
   email?: string;
+  taxId?: string;
   fiscalYear?: string;
+  fiscalYearEndMonth?: string;
+  fiscalYearEndDay?: number;
   annualMeetingMonth?: string;
   managementStartDate?: string;
   assignedManagerId?: string;
+  financialPlatform?: string;
+  financialPortalLink?: string;
+  documentStorageLink?: string;
+  emergencyInstructions?: string;
+  generalNotes?: string;
   propertyCount?: number;
   unitCount?: number;
   createdAt: string;
@@ -262,18 +272,29 @@ export async function updateAssociation(
       .from("associations")
       .update({
         name: input.name,
+        short_name: input.shortName,
         legal_name: input.legalName,
         type: input.type,
+        status: input.status,
         address_street: input.addressStreet,
         address_city: input.addressCity,
         address_state: input.addressState,
         address_zip: input.addressZip,
+        mailing_address: input.mailingAddress,
         phone: input.phone,
         email: input.email,
+        tax_id: input.taxId,
         fiscal_year: input.fiscalYear,
+        fiscal_year_end_month: input.fiscalYearEndMonth,
+        fiscal_year_end_day: input.fiscalYearEndDay,
         annual_meeting_month: input.annualMeetingMonth,
         management_start_date: input.managementStartDate,
         assigned_manager_id: input.assignedManagerId,
+        financial_platform: input.financialPlatform,
+        financial_portal_link: input.financialPortalLink,
+        document_storage_link: input.documentStorageLink,
+        emergency_instructions: input.emergencyInstructions,
+        general_notes: input.generalNotes,
         updated_by: updaterContact?.id || null,
         updated_at: new Date().toISOString(),
       })
