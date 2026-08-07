@@ -11,6 +11,13 @@ import { ArrowLeft, Loader2, Save, Building2 } from "lucide-react";
 interface Association {
   id: string;
   name: string;
+  assignedManagerId?: string;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface Property {
@@ -28,6 +35,7 @@ interface Property {
   managementStartDate?: string;
   accessInstructions?: string;
   emergencyNotes?: string;
+  assignedStaffId?: string;
   photoUrl?: string;
 }
 
@@ -38,6 +46,7 @@ export default function EditPropertyPage() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +55,15 @@ export default function EditPropertyPage() {
   useEffect(() => {
     loadData();
   }, [propertyId]);
+
+  // Load contacts when association changes
+  useEffect(() => {
+    if (formData.associationId) {
+      loadContacts(formData.associationId);
+    } else {
+      setContacts([]);
+    }
+  }, [formData.associationId]);
 
   async function loadData() {
     try {
@@ -65,10 +83,29 @@ export default function EditPropertyPage() {
         const assocData = await assocRes.json();
         if (assocData.success) setAssociations(assocData.data.data || []);
       }
+      
+      // Load contacts for the property's association
+      if (propData.data.associationId) {
+        await loadContacts(propData.data.associationId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadContacts(associationId: string) {
+    try {
+      const response = await fetch(`/api/contacts?associationId=${associationId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setContacts(result.data.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading contacts:", error);
     }
   }
 
@@ -252,6 +289,27 @@ export default function EditPropertyPage() {
                   placeholder="e.g., 24"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Assigned Property Manager <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.assignedStaffId || ""}
+                  onChange={(e) => handleChange("assignedStaffId", e.target.value)}
+                  className="input w-full"
+                  required
+                >
+                  <option value="">Select Property Manager</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.firstName} {contact.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Management Start Date
