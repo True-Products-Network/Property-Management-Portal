@@ -159,6 +159,17 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     }
     
     const portalUserId = portalUser.id;
+    console.log("[createApproval] Using portalUserId:", portalUserId, "for insert");
+    
+    // Verify the portal user actually exists
+    const { data: verifyUser, error: verifyError } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", portalUserId)
+      .single();
+    
+    console.log("[createApproval] Verification result:", { verifyUser, verifyError });
+    
     const approvalId = `APPR-${Date.now()}`;
     
     const { data, error } = await supabase.from("approvals").insert({
