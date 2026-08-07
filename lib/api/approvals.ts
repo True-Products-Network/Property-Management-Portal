@@ -141,6 +141,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     }
     
     console.log("[createApproval] Requester name:", requesterName);
+    console.log("[createApproval] portalUser exists:", !!portalUser, "portalUser.id:", portalUser?.id);
     
     if (!portalUser) {
       console.error("[createApproval] No portal user found for auth user:", authUserId);
