@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { ArrowLeft, Loader2, Save, Home } from "lucide-react";
 
 interface Property {
@@ -231,26 +232,14 @@ export default function EditUnitPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Unit Type
-                </label>
-                <select
-                  value={formData.type || ""}
-                  onChange={(e) => handleChange("type", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Type</option>
-                  <option value="studio">Studio</option>
-                  <option value="1_bedroom">1 Bedroom</option>
-                  <option value="2_bedroom">2 Bedroom</option>
-                  <option value="3_bedroom">3 Bedroom</option>
-                  <option value="4_bedroom">4+ Bedroom</option>
-                  <option value="penthouse">Penthouse</option>
-                  <option value="loft">Loft</option>
-                  <option value="townhouse">Townhouse</option>
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Unit Type"
+                value={formData.type || ""}
+                onChange={(value) => handleChange("type", value)}
+                placeholder="Select Type"
+                label="Unit Type"
+              />
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Floor
@@ -309,38 +298,22 @@ export default function EditUnitPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Occupancy Status
-                </label>
-                <select
-                  value={formData.occupancyStatus || ""}
-                  onChange={(e) => handleChange("occupancyStatus", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Status</option>
-                  <option value="occupied">Occupied</option>
-                  <option value="vacant">Vacant</option>
-                  <option value="under_renovation">Under Renovation</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Rental Status
-                </label>
-                <select
-                  value={formData.rentalStatus || ""}
-                  onChange={(e) => handleChange("rentalStatus", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Status</option>
-                  <option value="owner_occupied">Owner Occupied</option>
-                  <option value="tenant_occupied">Tenant Occupied</option>
-                  <option value="vacant">Vacant</option>
-                  <option value="for_rent">For Rent</option>
-                  <option value="for_sale">For Sale</option>
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Occupancy Status"
+                value={formData.occupancyStatus || ""}
+                onChange={(value) => handleChange("occupancyStatus", value)}
+                placeholder="Select Status"
+                label="Occupancy Status"
+              />
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Rental Status"
+                value={formData.rentalStatus || ""}
+                onChange={(value) => handleChange("rentalStatus", value)}
+                placeholder="Select Status"
+                label="Rental Status"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -7,24 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
-
-const ASSOCIATION_TYPES = [
-  { value: "condominium", label: "Condominium" },
-  { value: "hoa", label: "HOA (Homeowners Association)" },
-  { value: "cooperative", label: "Cooperative" },
-  { value: "commercial", label: "Commercial" },
-  { value: "mixed_use", label: "Mixed Use" },
-  { value: "other", label: "Other" },
-];
-
-const ASSOCIATION_STATUSES = [
-  { value: "prospect", label: "Prospect" },
-  { value: "onboarding", label: "Onboarding" },
-  { value: "active", label: "Active" },
-  { value: "on_hold", label: "On-Hold" },
-  { value: "ending_management", label: "Ending Management" },
-  { value: "inactive", label: "Inactive" },
-];
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -223,35 +206,25 @@ export default function EditAssociationPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Type *
-                </label>
-                <select
-                  required
+                <DropdownSelect
+                  recordType="Association Company"
+                  fieldName="Association Type"
+                  label="Association Type *"
                   value={formData.type || ""}
-                  onChange={(e) => handleChange("type", e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                >
-                  {ASSOCIATION_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("type", value)}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Status *
-                </label>
-                <select
-                  required
+                <DropdownSelect
+                  recordType="Association Company"
+                  fieldName="Association Status"
+                  label="Association Status *"
                   value={formData.status || ""}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                >
-                  {ASSOCIATION_STATUSES.map((status) => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  required
+                />
               </div>
 
               <div className="space-y-2">

@@ -800,7 +800,8 @@ function ContactForm() {
   );
 }
 
-export default function NewContactPage() {
+// Wrap with Suspense only (contacts are core functionality)
+export default function NewContactWrapper() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center h-64">

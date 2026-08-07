@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Truck, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Vendor {
   id: string;
@@ -44,31 +45,6 @@ interface FormData {
   insuranceExpiry: string;
   workersCompExpiry: string;
 }
-
-const VENDOR_CATEGORIES = [
-  { value: "hvac", label: "HVAC" },
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "security", label: "Security" },
-  { value: "pest_control", label: "Pest Control" },
-  { value: "roofing", label: "Roofing" },
-  { value: "painting", label: "Painting" },
-  { value: "general_contracting", label: "General Contracting" },
-  { value: "elevator", label: "Elevator" },
-  { value: "fire_safety", label: "Fire Safety" },
-  { value: "pool_service", label: "Pool Service" },
-  { value: "snow_removal", label: "Snow Removal" },
-  { value: "other", label: "Other" },
-];
-
-const VENDOR_STATUSES = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending_approval", label: "Pending Approval" },
-  { value: "suspended", label: "Suspended" },
-];
 
 export default function EditVendorPage() {
   const router = useRouter();
@@ -291,35 +267,27 @@ export default function EditVendorPage() {
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Category <span className="text-red-500">*</span>
                 </label>
-                <select
+                <DropdownSelect
+                  recordType="Vendor"
+                  fieldName="Category"
                   value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  className={`input w-full ${errors.category ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Category</option>
-                  {VENDOR_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("category", value)}
+                  placeholder="Select Category"
+                  className={errors.category ? "border-red-500" : ""}
+                />
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Status
                 </label>
-                <select
+                <DropdownSelect
+                  recordType="Vendor"
+                  fieldName="Status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  {VENDOR_STATUSES.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  placeholder="Select Status"
+                />
               </div>
             </div>
           </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ interface FormData {
   photoUrl: string;
 }
 
-export default function NewPropertyPage() {
+function NewPropertyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const propertyId = searchParams.get("id");
@@ -528,5 +528,18 @@ export default function NewPropertyPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with Suspense only (properties are core functionality)
+export default function NewPropertyWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    }>
+      <NewPropertyForm />
+    </Suspense>
   );
 }

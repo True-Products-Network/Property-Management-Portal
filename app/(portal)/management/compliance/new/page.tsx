@@ -607,23 +607,17 @@ function NewComplianceForm() {
   );
 }
 
-function NewComplianceFormPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
-      </div>
-    }>
-      <NewComplianceForm />
-    </Suspense>
-  );
-}
-
-// Wrap with EntitlementGuard
+// Wrap with EntitlementGuard and Suspense
 export default function NewComplianceWrapper() {
   return (
     <EntitlementGuard featureKey="compliance">
-      <NewComplianceForm />
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+        </div>
+      }>
+        <NewComplianceForm />
+      </Suspense>
     </EntitlementGuard>
   );
 }

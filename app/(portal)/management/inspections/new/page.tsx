@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, ClipboardCheck, Loader2, Pencil, Calendar } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Property {
   id: string;
@@ -45,23 +46,6 @@ interface CalendarSettings {
   ghl_inspection_calendar_url: string;
   calendar_provider: string;
 }
-
-const INSPECTION_TYPES = [
-  { value: "annual", label: "Annual Inspection" },
-  { value: "move_in", label: "Move-In Inspection" },
-  { value: "move_out", label: "Move-Out Inspection" },
-  { value: "safety", label: "Safety Inspection" },
-  { value: "maintenance", label: "Maintenance Inspection" },
-  { value: "complaint", label: "Complaint Inspection" },
-  { value: "insurance", label: "Insurance Inspection" },
-];
-
-const OVERALL_RATINGS = [
-  { value: "excellent", label: "Excellent" },
-  { value: "good", label: "Good" },
-  { value: "fair", label: "Fair" },
-  { value: "poor", label: "Poor" },
-];
 
 function InspectionForm() {
   const router = useRouter();
@@ -362,37 +346,27 @@ function InspectionForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Inspection Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Inspection"
+                  fieldName="Inspection Type"
                   value={formData.inspectionType}
-                  onChange={(e) => handleChange("inspectionType", e.target.value)}
-                  className={`input w-full ${errors.inspectionType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Type</option>
-                  {INSPECTION_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("inspectionType", value)}
+                  placeholder="Select Type"
+                  label="Inspection Type"
+                  required
+                  className={errors.inspectionType ? "[&_select]:border-red-500" : ""}
+                />
                 {errors.inspectionType && <p className="text-sm text-red-500 mt-1">{errors.inspectionType}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Inspection"
+                  fieldName="Inspection Status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  placeholder="Select Status"
+                  label="Status"
+                />
               </div>
             </div>
 
@@ -500,21 +474,14 @@ function InspectionForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Overall Rating
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Inspection"
+                  fieldName="Overall Result"
                   value={formData.overallRating}
-                  onChange={(e) => handleChange("overallRating", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Rating</option>
-                  {OVERALL_RATINGS.map((rating) => (
-                    <option key={rating.value} value={rating.value}>
-                      {rating.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("overallRating", value)}
+                  placeholder="Select Rating"
+                  label="Overall Rating"
+                />
               </div>
               <div className="flex items-center pt-6">
                 <input
@@ -603,11 +570,17 @@ function InspectionForm() {
   );
 }
 
-// Wrap with EntitlementGuard
+// Wrap with EntitlementGuard and Suspense
 export default function InspectionFormWrapper() {
   return (
     <EntitlementGuard featureKey="inspections">
-      <InspectionForm />
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+        </div>
+      }>
+        <InspectionForm />
+      </Suspense>
     </EntitlementGuard>
   );
 }

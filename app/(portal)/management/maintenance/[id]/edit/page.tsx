@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Wrench, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Property {
   id: string;
@@ -69,26 +70,6 @@ interface FormData {
   vendorNotes: string;
   internalNotes: string;
 }
-
-const CATEGORIES = [
-  { value: "repair", label: "Repair" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "inspection", label: "Inspection" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "hvac", label: "HVAC" },
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "security", label: "Security" },
-  { value: "other", label: "Other" },
-];
-
-const URGENCY_LEVELS = [
-  { value: "low", label: "Low - Routine" },
-  { value: "medium", label: "Medium - Soon" },
-  { value: "high", label: "High - Urgent" },
-  { value: "emergency", label: "Emergency - Immediate" },
-];
 
 export default function EditMaintenanceRequestPage() {
   const router = useRouter();
@@ -442,41 +423,28 @@ export default function EditMaintenanceRequestPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  className={`input w-full ${errors.category ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Category</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Urgency <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.urgency}
-                  onChange={(e) => handleChange("urgency", e.target.value)}
-                  className={`input w-full ${errors.urgency ? "border-red-500" : ""}`}
-                >
-                  {URGENCY_LEVELS.map((level) => (
-                    <option key={level.value} value={level.value}>
-                      {level.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.urgency && <p className="text-sm text-red-500 mt-1">{errors.urgency}</p>}
-              </div>
+              <DropdownSelect
+                recordType="Maintenance Request"
+                fieldName="Category"
+                value={formData.category}
+                onChange={(value) => handleChange("category", value)}
+                placeholder="Select Category"
+                label="Category"
+                required
+                className={errors.category ? "[&_select]:border-red-500" : ""}
+              />
+              {errors.category && <p className="text-sm text-red-500 mt-1 col-span-1">{errors.category}</p>}
+              <DropdownSelect
+                recordType="Maintenance Request"
+                fieldName="Urgency"
+                value={formData.urgency}
+                onChange={(value) => handleChange("urgency", value)}
+                placeholder="Select Urgency"
+                label="Urgency"
+                required
+                className={errors.urgency ? "[&_select]:border-red-500" : ""}
+              />
+              {errors.urgency && <p className="text-sm text-red-500 mt-1 col-span-1">{errors.urgency}</p>}
             </div>
           </CardContent>
         </Card>

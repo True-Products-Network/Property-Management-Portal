@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 import { ArrowLeft, Save, Home, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 
@@ -13,11 +14,6 @@ interface Property {
   name: string;
   associationId: string;
   associationName: string;
-}
-
-interface DropdownOption {
-  value: string;
-  label: string;
 }
 
 interface FormData {
@@ -40,7 +36,7 @@ interface FormData {
   accessNotes: string;
 }
 
-export default function NewUnitPage() {
+function NewUnitForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const unitId = searchParams.get("id");
@@ -49,7 +45,6 @@ export default function NewUnitPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
-  const [unitTypes, setUnitTypes] = useState<DropdownOption[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [formData, setFormData] = useState<FormData>({
     propertyId: "",
@@ -73,7 +68,6 @@ export default function NewUnitPage() {
 
   useEffect(() => {
     loadProperties();
-    loadDropdowns();
   }, []);
 
   useEffect(() => {
@@ -81,27 +75,6 @@ export default function NewUnitPage() {
       loadUnitData(unitId);
     }
   }, [isEditMode, unitId]);
-
-  async function loadDropdowns() {
-    try {
-      const response = await fetch("/api/admin/dropdowns");
-      if (response.ok) {
-        const result = await response.json();
-        console.log("[Unit Form] Dropdowns response:", result);
-        if (result.success && result.data) {
-          // API returns grouped data: { unit: { type: [...] } }
-          const unitDropdowns = result.data['unit'];
-          if (unitDropdowns && unitDropdowns['type']) {
-            setUnitTypes(unitDropdowns['type']);
-          } else {
-            console.log("[Unit Form] No unit type dropdowns found");
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading dropdowns:", error);
-    }
-  }
 
   async function loadProperties() {
     try {
@@ -354,23 +327,14 @@ export default function NewUnitPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Unit Type
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => handleChange("type", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Type</option>
-                  {unitTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Unit Type"
+                value={formData.type}
+                onChange={(value) => handleChange("type", value)}
+                placeholder="Select Type"
+                label="Unit Type"
+              />
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Floor
@@ -429,38 +393,22 @@ export default function NewUnitPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Occupancy Status
-                </label>
-                <select
-                  value={formData.occupancyStatus}
-                  onChange={(e) => handleChange("occupancyStatus", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Status</option>
-                  <option value="occupied">Occupied</option>
-                  <option value="vacant">Vacant</option>
-                  <option value="under_renovation">Under Renovation</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Rental Status
-                </label>
-                <select
-                  value={formData.rentalStatus}
-                  onChange={(e) => handleChange("rentalStatus", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="">Select Status</option>
-                  <option value="owner_occupied">Owner Occupied</option>
-                  <option value="tenant_occupied">Tenant Occupied</option>
-                  <option value="vacant">Vacant</option>
-                  <option value="for_rent">For Rent</option>
-                  <option value="for_sale">For Sale</option>
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Occupancy Status"
+                value={formData.occupancyStatus}
+                onChange={(value) => handleChange("occupancyStatus", value)}
+                placeholder="Select Status"
+                label="Occupancy Status"
+              />
+              <DropdownSelect
+                recordType="Unit"
+                fieldName="Rental Status"
+                value={formData.rentalStatus}
+                onChange={(value) => handleChange("rentalStatus", value)}
+                placeholder="Select Status"
+                label="Rental Status"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -571,5 +519,18 @@ export default function NewUnitPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+// Wrap with Suspense only (units are core functionality)
+export default function NewUnitWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+      </div>
+    }>
+      <NewUnitForm />
+    </Suspense>
   );
 }

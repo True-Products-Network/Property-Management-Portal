@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Truck, Loader2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
 import ContactLookup from "@/components/ContactLookup";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface FormData {
   companyName: string;
@@ -28,23 +29,6 @@ interface FormData {
   insuranceExpiry: string;
   workersCompExpiry: string;
 }
-
-const VENDOR_CATEGORIES = [
-  { value: "hvac", label: "HVAC" },
-  { value: "plumbing", label: "Plumbing" },
-  { value: "electrical", label: "Electrical" },
-  { value: "landscaping", label: "Landscaping" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "security", label: "Security" },
-  { value: "pest_control", label: "Pest Control" },
-  { value: "roofing", label: "Roofing" },
-  { value: "painting", label: "Painting" },
-  { value: "general_contracting", label: "General Contracting" },
-  { value: "elevator", label: "Elevator" },
-  { value: "fire_safety", label: "Fire Safety" },
-  { value: "pool_service", label: "Pool Service" },
-  { value: "snow_removal", label: "Snow Removal" },
-];
 
 function NewVendorForm() {
   const router = useRouter();
@@ -267,33 +251,27 @@ function NewVendorForm() {
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Category <span className="text-red-500">*</span>
                 </label>
-                <select
+                <DropdownSelect
+                  recordType="Vendor"
+                  fieldName="Category"
                   value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  className={`input w-full ${errors.category ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Category</option>
-                  {VENDOR_CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("category", value)}
+                  placeholder="Select Category"
+                  className={errors.category ? "border-red-500" : ""}
+                />
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Status
                 </label>
-                <select
+                <DropdownSelect
+                  recordType="Vendor"
+                  fieldName="Status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending_approval">Pending Approval</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  placeholder="Select Status"
+                />
               </div>
             </div>
           </CardContent>
@@ -488,11 +466,17 @@ function NewVendorForm() {
   );
 }
 
-// Wrap with EntitlementGuard
+// Wrap with EntitlementGuard and Suspense
 export default function NewVendorWrapper() {
   return (
     <EntitlementGuard featureKey="vendors">
-      <NewVendorForm />
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+        </div>
+      }>
+        <NewVendorForm />
+      </Suspense>
     </EntitlementGuard>
   );
 }
