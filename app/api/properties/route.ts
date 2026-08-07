@@ -74,8 +74,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const result = await createProperty(validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    const result = await createProperty(validation.data, user.id, limitCheck.tenantId);
+    if (!result.success) {
+      console.error("[Properties API POST] createProperty failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });

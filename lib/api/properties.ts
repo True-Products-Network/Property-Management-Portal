@@ -128,17 +128,32 @@ export async function getProperty(id: string): Promise<ApiResponse<Property>> {
 
 export async function createProperty(
   input: CreatePropertyInput,
-  userId: string
+  userId: string,
+  tenantId?: string
 ): Promise<ApiResponse<Property>> {
   try {
     const supabase = await createClient();
     
+    // Get tenant_id if not provided
+    let effectiveTenantId = tenantId;
+    if (!effectiveTenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      effectiveTenantId = tenantUser?.tenant_id;
+    }
+    
     const propertyId = `PROP-${Date.now()}`;
+    
+    console.log("[createProperty] Creating property with tenant_id:", effectiveTenantId);
     
     const { data, error } = await supabase
       .from("properties")
       .insert({
         property_id: propertyId,
+        tenant_id: effectiveTenantId,
         association_id: input.associationId,
         name: input.name,
         address_street: input.addressStreet,
