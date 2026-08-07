@@ -18,7 +18,7 @@ const updateSchema = z.object({
   managementStartDate: z.string().optional(),
   accessInstructions: z.string().optional(),
   emergencyNotes: z.string().optional(),
-  assignedStaffId: z.string().uuid().optional(),
+  assignedStaffId: z.string().uuid().optional().nullable(),
   photoUrl: z.string().optional(),
 });
 
