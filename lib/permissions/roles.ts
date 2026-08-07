@@ -93,6 +93,7 @@ function buildMenuFromPermissions(permissions: any[]): MenuItem[] {
 
   const moduleIcons: Record<string, string> = {
     dashboard: "LayoutDashboard",
+    association_dashboard: "Building2",
     associations: "Building2",
     properties: "Home",
     units: "DoorOpen",
@@ -111,6 +112,7 @@ function buildMenuFromPermissions(permissions: any[]): MenuItem[] {
 
   const moduleRoutes: Record<string, string> = {
     dashboard: "/management/overview",
+    association_dashboard: "/management/associations/dashboard",
     associations: "/management/associations",
     properties: "/management/properties",
     units: "/management/units",
@@ -129,6 +131,7 @@ function buildMenuFromPermissions(permissions: any[]): MenuItem[] {
 
   const moduleGroups: Record<string, string> = {
     dashboard: "dashboard",
+    association_dashboard: "dashboard",
     associations: "entities",
     properties: "entities",
     units: "entities",
