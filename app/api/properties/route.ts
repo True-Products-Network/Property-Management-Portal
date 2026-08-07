@@ -9,15 +9,18 @@ const createSchema = z.object({
   associationId: z.string().uuid(),
   name: z.string().min(1),
   addressStreet: z.string().min(1),
-  addressCity: z.string().optional(),
-  addressState: z.string().optional(),
-  addressZip: z.string().optional(),
+  addressCity: z.string().optional().nullable(),
+  addressState: z.string().optional().nullable(),
+  addressZip: z.string().optional().nullable(),
   type: z.enum(["Condominium", "Apartment", "Townhouse", "Single Family", "Commercial", "Mixed Use"]),
-  yearBuilt: z.number().optional(),
-  managementStartDate: z.string().optional(),
-  accessInstructions: z.string().optional(),
-  emergencyNotes: z.string().optional(),
-  assignedStaffId: z.string().uuid().optional(),
+  status: z.enum(["active", "inactive", "under_construction"]).optional().nullable(),
+  yearBuilt: z.number().optional().nullable(),
+  totalUnits: z.number().optional().nullable(),
+  managementStartDate: z.string().optional().nullable(),
+  accessInstructions: z.string().optional().nullable(),
+  emergencyNotes: z.string().optional().nullable(),
+  assignedStaffId: z.string().uuid().optional().nullable(),
+  photoUrl: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -60,8 +63,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log("[Properties API POST] Received body:", JSON.stringify(body, null, 2));
+    
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
+      console.error("[Properties API POST] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
