@@ -11,7 +11,7 @@ const createSchema = z.object({
   unitId: z.string().uuid().optional(),
   title: z.string().min(1),
   description: z.string().optional(),
-  category: z.enum(["fire_safety", "elevator", "accessibility", "environmental", "zoning", "licensing", "insurance", "financial", "other"]).optional(),
+  category: z.string().optional(), // Allow any string, validation is flexible
   priority: z.enum(["critical", "high", "medium", "low"]).optional(),
   identifiedDate: z.string().optional(),
   dueDate: z.string().optional(),
