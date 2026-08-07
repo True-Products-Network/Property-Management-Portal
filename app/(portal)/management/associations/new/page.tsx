@@ -8,24 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Info, X, Search, Plus } from "lucide-react";
-
-const ASSOCIATION_TYPES = [
-  { value: "condominium", label: "Condominium" },
-  { value: "hoa", label: "HOA (Homeowners Association)" },
-  { value: "cooperative", label: "Cooperative" },
-  { value: "commercial", label: "Commercial" },
-  { value: "mixed_use", label: "Mixed Use" },
-  { value: "other", label: "Other" },
-];
-
-const ASSOCIATION_STATUSES = [
-  { value: "prospect", label: "Prospect" },
-  { value: "onboarding", label: "Onboarding" },
-  { value: "active", label: "Active" },
-  { value: "on_hold", label: "On-Hold" },
-  { value: "ending_management", label: "Ending Management" },
-  { value: "inactive", label: "Inactive" },
-];
+import { useDropdowns } from "@/lib/hooks/useDropdowns";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -49,14 +32,24 @@ export default function NewAssociationPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // Fetch dropdown options dynamically
+  const { options: associationTypes, isLoading: typesLoading } = useDropdowns(
+    "Association Company",
+    "Association Type"
+  );
+  const { options: associationStatuses, isLoading: statusesLoading } = useDropdowns(
+    "Association Company",
+    "Association Status"
+  );
+
   // Manager selection modal state
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [managerSearchQuery, setManagerSearchQuery] = useState("");
   const [existingContacts, setExistingContacts] = useState<Contact[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showNewManagerForm, setShowNewManagerForm] = useState(false);
-  
+
   // New manager form state
   const [newManager, setNewManager] = useState({
     firstName: "",
@@ -362,8 +355,10 @@ export default function NewAssociationPage() {
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
+                  disabled={typesLoading}
                 >
-                  {ASSOCIATION_TYPES.map((type) => (
+                  <option value="">Select type...</option>
+                  {associationTypes.map((type) => (
                     <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
@@ -378,8 +373,10 @@ export default function NewAssociationPage() {
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
+                  disabled={statusesLoading}
                 >
-                  {ASSOCIATION_STATUSES.map((status) => (
+                  <option value="">Select status...</option>
+                  {associationStatuses.map((status) => (
                     <option key={status.value} value={status.value}>{status.label}</option>
                   ))}
                 </select>
