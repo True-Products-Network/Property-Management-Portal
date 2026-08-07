@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Info, X, Search, Plus } from "lucide-react";
-import { useDropdowns } from "@/lib/hooks/useDropdowns";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -32,16 +32,6 @@ export default function NewAssociationPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Fetch dropdown options dynamically
-  const { options: associationTypes, isLoading: typesLoading } = useDropdowns(
-    "Association Company",
-    "Association Type"
-  );
-  const { options: associationStatuses, isLoading: statusesLoading } = useDropdowns(
-    "Association Company",
-    "Association Status"
-  );
 
   // Manager selection modal state
   const [showManagerModal, setShowManagerModal] = useState(false);
@@ -346,41 +336,25 @@ export default function NewAssociationPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Type *
-                </label>
-                <select
-                  required
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                  disabled={typesLoading}
-                >
-                  <option value="">Select type...</option>
-                  {associationTypes.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Association Company"
+                fieldName="Association Type"
+                label="Association Type"
+                value={formData.type}
+                onChange={(value) => setFormData({ ...formData, type: value })}
+                placeholder="Select type..."
+                required
+              />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Status *
-                </label>
-                <select
-                  required
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                  disabled={statusesLoading}
-                >
-                  <option value="">Select status...</option>
-                  {associationStatuses.map((status) => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
-                  ))}
-                </select>
-              </div>
+              <DropdownSelect
+                recordType="Association Company"
+                fieldName="Association Status"
+                label="Association Status"
+                value={formData.status}
+                onChange={(value) => setFormData({ ...formData, status: value })}
+                placeholder="Select status..."
+                required
+              />
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
