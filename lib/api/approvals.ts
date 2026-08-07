@@ -189,6 +189,16 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     
     // Use service client to bypass RLS for insert
     const serviceClient = createServiceClient();
+    console.log("[createApproval] Service client created, attempting insert...");
+    
+    // Test service client with a simple query first
+    const { data: testPortal, error: testError } = await serviceClient
+      .from("portal_users")
+      .select("id")
+      .eq("id", portalUserId)
+      .single();
+    
+    console.log("[createApproval] Service client test query:", { testPortal, testError });
     
     const approvalId = `APPR-${Date.now()}`;
     
