@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Get portal user details
     const { data: portalUsers, error: puError } = await supabase
       .from("portal_users")
-      .select("id, email, first_name, last_name, status")
+      .select("id, email, status")
       .in("id", userIds);
 
     if (puError) {
@@ -75,6 +75,20 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Get contact details for names
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("portal_user_id, first_name, last_name")
+      .in("portal_user_id", userIds);
+
+    const contactMap = new Map();
+    (contacts || []).forEach((c: any) => {
+      contactMap.set(c.portal_user_id, {
+        firstName: c.first_name,
+        lastName: c.last_name,
+      });
+    });
 
     // Get user roles
     const { data: userRoles, error: urError } = await supabase
@@ -98,14 +112,17 @@ export async function GET(request: NextRequest) {
     });
 
     // Map to response format
-    const mappedUsers = (portalUsers || []).map((pu: any) => ({
-      id: pu.id,
-      email: pu.email,
-      firstName: pu.first_name,
-      lastName: pu.last_name,
-      status: pu.status,
-      roles: roleMap.get(pu.id) || [],
-    }));
+    const mappedUsers = (portalUsers || []).map((pu: any) => {
+      const contact = contactMap.get(pu.id);
+      return {
+        id: pu.id,
+        email: pu.email,
+        firstName: contact?.firstName || "",
+        lastName: contact?.lastName || "",
+        status: pu.status,
+        roles: roleMap.get(pu.id) || [],
+      };
+    });
 
     return NextResponse.json({
       success: true,
