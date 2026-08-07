@@ -78,6 +78,11 @@ export async function getContacts(
       query = query.eq("tenant_id", tenantId);
     }
     
+    // Filter by portal_user_id if provided
+    if (params.portalUserId) {
+      query = query.eq("portal_user_id", params.portalUserId);
+    }
+    
     if (params.search) {
       query = query.or(`first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`);
     }

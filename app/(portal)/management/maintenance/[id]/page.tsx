@@ -378,13 +378,21 @@ export default function MaintenanceRequestDetailPage() {
         }
       }
 
-      // Load reporter
+      // Load reporter - look up by portal_user_id since reportedByContactId is now portal_user ID
       if (requestData.reportedByContactId) {
         try {
-          const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
-          const contactResult = await contactResponse.json();
-          if (contactResult.success) {
-            setReporter(contactResult.data);
+          // First try to find contact by portal_user_id
+          const contactsResponse = await fetch(`/api/contacts?portalUserId=${requestData.reportedByContactId}`);
+          const contactsResult = await contactsResponse.json();
+          if (contactsResult.success && contactsResult.data?.length > 0) {
+            setReporter(contactsResult.data[0]);
+          } else {
+            // Fallback: try direct fetch in case it's still a contact ID
+            const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
+            const contactResult = await contactResponse.json();
+            if (contactResult.success) {
+              setReporter(contactResult.data);
+            }
           }
         } catch (e) {
           console.error("Error loading reporter:", e);

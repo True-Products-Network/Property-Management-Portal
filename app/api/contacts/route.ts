@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       search: searchParams.get("search") || undefined,
       sortBy: searchParams.get("sortBy") || "last_name",
       sortOrder: (searchParams.get("sortOrder") || "asc") as "asc" | "desc",
+      portalUserId: searchParams.get("portalUserId") || undefined,
     };
     
     // Get tenant_id for filtering

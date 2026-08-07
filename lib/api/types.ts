@@ -30,4 +30,5 @@ export interface QueryParams {
   sortOrder?: 'asc' | 'desc';
   search?: string;
   filters?: Record<string, string | string[]>;
+  portalUserId?: string;
 }
