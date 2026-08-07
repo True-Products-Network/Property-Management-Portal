@@ -57,7 +57,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(result);
+    // Add cache-control headers to prevent caching
+    const response = NextResponse.json(result);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (error) {
     console.error("Error in GET /api/admin/dropdowns:", error);
     return NextResponse.json(

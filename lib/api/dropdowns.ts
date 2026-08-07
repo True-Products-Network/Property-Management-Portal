@@ -119,9 +119,9 @@ export async function getDropdownSettingsGrouped(
       .order("field_name")
       .order("sort_order");
 
-    // Filter by tenant_id if provided
+    // Filter by tenant_id if provided - include both tenant-specific and global (null tenant_id)
     if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
+      query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
     }
 
     const { data, error } = await query;
