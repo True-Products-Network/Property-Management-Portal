@@ -43,8 +43,8 @@ export async function checkEntitlementServer(
   if (entitlement) {
     console.log(`[Entitlements] Found tenant_entitlement:`, entitlement);
     return {
-      enabled: entitlement.enabled,
-      limit: entitlement.usage_limit || undefined,
+      enabled: entitlement.is_enabled,
+      limit: entitlement.limit_value || undefined,
       currentUsage: entitlement.current_usage || 0,
     };
   }
