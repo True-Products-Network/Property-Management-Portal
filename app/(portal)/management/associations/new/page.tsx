@@ -223,18 +223,28 @@ export default function NewAssociationPage() {
       // Transform form data to match API schema
       const apiData = {
         name: formData.name,
+        shortName: formData.shortName || undefined,
         legalName: formData.legalName || undefined,
         type: formData.type.charAt(0).toUpperCase() + formData.type.slice(1), // Convert to proper case
         addressStreet: formData.addressStreet || undefined,
         addressCity: formData.addressCity || undefined,
         addressState: formData.addressState || undefined,
         addressZip: formData.addressZip || undefined,
+        mailingAddress: formData.mailingAddress || undefined,
         phone: formData.phone || undefined,
         email: formData.email || undefined,
+        taxId: formData.taxId || undefined,
         fiscalYear: formData.fiscalYear || undefined,
+        fiscalYearEndMonth: formData.fiscalYearEndMonth || undefined,
+        fiscalYearEndDay: formData.fiscalYearEndDay ? parseInt(formData.fiscalYearEndDay.toString()) : undefined,
         annualMeetingMonth: formData.annualMeetingMonth || undefined,
         managementStartDate: formData.managementStartDate || undefined,
         assignedManagerId: formData.assignedManagerId ? formData.assignedManagerId : undefined,
+        financialPlatform: formData.financialPlatform || undefined,
+        financialPortalLink: formData.financialPortalLink || undefined,
+        documentStorageLink: formData.documentStorageLink || undefined,
+        emergencyInstructions: formData.emergencyInstructions || undefined,
+        generalNotes: formData.generalNotes || undefined,
         propertyCount: formData.propertyCount ? parseInt(formData.propertyCount.toString()) : undefined,
         unitCount: formData.unitCount ? parseInt(formData.unitCount.toString()) : undefined,
       };
