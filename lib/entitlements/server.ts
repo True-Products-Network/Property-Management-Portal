@@ -10,6 +10,8 @@ export async function checkEntitlementServer(
 ): Promise<{ enabled: boolean; limit?: number; currentUsage?: number }> {
   const supabase = await createClient();
 
+  console.log(`[Entitlements] Checking ${featureKey} for tenant ${tenantId}`);
+
   // First, look up the feature UUID from the code
   const { data: feature } = await supabase
     .from("features")
@@ -23,6 +25,7 @@ export async function checkEntitlementServer(
   }
 
   const featureId = feature.id;
+  console.log(`[Entitlements] Found feature ${featureKey} with ID ${featureId}`);
 
   // Check tenant entitlements
   const { data: entitlement, error } = await supabase
@@ -33,10 +36,12 @@ export async function checkEntitlementServer(
     .single();
 
   if (error && error.code !== "PGRST116") {
+    console.log(`[Entitlements] Error checking tenant_entitlements:`, error);
     throw error;
   }
 
   if (entitlement) {
+    console.log(`[Entitlements] Found tenant_entitlement:`, entitlement);
     return {
       enabled: entitlement.enabled,
       limit: entitlement.usage_limit || undefined,
@@ -44,16 +49,36 @@ export async function checkEntitlementServer(
     };
   }
 
-  // Check plan features
-  const { data: planFeature } = await supabase
+  console.log(`[Entitlements] No tenant_entitlement found, checking plan_features`);
+
+  // Get the tenant's active subscription plan
+  const { data: subscription } = await supabase
+    .from("tenant_subscriptions")
+    .select("plan_id")
+    .eq("tenant_id", tenantId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  console.log(`[Entitlements] Tenant subscription:`, subscription);
+
+  if (!subscription) {
+    console.log(`[Entitlements] No active subscription found for tenant ${tenantId}`);
+    return { enabled: false };
+  }
+
+  // Check plan features directly
+  const { data: planFeature, error: planError } = await supabase
     .from("plan_features")
-    .select("*, plans!inner(tenant_subscriptions!inner(tenant_id))")
+    .select("*")
+    .eq("plan_id", subscription.plan_id)
     .eq("feature_id", featureId)
-    .eq("plans.tenant_subscriptions.tenant_id", tenantId)
-    .single();
+    .maybeSingle();
+
+  console.log(`[Entitlements] Plan feature check:`, { planFeature, planError });
 
   return {
-    enabled: !!planFeature,
+    enabled: !!planFeature && planFeature.is_enabled !== false,
+    limit: planFeature?.limit_value || undefined,
   };
 }
 

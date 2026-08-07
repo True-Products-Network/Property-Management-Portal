@@ -61,20 +61,24 @@ export default function ContactLookup({
     async function fetchRoles() {
       setIsLoadingRoles(true);
       try {
-        const response = await fetch('/api/admin/dropdowns?recordType=contact&fieldName=role');
+        const response = await fetch('/api/dropdowns?recordType=contact&fieldName=role');
+        console.log('[ContactLookup] Fetching roles from /api/dropdowns');
         if (response.ok) {
           const result = await response.json();
-          if (result.success && result.data) {
-            const roles = result.data.map((item: { value: string; label: string }) => ({
-              value: item.value,
-              label: item.label,
-            }));
-            setContactRoles(roles);
+          console.log('[ContactLookup] Roles response:', result);
+          if (result.success && Array.isArray(result.data)) {
+            setContactRoles(result.data);
             // Set default role if roleFilter not provided
-            if (!roleFilter && roles.length > 0) {
-              setNewContact(prev => ({ ...prev, role: roles[0].value }));
+            if (!roleFilter && result.data.length > 0) {
+              setNewContact(prev => ({ ...prev, role: result.data[0].value }));
+            } else if (roleFilter) {
+              setNewContact(prev => ({ ...prev, role: roleFilter }));
             }
+          } else {
+            console.error('[ContactLookup] Invalid response format:', result);
           }
+        } else {
+          console.error('[ContactLookup] Failed to fetch roles:', response.status);
         }
       } catch (error) {
         console.error("Error fetching contact roles:", error);
