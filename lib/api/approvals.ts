@@ -1,6 +1,5 @@
 // Approvals API - Updated Aug 7, 2026
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { ApiResponse, PaginatedResponse, QueryParams } from "./types";
 import { mapApproval } from "./mappers";
 
@@ -87,123 +86,36 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
   try {
     const supabase = await createClient();
     
-    console.log("[createApproval] Looking up portal user for auth user:", authUserId);
+    console.log("[createApproval] Looking up contact for auth user:", authUserId);
     
-    // First check if auth user ID exists directly in portal_users
-    const { data: directPortalUser, error: directError } = await supabase
-      .from("portal_users")
-      .select("id, email")
-      .eq("id", authUserId)
+    // FK constraints reference contacts(id), not portal_users(id)
+    // Look up the contact by portal_user_id
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id, first_name, last_name, email")
+      .eq("portal_user_id", authUserId)
       .maybeSingle();
     
-    console.log("[createApproval] Direct lookup result:", { directPortalUser, directError });
+    console.log("[createApproval] Contact lookup result:", { contact, contactError });
     
-    // Also try looking up by email via auth
-    const { data: { user: authData } } = await supabase.auth.getUser();
-    console.log("[createApproval] Auth user data:", { email: authData?.email, id: authData?.id });
-    
-    let portalUser = directPortalUser;
-    
-    // If not found by ID, try by email
-    if (!portalUser && authData?.email) {
-      const { data: emailUser, error: emailError } = await supabase
-        .from("portal_users")
-        .select("id, email")
-        .eq("email", authData.email)
-        .maybeSingle();
-      
-      console.log("[createApproval] Email lookup result:", { emailUser, emailError });
-      
-      if (emailUser) {
-        portalUser = emailUser;
-      }
-    }
-    
-    const portalUserError = directError;
-    
-    console.log("[createApproval] Portal user lookup result:", { portalUser, portalUserError });
-    
-    if (portalUserError) {
-      console.error("[createApproval] Error looking up portal user:", portalUserError);
+    if (contactError) {
+      console.error("[createApproval] Error looking up contact:", contactError);
       return { success: false, error: "Failed to verify user" };
     }
     
-    // Get user's name from contacts table
-    let requesterName = "Unknown";
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("first_name, last_name")
-      .eq("portal_user_id", portalUser?.id || authUserId)
-      .maybeSingle();
-    
-    if (contact) {
-      requesterName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    if (!contact) {
+      console.error("[createApproval] No contact found for auth user:", authUserId);
+      return { success: false, error: "User not found in contacts" };
     }
     
-    console.log("[createApproval] Requester name:", requesterName);
-    console.log("[createApproval] portalUser exists:", !!portalUser, "portalUser.id:", portalUser?.id);
+    const contactId = contact.id;
+    const requesterName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
     
-    if (!portalUser) {
-      console.error("[createApproval] No portal user found for auth user:", authUserId);
-      
-      // Try to find by email as fallback
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("[createApproval] Auth user email:", user?.email);
-      
-      if (user?.email) {
-        const { data: portalUserByEmail } = await supabase
-          .from("portal_users")
-          .select("id, email")
-          .eq("email", user.email)
-          .maybeSingle();
-        
-        console.log("[createApproval] Portal user by email lookup:", portalUserByEmail);
-        
-        if (portalUserByEmail) {
-          console.log("[createApproval] Found portal user by email, using ID:", portalUserByEmail.id);
-          const approvalId = `APPR-${Date.now()}`;
-          
-          const { data, error } = await supabase.from("approvals").insert({
-            approval_id: approvalId,
-            association_id: input.associationId,
-            title: input.title,
-            description: input.description,
-            approval_type: input.approvalType,
-            requested_amount: input.requestedAmount,
-            maintenance_request_id: input.maintenanceRequestId,
-            vendor_id: input.vendorId,
-            requested_by: portalUserByEmail.id,
-            requested_by_name: requesterName,
-            status: "pending",
-          }).select().single();
-          
-          if (error) return { success: false, error: error.message };
-          return { success: true, data, message: "Approval request created successfully" };
-        }
-      }
-      
-      return { success: false, error: "User not found in portal users" };
-    }
-    
-    const portalUserId = portalUser.id;
-    console.log("[createApproval] Using portalUserId:", portalUserId, "for insert");
-    
-    // Use service client to bypass RLS for insert
-    const serviceClient = createServiceClient();
-    console.log("[createApproval] Service client created, attempting insert...");
-    
-    // Test service client with a simple query first
-    const { data: testPortal, error: testError } = await serviceClient
-      .from("portal_users")
-      .select("id")
-      .eq("id", portalUserId)
-      .single();
-    
-    console.log("[createApproval] Service client test query:", { testPortal, testError });
+    console.log("[createApproval] Using contactId:", contactId, "name:", requesterName);
     
     const approvalId = `APPR-${Date.now()}`;
     
-    const { data, error } = await serviceClient.from("approvals").insert({
+    const { data, error } = await supabase.from("approvals").insert({
       approval_id: approvalId,
       association_id: input.associationId,
       title: input.title,
@@ -212,7 +124,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
       requested_amount: input.requestedAmount,
       maintenance_request_id: input.maintenanceRequestId,
       vendor_id: input.vendorId,
-      requested_by: portalUserId,
+      requested_by: contactId,
       requested_by_name: requesterName,
       status: "pending",
     }).select().single();
@@ -228,31 +140,23 @@ export async function approveApproval(id: string, approvedAmount: number, authUs
   try {
     const supabase = await createClient();
     
-    // Look up the portal user ID from the auth user ID
-    const { data: portalUser } = await supabase
-      .from("portal_users")
-      .select("id")
-      .eq("id", authUserId)
-      .maybeSingle();
-    
-    const portalUserId = portalUser?.id || authUserId;
-    
-    // Get approver's name from contacts
-    let approverName = "Unknown";
+    // FK constraints reference contacts(id), not portal_users(id)
+    // Look up the contact by portal_user_id
     const { data: contact } = await supabase
       .from("contacts")
-      .select("first_name, last_name")
-      .eq("portal_user_id", portalUserId)
+      .select("id, first_name, last_name")
+      .eq("portal_user_id", authUserId)
       .maybeSingle();
     
-    if (contact) {
-      approverName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
-    }
+    const contactId = contact?.id;
+    const approverName = contact 
+      ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown"
+      : "Unknown";
     
     const { data, error } = await supabase.from("approvals").update({
       status: "approved",
       approved_amount: approvedAmount,
-      approved_by: portalUserId,
+      approved_by: contactId,
       approved_by_name: approverName,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -269,31 +173,23 @@ export async function rejectApproval(id: string, reason: string, authUserId: str
   try {
     const supabase = await createClient();
     
-    // Look up the portal user ID from the auth user ID
-    const { data: portalUser } = await supabase
-      .from("portal_users")
-      .select("id")
-      .eq("id", authUserId)
-      .maybeSingle();
-    
-    const portalUserId = portalUser?.id || authUserId;
-    
-    // Get denier's name from contacts
-    let denierName = "Unknown";
+    // FK constraints reference contacts(id), not portal_users(id)
+    // Look up the contact by portal_user_id
     const { data: contact } = await supabase
       .from("contacts")
-      .select("first_name, last_name")
-      .eq("portal_user_id", portalUserId)
+      .select("id, first_name, last_name")
+      .eq("portal_user_id", authUserId)
       .maybeSingle();
     
-    if (contact) {
-      denierName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
-    }
+    const contactId = contact?.id;
+    const denierName = contact
+      ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown"
+      : "Unknown";
     
     const { data, error } = await supabase.from("approvals").update({
       status: "rejected",
       denial_reason: reason,
-      denied_by: portalUserId,
+      denied_by: contactId,
       denied_by_name: denierName,
       denied_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
