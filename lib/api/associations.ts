@@ -250,6 +250,14 @@ export async function updateAssociation(
   try {
     const supabase = await createClient();
     
+    // Look up the updater's contact record for updated_by
+    // The updated_by field references contacts(id), not auth.users
+    const { data: updaterContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", userId)
+      .maybeSingle();
+    
     const { data, error } = await supabase
       .from("associations")
       .update({
@@ -266,7 +274,7 @@ export async function updateAssociation(
         annual_meeting_month: input.annualMeetingMonth,
         management_start_date: input.managementStartDate,
         assigned_manager_id: input.assignedManagerId,
-        updated_by: userId,
+        updated_by: updaterContact?.id || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", input.id)
