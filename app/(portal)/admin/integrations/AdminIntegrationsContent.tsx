@@ -174,15 +174,21 @@ export default function AdminIntegrationsContent() {
     try {
       const response = await fetch("/api/associations");
       if (response.ok) {
-        const data = await response.json();
-        setAssociations(data);
-        // Auto-select first association if none selected
-        if (data.length > 0 && !selectedAssociationId) {
-          setSelectedAssociationId(data[0].id);
+        const result = await response.json();
+        if (result.success && result.data?.data) {
+          const associationsData = result.data.data;
+          setAssociations(associationsData);
+          // Auto-select first association if none selected
+          if (associationsData.length > 0 && !selectedAssociationId) {
+            setSelectedAssociationId(associationsData[0].id);
+          }
+        } else {
+          setAssociations([]);
         }
       }
     } catch (error) {
       console.error("Error fetching associations:", error);
+      setAssociations([]);
     } finally {
       setIsLoading(false);
     }

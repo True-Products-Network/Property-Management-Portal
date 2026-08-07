@@ -20,6 +20,23 @@ import {
   RefreshCw,
   Tag,
   Settings,
+  Building2,
+  Home,
+  Users,
+  Wrench,
+  FileText,
+  CreditCard,
+  Calendar,
+  Shield,
+  Truck,
+  ClipboardCheck,
+  DollarSign,
+  Briefcase,
+  UserCircle,
+  MapPin,
+  Key,
+  LayoutGrid,
+  LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -39,6 +56,34 @@ interface RecordTypeInfo {
   id: string;
   label: string;
   fields: string[];
+}
+
+// Icon mapping for record types
+const recordTypeIcons: Record<string, LucideIcon> = {
+  "association": Building2,
+  "association company": Building2,
+  "property": Home,
+  "unit": MapPin,
+  "contact": Users,
+  "user": UserCircle,
+  "maintenance": Wrench,
+  "maintenance request": Wrench,
+  "document": FileText,
+  "payment": CreditCard,
+  "invoice": DollarSign,
+  "appointment": Calendar,
+  "inspection": ClipboardCheck,
+  "compliance": Shield,
+  "vendor": Truck,
+  "approval": CheckCircle2,
+  "role": Key,
+  "workflow": Briefcase,
+  "default": LayoutGrid,
+};
+
+function getIconForRecordType(recordType: string): LucideIcon {
+  const normalizedType = recordType.toLowerCase();
+  return recordTypeIcons[normalizedType] || recordTypeIcons["default"];
 }
 
 export default function AdminDropdownsPage() {
@@ -324,6 +369,7 @@ export default function AdminDropdownsPage() {
               (sum, vals) => sum + vals.length,
               0
             );
+            const RecordTypeIcon = getIconForRecordType(recordType.id);
 
             return (
               <Card key={recordType.id} className="overflow-hidden">
@@ -338,6 +384,9 @@ export default function AdminDropdownsPage() {
                     ) : (
                       <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
                     )}
+                    <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center">
+                      <RecordTypeIcon className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
                     <div>
                       <h3 className="font-medium text-[var(--main-text)]">{recordType.label}</h3>
                       <p className="text-sm text-[var(--secondary-text)]">

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Calendar, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -47,13 +48,20 @@ interface FormData {
   status: string;
 }
 
-const APPOINTMENT_TYPES = [
+const APPOINTMENT_TYPE_OPTIONS = [
   { value: "inspection", label: "Inspection" },
   { value: "maintenance", label: "Maintenance" },
   { value: "meeting", label: "Meeting" },
   { value: "showing", label: "Unit Showing" },
   { value: "consultation", label: "Consultation" },
   { value: "walkthrough", label: "Walkthrough" },
+];
+
+const APPOINTMENT_STATUS_OPTIONS = [
+  { value: "scheduled", label: "Scheduled" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 function NewAppointmentForm() {
@@ -379,37 +387,28 @@ function NewAppointmentForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="appointment"
+                  fieldName="type"
                   value={formData.appointmentType}
-                  onChange={(e) => handleChange("appointmentType", e.target.value)}
-                  className={`input w-full ${errors.appointmentType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Type</option>
-                  {APPOINTMENT_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("appointmentType", value)}
+                  label="Type"
+                  placeholder="Select Type"
+                  required
+                  className={errors.appointmentType ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={APPOINTMENT_TYPE_OPTIONS}
+                />
                 {errors.appointmentType && <p className="text-sm text-red-500 mt-1">{errors.appointmentType}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="appointment"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={APPOINTMENT_STATUS_OPTIONS}
+                />
               </div>
             </div>
 

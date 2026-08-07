@@ -22,6 +22,23 @@ import {
   CheckCircle2,
   XCircle,
   Settings,
+  Building2,
+  Home,
+  Users,
+  Wrench,
+  FileText,
+  CreditCard,
+  Calendar,
+  Shield,
+  Truck,
+  ClipboardCheck,
+  DollarSign,
+  Briefcase,
+  UserCircle,
+  MapPin,
+  Key,
+  LayoutGrid,
+  LucideIcon,
 } from "lucide-react";
 
 interface CategoryValue {
@@ -49,6 +66,34 @@ interface FormData {
   sortOrder: number;
   isActive: boolean;
   field_name: string;
+}
+
+// Icon mapping for record types
+const recordTypeIcons: Record<string, LucideIcon> = {
+  "association": Building2,
+  "association company": Building2,
+  "property": Home,
+  "unit": MapPin,
+  "contact": Users,
+  "user": UserCircle,
+  "maintenance": Wrench,
+  "maintenance request": Wrench,
+  "document": FileText,
+  "payment": CreditCard,
+  "invoice": DollarSign,
+  "appointment": Calendar,
+  "inspection": ClipboardCheck,
+  "compliance": Shield,
+  "vendor": Truck,
+  "approval": CheckCircle2,
+  "role": Key,
+  "workflow": Briefcase,
+  "default": LayoutGrid,
+};
+
+function getIconForRecordType(recordType: string): LucideIcon {
+  const normalizedType = recordType.toLowerCase();
+  return recordTypeIcons[normalizedType] || recordTypeIcons["default"];
 }
 
 export default function CategoryManagementPage() {
@@ -348,6 +393,8 @@ export default function CategoryManagementPage() {
               valuesByField[v.field_name].push(v);
             });
 
+            const CategoryIcon = getIconForRecordType(category.name);
+
             return (
               <Card key={category.id} className="overflow-hidden">
                 {/* Category Header */}
@@ -361,6 +408,9 @@ export default function CategoryManagementPage() {
                     ) : (
                       <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
                     )}
+                    <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center">
+                      <CategoryIcon className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
                     <div>
                       <h3 className="font-medium text-[var(--main-text)]">
                         {capitalizeWords(category.name)}

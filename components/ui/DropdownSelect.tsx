@@ -19,6 +19,7 @@ interface DropdownSelectProps {
   disabled?: boolean;
   className?: string;
   id?: string;
+  defaultOptions?: DropdownOption[];
 }
 
 // Simple cache to avoid repeated API calls
@@ -35,6 +36,7 @@ export function DropdownSelect({
   disabled = false,
   className = "",
   id,
+  defaultOptions,
 }: DropdownSelectProps) {
   const [options, setOptions] = useState<DropdownOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,16 +67,18 @@ export function DropdownSelect({
       const result = await response.json();
 
       if (result.success && Array.isArray(result.data)) {
-        setOptions(result.data);
+        // Use fetched options if available, otherwise fall back to defaults
+        const finalOptions = result.data.length > 0 ? result.data : (defaultOptions || []);
+        setOptions(finalOptions);
         // Cache the result
-        cache[cacheKey] = result.data;
+        cache[cacheKey] = finalOptions;
       } else {
-        setOptions([]);
+        setOptions(defaultOptions || []);
       }
     } catch (err) {
       console.error(`Error fetching ${fieldName}:`, err);
       setError(err instanceof Error ? err.message : "Unknown error");
-      setOptions([]);
+      setOptions(defaultOptions || []);
     } finally {
       setIsLoading(false);
     }

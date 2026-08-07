@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Shield, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -65,7 +66,7 @@ interface FormData {
   fineAmount: string;
 }
 
-const CATEGORIES = [
+const CATEGORY_OPTIONS = [
   { value: "violation", label: "Violation" },
   { value: "delinquency", label: "Delinquency" },
   { value: "insurance", label: "Insurance Issue" },
@@ -74,11 +75,18 @@ const CATEGORIES = [
   { value: "maintenance", label: "Maintenance Required" },
 ];
 
-const PRIORITIES = [
+const PRIORITY_OPTIONS = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
   { value: "critical", label: "Critical" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "open", label: "Open" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "resolved", label: "Resolved" },
+  { value: "closed", label: "Closed" },
 ];
 
 function NewComplianceForm() {
@@ -375,56 +383,41 @@ function NewComplianceForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Compliance Matter"
+                  fieldName="category"
                   value={formData.category}
-                  onChange={(e) => handleChange("category", e.target.value)}
-                  className={`input w-full ${errors.category ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Category</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("category", value)}
+                  label="Category"
+                  placeholder="Select Category"
+                  required
+                  className={errors.category ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={CATEGORY_OPTIONS}
+                />
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Priority
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Compliance Matter"
+                  fieldName="priority"
                   value={formData.priority}
-                  onChange={(e) => handleChange("priority", e.target.value)}
-                  className="input w-full"
-                >
-                  {PRIORITIES.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("priority", value)}
+                  label="Priority"
+                  defaultOptions={PRIORITY_OPTIONS}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Compliance Matter"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={STATUS_OPTIONS}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">

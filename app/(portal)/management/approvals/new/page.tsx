@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, CheckSquare, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -36,7 +37,7 @@ interface FormData {
   vendorId: string;
 }
 
-const APPROVAL_TYPES = [
+const APPROVAL_TYPE_OPTIONS = [
   { value: "maintenance", label: "Maintenance Approval" },
   { value: "capital_expense", label: "Capital Expense" },
   { value: "vendor_selection", label: "Vendor Selection" },
@@ -255,21 +256,17 @@ function NewApprovalForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Approval Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="approval"
+                  fieldName="type"
                   value={formData.approvalType}
-                  onChange={(e) => handleChange("approvalType", e.target.value)}
-                  className={`input w-full ${errors.approvalType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Type</option>
-                  {APPROVAL_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("approvalType", value)}
+                  label="Approval Type"
+                  placeholder="Select Type"
+                  required
+                  className={errors.approvalType ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={APPROVAL_TYPE_OPTIONS}
+                />
                 {errors.approvalType && <p className="text-sm text-red-500 mt-1">{errors.approvalType}</p>}
               </div>
               <div>
