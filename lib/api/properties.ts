@@ -18,11 +18,12 @@ export interface Property {
   type: string;
   status: string;
   yearBuilt?: number;
-  totalUnits: number;
+  totalUnits?: number;
   managementStartDate?: string;
   accessInstructions?: string;
   emergencyNotes?: string;
   assignedStaffId?: string;
+  photoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,11 +36,14 @@ export interface CreatePropertyInput {
   addressState?: string;
   addressZip?: string;
   type: string;
+  status?: string;
   yearBuilt?: number;
+  totalUnits?: number;
   managementStartDate?: string;
   accessInstructions?: string;
   emergencyNotes?: string;
   assignedStaffId?: string;
+  photoUrl?: string;
 }
 
 export async function getProperties(
@@ -142,11 +146,14 @@ export async function createProperty(
         address_state: input.addressState,
         address_zip: input.addressZip,
         type: input.type,
+        status: input.status || 'active',
         year_built: input.yearBuilt,
+        total_units: input.totalUnits,
         management_start_date: input.managementStartDate,
         access_instructions: input.accessInstructions,
         emergency_notes: input.emergencyNotes,
         assigned_staff_id: input.assignedStaffId,
+        photo_url: input.photoUrl,
         created_by: userId,
         updated_by: userId,
       })
@@ -180,11 +187,14 @@ export async function updateProperty(
         address_state: input.addressState,
         address_zip: input.addressZip,
         type: input.type,
+        status: input.status,
         year_built: input.yearBuilt,
+        total_units: input.totalUnits,
         management_start_date: input.managementStartDate,
         access_instructions: input.accessInstructions,
         emergency_notes: input.emergencyNotes,
         assigned_staff_id: input.assignedStaffId,
+        photo_url: input.photoUrl,
         updated_by: userId,
         updated_at: new Date().toISOString(),
       })

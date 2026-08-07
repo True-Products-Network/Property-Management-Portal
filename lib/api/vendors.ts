@@ -31,6 +31,7 @@ export interface CreateVendorInput {
   companyName: string;
   doingBusinessAs?: string;
   category?: string;
+  status?: string;
   primaryContactName?: string;
   email?: string;
   phone?: string;
@@ -126,6 +127,7 @@ export async function updateVendor(id: string, input: Partial<CreateVendorInput>
       company_name: input.companyName,
       doing_business_as: input.doingBusinessAs,
       category: input.category,
+      status: input.status,
       primary_contact_name: input.primaryContactName,
       email: input.email,
       phone: input.phone,

@@ -88,6 +88,7 @@ export function mapProperty(row: any): Property {
     accessInstructions: row.access_instructions,
     emergencyNotes: row.emergency_notes,
     assignedStaffId: row.assigned_staff_id,
+    photoUrl: row.photo_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
