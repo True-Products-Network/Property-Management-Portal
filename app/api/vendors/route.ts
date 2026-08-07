@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     console.log("[Vendors API] User:", user.id, "businessId:", user.businessId);
 
     // Check entitlements
-    const entitlementCheck = await checkRouteEntitlement(request, "vendor_portals");
+    const entitlementCheck = await checkRouteEntitlement(request, "vendor_portal");
     console.log("[Vendors API] Entitlement check:", entitlementCheck);
     if (!entitlementCheck.allowed) {
       return NextResponse.json({ 

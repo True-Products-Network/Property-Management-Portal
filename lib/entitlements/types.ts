@@ -9,7 +9,7 @@ export type FeatureKey =
   | "communications"
   | "documents"
   | "vendors"
-  | "vendor_portals"
+  | "vendor_portal"
   | "workflows"
   | "advanced_reporting"
   | "api_access"
