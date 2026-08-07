@@ -79,9 +79,28 @@ export async function getApproval(id: string): Promise<ApiResponse<Approval>> {
   }
 }
 
-export async function createApproval(input: CreateApprovalInput, userId: string): Promise<ApiResponse<Approval>> {
+export async function createApproval(input: CreateApprovalInput, authUserId: string): Promise<ApiResponse<Approval>> {
   try {
     const supabase = await createClient();
+    
+    // Look up the portal user ID from the auth user ID
+    const { data: portalUser, error: portalUserError } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    if (portalUserError) {
+      console.error("[createApproval] Error looking up portal user:", portalUserError);
+      return { success: false, error: "Failed to verify user" };
+    }
+    
+    if (!portalUser) {
+      console.error("[createApproval] No portal user found for auth user:", authUserId);
+      return { success: false, error: "User not found in portal users" };
+    }
+    
+    const portalUserId = portalUser.id;
     const approvalId = `APPR-${Date.now()}`;
     
     const { data, error } = await supabase.from("approvals").insert({
@@ -93,7 +112,7 @@ export async function createApproval(input: CreateApprovalInput, userId: string)
       requested_amount: input.requestedAmount,
       maintenance_request_id: input.maintenanceRequestId,
       vendor_id: input.vendorId,
-      requested_by: userId,
+      requested_by: portalUserId,
       status: "pending",
     }).select().single();
     
@@ -104,13 +123,23 @@ export async function createApproval(input: CreateApprovalInput, userId: string)
   }
 }
 
-export async function approveApproval(id: string, approvedAmount: number, userId: string): Promise<ApiResponse<Approval>> {
+export async function approveApproval(id: string, approvedAmount: number, authUserId: string): Promise<ApiResponse<Approval>> {
   try {
     const supabase = await createClient();
+    
+    // Look up the portal user ID from the auth user ID
+    const { data: portalUser } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    const portalUserId = portalUser?.id || authUserId;
+    
     const { data, error } = await supabase.from("approvals").update({
       status: "approved",
       approved_amount: approvedAmount,
-      approved_by: userId,
+      approved_by: portalUserId,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", id).select().single();
@@ -122,13 +151,23 @@ export async function approveApproval(id: string, approvedAmount: number, userId
   }
 }
 
-export async function rejectApproval(id: string, reason: string, userId: string): Promise<ApiResponse<Approval>> {
+export async function rejectApproval(id: string, reason: string, authUserId: string): Promise<ApiResponse<Approval>> {
   try {
     const supabase = await createClient();
+    
+    // Look up the portal user ID from the auth user ID
+    const { data: portalUser } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    const portalUserId = portalUser?.id || authUserId;
+    
     const { data, error } = await supabase.from("approvals").update({
       status: "rejected",
       denial_reason: reason,
-      denied_by: userId,
+      denied_by: portalUserId,
       denied_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", id).select().single();
