@@ -195,6 +195,19 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     
     console.log("[createApproval] Verification result:", { verifyUser, verifyError });
     
+    // Verify association exists
+    const { data: verifyAssoc, error: verifyAssocError } = await supabase
+      .from("associations")
+      .select("id")
+      .eq("id", input.associationId)
+      .single();
+    
+    console.log("[createApproval] Association verification:", { 
+      associationId: input.associationId, 
+      verifyAssoc, 
+      verifyAssocError 
+    });
+    
     const approvalId = `APPR-${Date.now()}`;
     
     const { data, error } = await supabase.from("approvals").insert({
