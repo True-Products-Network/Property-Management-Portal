@@ -83,12 +83,16 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
   try {
     const supabase = await createClient();
     
+    console.log("[createApproval] Looking up portal user for auth user:", authUserId);
+    
     // Look up the portal user ID from the auth user ID
     const { data: portalUser, error: portalUserError } = await supabase
       .from("portal_users")
-      .select("id")
+      .select("id, email, first_name, last_name")
       .eq("id", authUserId)
       .maybeSingle();
+    
+    console.log("[createApproval] Portal user lookup result:", { portalUser, portalUserError });
     
     if (portalUserError) {
       console.error("[createApproval] Error looking up portal user:", portalUserError);
@@ -97,6 +101,42 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
     
     if (!portalUser) {
       console.error("[createApproval] No portal user found for auth user:", authUserId);
+      
+      // Try to find by email as fallback
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("[createApproval] Auth user email:", user?.email);
+      
+      if (user?.email) {
+        const { data: portalUserByEmail } = await supabase
+          .from("portal_users")
+          .select("id, email")
+          .eq("email", user.email)
+          .maybeSingle();
+        
+        console.log("[createApproval] Portal user by email lookup:", portalUserByEmail);
+        
+        if (portalUserByEmail) {
+          console.log("[createApproval] Found portal user by email, using ID:", portalUserByEmail.id);
+          const approvalId = `APPR-${Date.now()}`;
+          
+          const { data, error } = await supabase.from("approvals").insert({
+            approval_id: approvalId,
+            association_id: input.associationId,
+            title: input.title,
+            description: input.description,
+            approval_type: input.approvalType,
+            requested_amount: input.requestedAmount,
+            maintenance_request_id: input.maintenanceRequestId,
+            vendor_id: input.vendorId,
+            requested_by: portalUserByEmail.id,
+            status: "pending",
+          }).select().single();
+          
+          if (error) return { success: false, error: error.message };
+          return { success: true, data, message: "Approval request created successfully" };
+        }
+      }
+      
       return { success: false, error: "User not found in portal users" };
     }
     
