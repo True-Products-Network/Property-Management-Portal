@@ -13,26 +13,15 @@ import {
   Search,
   Edit2,
   Trash2,
-  AlertTriangle,
-  Building2,
-  Users,
-  Wrench,
-  ClipboardCheck,
-  FileText,
-  Scale,
   Save,
   X,
   Loader2,
   ChevronRight,
   ChevronDown,
   RefreshCw,
-  MoreVertical,
   CheckCircle2,
   XCircle,
-  GripVertical,
-  CreditCard,
-  MessageSquare,
-  CalendarDays,
+  Settings,
 } from "lucide-react";
 
 interface CategoryValue {
@@ -49,11 +38,7 @@ interface CategoryValue {
 interface Category {
   id: string;
   name: string;
-  description: string;
-  icon: string;
-  apiName: string;
   values: CategoryValue[];
-  isSystem: boolean;
   fields: string[];
 }
 
@@ -66,127 +51,15 @@ interface FormData {
   field_name: string;
 }
 
-const CATEGORY_DEFINITIONS = [
-  {
-    id: "association_company",
-    name: "Association Company",
-    description: "Association types and statuses",
-    icon: "building",
-    apiName: "Association Company",
-  },
-  {
-    id: "people",
-    name: "People",
-    description: "Contact roles, board positions, and preferences",
-    icon: "users",
-    apiName: "People",
-  },
-  {
-    id: "vendor_company",
-    name: "Vendor Company",
-    description: "Vendor types and statuses",
-    icon: "truck",
-    apiName: "Vendor Company",
-  },
-  {
-    id: "property",
-    name: "Property",
-    description: "Property types and statuses",
-    icon: "building",
-    apiName: "Property",
-  },
-  {
-    id: "unit",
-    name: "Unit",
-    description: "Unit occupancy and rental statuses",
-    icon: "home",
-    apiName: "Unit",
-  },
-  {
-    id: "maintenance_request",
-    name: "Maintenance Request",
-    description: "Maintenance categories, urgency levels, and statuses",
-    icon: "wrench",
-    apiName: "Maintenance Request",
-  },
-  {
-    id: "inspection",
-    name: "Inspection",
-    description: "Inspection results and statuses",
-    icon: "clipboard",
-    apiName: "Inspection",
-  },
-  {
-    id: "document_record",
-    name: "Document Record",
-    description: "Document types and confidentiality levels",
-    icon: "file",
-    apiName: "Document Record",
-  },
-  {
-    id: "compliance_matter",
-    name: "Compliance Matter",
-    description: "Compliance statuses",
-    icon: "scale",
-    apiName: "Compliance Matter",
-  },
-  {
-    id: "approval_request",
-    name: "Approval Request",
-    description: "Approval types and statuses",
-    icon: "check_circle",
-    apiName: "Approval Request",
-  },
-  {
-    id: "payment_record",
-    name: "Payment Record",
-    description: "Payment types and statuses",
-    icon: "credit_card",
-    apiName: "Payment Record",
-  },
-  {
-    id: "communication",
-    name: "Communication",
-    description: "Communication types and statuses",
-    icon: "message",
-    apiName: "Communication",
-  },
-  {
-    id: "appointment",
-    name: "Appointment",
-    description: "Appointment types and statuses",
-    icon: "calendar",
-    apiName: "Appointment",
-  },
-];
-
-const ICON_MAP: Record<string, React.ElementType> = {
-  building: Building2,
-  users: Users,
-  truck: Tag,
-  home: Tag,
-  wrench: Wrench,
-  clipboard: ClipboardCheck,
-  file: FileText,
-  scale: Scale,
-  check_circle: CheckCircle2,
-  credit_card: CreditCard,
-  message: MessageSquare,
-  calendar: CalendarDays,
-};
-
 export default function CategoryManagementPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [showValueModal, setShowValueModal] = useState(false);
   const [editingValue, setEditingValue] = useState<CategoryValue | null>(null);
-  const [showRetireModal, setShowRetireModal] = useState(false);
-  const [retiringValue, setRetiringValue] = useState<CategoryValue | null>(null);
-  const [replacementValue, setReplacementValue] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     value: "",
     label: "",
@@ -202,48 +75,22 @@ export default function CategoryManagementPage() {
 
   async function loadCategories() {
     try {
+      setIsLoading(true);
       const response = await fetch("/api/admin/categories");
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          const categoriesMap = new Map<string, Category>();
-          
-          for (const def of CATEGORY_DEFINITIONS) {
-            categoriesMap.set(def.id, {
-              ...def,
-              values: [],
-              fields: [],
-              isSystem: true,
-            });
-          }
-          
-          for (const item of result.data || []) {
-            // Match by finding category with matching apiName
-            const category = Array.from(categoriesMap.values()).find(
-              (cat) => cat.apiName === item.id
-            );
-            
-            if (category && item.values) {
-              for (const value of item.values) {
-                category.values.push({
-                  id: value.id,
-                  value: value.value,
-                  label: value.label,
-                  description: value.description,
-                  sortOrder: value.sortOrder || 0,
-                  isActive: value.isActive !== false,
-                  recordCount: 0,
-                  field_name: value.field_name,
-                });
-                
-                if (value.field_name && !category.fields.includes(value.field_name)) {
-                  category.fields.push(value.field_name);
-                }
-              }
-            }
-          }
-          
-          setCategories(Array.from(categoriesMap.values()));
+          // Transform API data into categories with fields
+          const cats: Category[] = result.data.map((item: any) => {
+            const fields = [...new Set(item.values?.map((v: any) => v.field_name) || [])];
+            return {
+              id: item.id,
+              name: item.id, // Use record_type as name (will capitalize in render)
+              values: item.values || [],
+              fields: fields as string[],
+            };
+          });
+          setCategories(cats);
         }
       }
     } catch (error) {
@@ -254,16 +101,23 @@ export default function CategoryManagementPage() {
   }
 
   function toggleCategory(categoryId: string) {
-    setExpandedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
+    setExpandedCategories((prev) =>
+      prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
         : [...prev, categoryId]
     );
   }
 
-  function handleAddValue(categoryId: string, fieldName: string = "") {
+  function expandAll() {
+    setExpandedCategories(categories.map((c) => c.id));
+  }
+
+  function collapseAll() {
+    setExpandedCategories([]);
+  }
+
+  function handleAddValue(categoryId: string, fieldName: string) {
     setSelectedCategory(categoryId);
-    setEditingValue(null);
     setFormData({
       value: "",
       label: "",
@@ -272,11 +126,11 @@ export default function CategoryManagementPage() {
       isActive: true,
       field_name: fieldName,
     });
+    setEditingValue(null);
     setShowValueModal(true);
   }
 
-  function handleEditValue(categoryId: string, value: CategoryValue) {
-    setSelectedCategory(categoryId);
+  function handleEditValue(value: CategoryValue) {
     setEditingValue(value);
     setFormData({
       value: value.value,
@@ -289,48 +143,100 @@ export default function CategoryManagementPage() {
     setShowValueModal(true);
   }
 
-  async function handleSaveValue() {
-    if (!formData.value.trim() || !formData.label.trim()) {
-      alert("Value and Label are required");
-      return;
-    }
+  async function handleSave() {
+    if (!formData.value || !formData.label) return;
 
     setIsSaving(true);
     try {
       const url = editingValue
-        ? `/api/admin/categories/${selectedCategory}/values/${editingValue.id}`
-        : `/api/admin/categories/${selectedCategory}/values`;
+        ? `/api/admin/dropdowns/${editingValue.id}`
+        : "/api/admin/dropdowns";
       const method = editingValue ? "PUT" : "POST";
+
+      const body = editingValue
+        ? {
+            value: formData.value,
+            label: formData.label,
+            sortOrder: formData.sortOrder,
+            isDefault: false,
+          }
+        : {
+            recordType: selectedCategory,
+            fieldName: formData.field_name,
+            value: formData.value,
+            label: formData.label,
+            sortOrder: formData.sortOrder,
+          };
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(body),
       });
 
       if (response.ok) {
         setShowValueModal(false);
         loadCategories();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Failed to save value");
       }
     } catch (error) {
       console.error("Error saving value:", error);
-      alert("An error occurred while saving");
     } finally {
       setIsSaving(false);
     }
   }
 
-  const filteredCategories = categories.filter(
-    (cat) =>
-      cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cat.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cat.values.some(v => v.label.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  async function handleToggleActive(id: string, isActive: boolean) {
+    try {
+      const response = await fetch(`/api/admin/dropdowns/${id}/toggle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive }),
+      });
+
+      if (response.ok) {
+        loadCategories();
+      }
+    } catch (error) {
+      console.error("Error toggling value:", error);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this value?")) return;
+
+    try {
+      const response = await fetch(`/api/admin/dropdowns/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        loadCategories();
+      }
+    } catch (error) {
+      console.error("Error deleting value:", error);
+    }
+  }
+
+  // Filter categories based on search
+  const filteredCategories = categories.filter((cat) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    if (cat.name.toLowerCase().includes(query)) return true;
+    if (cat.fields.some((f) => f.toLowerCase().includes(query))) return true;
+    if (cat.values.some((v) => v.label.toLowerCase().includes(query))) return true;
+    return false;
+  });
+
+  // Capitalize first letter of each word
+  function capitalizeWords(str: string) {
+    return str
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
 
   const totalValues = categories.reduce((sum, cat) => sum + cat.values.length, 0);
+  const totalFields = categories.reduce((sum, cat) => sum + cat.fields.length, 0);
 
   if (isLoading) {
     return (
@@ -353,10 +259,10 @@ export default function CategoryManagementPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
-              Category Management
+              Category Maintenance
             </h1>
             <p className="text-[var(--secondary-text)] mt-1">
-              Manage dropdown values and controlled lists
+              Manage category values across all record types
             </p>
           </div>
         </div>
@@ -367,7 +273,7 @@ export default function CategoryManagementPage() {
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
             <div className="w-12 h-12 bg-[var(--teal)]/10 rounded-xl flex items-center justify-center">
-              <Tag className="h-6 w-6 text-[var(--teal)]" />
+              <Settings className="h-6 w-6 text-[var(--teal)]" />
             </div>
             <div>
               <p className="text-sm text-[var(--secondary-text)]">Categories</p>
@@ -389,266 +295,237 @@ export default function CategoryManagementPage() {
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
             <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-              <Building2 className="h-6 w-6 text-green-600" />
+              <Tag className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-[var(--secondary-text)]">Active Fields</p>
-              <p className="text-2xl font-semibold">
-                {categories.reduce((sum, cat) => sum + cat.fields.length, 0)}
-              </p>
+              <p className="text-sm text-[var(--secondary-text)]">Fields</p>
+              <p className="text-2xl font-semibold">{totalFields}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Search and Controls */}
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="relative flex-1 min-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
           <Input
-            placeholder="Search categories or values..."
+            placeholder="Search categories, fields, or values..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
-        <Button variant="outline" onClick={loadCategories}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={expandAll}>
+            Expand All
+          </Button>
+          <Button variant="outline" size="sm" onClick={collapseAll}>
+            Collapse All
+          </Button>
+          <Button variant="outline" size="sm" onClick={loadCategories}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Categories List */}
       <div className="space-y-3">
-        {filteredCategories.map((category) => {
-          const Icon = ICON_MAP[category.icon] || Tag;
-          const isExpanded = expandedCategories.includes(category.id);
-          const valueCount = category.values.length;
-          
-          return (
-            <Card key={category.id} className="overflow-hidden">
-              {/* Category Header */}
-              <div 
-                className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--page-background)] transition-colors"
-                onClick={() => toggleCategory(category.id)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-[var(--teal)]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[var(--main-text)]">{category.name}</h3>
-                    <p className="text-sm text-[var(--secondary-text)]">{category.description}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-sm">
-                    {valueCount} values
-                  </Badge>
-                  <Badge variant="outline" className="text-sm">
-                    {category.fields.length} fields
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddValue(category.id);
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                  {isExpanded ? (
-                    <ChevronDown className="h-5 w-5 text-[var(--secondary-text)]" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
-                  )}
-                </div>
-              </div>
+        {filteredCategories.length === 0 ? (
+          <div className="text-center py-12 text-[var(--secondary-text)]">
+            {searchQuery ? "No matching categories found" : "No categories configured"}
+          </div>
+        ) : (
+          filteredCategories.map((category) => {
+            const isExpanded = expandedCategories.includes(category.id);
+            const valuesByField: Record<string, CategoryValue[]> = {};
 
-              {/* Expanded Content */}
-              {isExpanded && (
-                <div className="border-t border-[var(--border-color)]">
-                  {category.fields.length === 0 ? (
-                    <div className="p-8 text-center text-[var(--secondary-text)]">
-                      <p>No values defined yet</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => handleAddValue(category.id)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add First Value
-                      </Button>
+            category.values.forEach((v) => {
+              if (!valuesByField[v.field_name]) {
+                valuesByField[v.field_name] = [];
+              }
+              valuesByField[v.field_name].push(v);
+            });
+
+            return (
+              <Card key={category.id} className="overflow-hidden">
+                {/* Category Header */}
+                <div
+                  className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--page-background)] transition-colors"
+                  onClick={() => toggleCategory(category.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    {isExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-[var(--secondary-text)]" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-[var(--secondary-text)]" />
+                    )}
+                    <div>
+                      <h3 className="font-medium text-[var(--main-text)]">
+                        {capitalizeWords(category.name)}
+                      </h3>
+                      <p className="text-sm text-[var(--secondary-text)]">
+                        {category.fields.length} fields · {category.values.length} values
+                      </p>
                     </div>
-                  ) : (
+                  </div>
+                  <Badge variant="secondary">{category.values.length}</Badge>
+                </div>
+
+                {/* Fields and Values */}
+                {isExpanded && (
+                  <div className="border-t">
                     <div className="p-4 space-y-6">
                       {category.fields.map((fieldName) => {
-                        const fieldValues = category.values
-                          .filter((v) => v.field_name === fieldName)
-                          .sort((a, b) => a.sortOrder - b.sortOrder);
-                        
+                        const values = valuesByField[fieldName] || [];
+
                         return (
-                          <div key={fieldName} className="bg-[var(--page-background)] rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-medium text-[var(--main-text)]">{fieldName}</h4>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleAddValue(category.id, fieldName)}
-                              >
-                                <Plus className="h-4 w-4 mr-1" />
-                                Add
-                              </Button>
+                          <div key={fieldName} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-sm text-[var(--main-text)]">
+                                {fieldName}
+                              </h4>
+                              <Badge variant="outline" className="text-xs">
+                                {values.length} values
+                              </Badge>
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                              {fieldValues.map((value) => (
-                                <div
-                                  key={value.id}
-                                  className={`group flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
-                                    value.isActive
-                                      ? "bg-white border-[var(--border-color)] hover:border-[var(--teal)]"
-                                      : "bg-gray-50 border-gray-200 opacity-60"
-                                  }`}
-                                >
-                                  <GripVertical className="h-4 w-4 text-gray-300 cursor-move" />
-                                  <span className="font-medium text-sm">{value.label}</span>
-                                  {!value.isActive && (
-                                    <Badge className="bg-gray-100 text-gray-600 text-xs">Inactive</Badge>
-                                  )}
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 w-6 p-0"
-                                      onClick={() => handleEditValue(category.id, value)}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
+
+                            <div className="space-y-1">
+                              {values
+                                .sort((a, b) => a.sortOrder - b.sortOrder)
+                                .map((value) => (
+                                  <div
+                                    key={value.id}
+                                    className={`flex items-center justify-between p-2 rounded-lg border ${
+                                      value.isActive
+                                        ? "bg-white border-gray-200"
+                                        : "bg-gray-50 border-gray-100 opacity-60"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                        {value.value}
+                                      </code>
+                                      <span className="text-sm">{value.label}</span>
+                                      {!value.isActive && (
+                                        <Badge variant="secondary" className="text-xs">
+                                          Inactive
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditValue(value);
+                                        }}
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className={`h-6 w-6 p-0 ${
+                                          value.isActive ? "text-green-600" : "text-gray-400"
+                                        }`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleActive(value.id, !value.isActive);
+                                        }}
+                                      >
+                                        {value.isActive ? (
+                                          <CheckCircle2 className="h-3 w-3" />
+                                        ) : (
+                                          <XCircle className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 text-red-500"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDelete(value.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
                             </div>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => handleAddValue(category.id, fieldName)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Value
+                            </Button>
                           </div>
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          );
-        })}
+                  </div>
+                )}
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Value Modal */}
       {showValueModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md">
-            <div className="border-b border-[var(--border-color)] p-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">
-                {editingValue ? "Edit Value" : "Add New Value"}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowValueModal(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="p-6 space-y-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>{editingValue ? "Edit Value" : "Add New Value"}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Field Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  value={formData.field_name}
-                  onChange={(e) => setFormData({ ...formData, field_name: e.target.value })}
-                  placeholder="e.g., Property Status"
-                  disabled={!!editingValue}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Value Code <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium mb-1">Code (Value)</label>
                 <Input
                   value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   placeholder="e.g., active"
                   disabled={!!editingValue}
                 />
-                <p className="text-xs text-[var(--secondary-text)] mt-1">
-                  Unique identifier, cannot be changed later
-                </p>
               </div>
-
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Display Label <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium mb-1">Display Label</label>
                 <Input
                   value={formData.label}
                   onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                   placeholder="e.g., Active"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium mb-2">Description</label>
+                <label className="block text-sm font-medium mb-1">Sort Order</label>
                 <Input
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Optional description"
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })
+                  }
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Sort Order</label>
-                  <Input
-                    type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="flex items-center">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm">Active</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-4 pt-4 border-t border-[var(--border-color)]">
-                <Button variant="outline" onClick={() => setShowValueModal(false)}>
+              <div className="flex gap-2 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowValueModal(false)}>
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleSaveValue}
-                  disabled={isSaving}
-                  className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </>
-                  )}
+                <Button className="flex-1" onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save
                 </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
