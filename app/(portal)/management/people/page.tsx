@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AssociationSelector } from "@/components/AssociationSelector";
+import { useAssociation } from "@/lib/context/AssociationContext";
 import {
   Users,
   Plus,
@@ -52,17 +54,23 @@ export default function PeoplePage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { selectedAssociation } = useAssociation();
 
   useEffect(() => {
     loadContacts();
-  }, []);
+  }, [selectedAssociation?.id]);
 
   async function loadContacts() {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch("/api/contacts");
+      // Filter by selected association
+      const url = selectedAssociation?.id 
+        ? `/api/contacts?associationId=${selectedAssociation.id}`
+        : "/api/contacts";
+      
+      const response = await fetch(url);
       const result = await response.json();
       
       if (!result.success) {
@@ -205,12 +213,15 @@ export default function PeoplePage() {
             Manage property owners, tenants, and other contacts
           </p>
         </div>
-        <Link href="/management/people/new">
-          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <AssociationSelector />
+          <Link href="/management/people/new">
+            <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Contact
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}

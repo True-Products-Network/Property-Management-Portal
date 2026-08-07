@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { PortalShell } from "@/components/shell/PortalShell";
 import { getPrimaryRole } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
+import { AssociationProviderWrapper } from "@/components/AssociationProviderWrapper";
 
 export default async function PortalLayout({
   children,
@@ -53,14 +54,16 @@ export default async function PortalLayout({
   }
 
   return (
-    <PortalShell
-      role={effectiveRole}
-      userName={displayName}
-      userEmail={user.email}
-      notificationCount={0}
-      tenantId={tenantId}
-    >
-      {children}
-    </PortalShell>
+    <AssociationProviderWrapper>
+      <PortalShell
+        role={effectiveRole}
+        userName={displayName}
+        userEmail={user.email}
+        notificationCount={0}
+        tenantId={tenantId}
+      >
+        {children}
+      </PortalShell>
+    </AssociationProviderWrapper>
   );
 }
