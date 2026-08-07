@@ -127,6 +127,7 @@ export function mapContact(row: any): Contact {
     id: row.id,
     contactId: row.contact_id,
     portalUserId: row.portal_user_id,
+    associationId: row.association_id,
     firstName: row.first_name,
     lastName: row.last_name,
     email: row.email,

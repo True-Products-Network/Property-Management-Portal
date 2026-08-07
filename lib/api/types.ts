@@ -31,4 +31,5 @@ export interface QueryParams {
   search?: string;
   filters?: Record<string, string | string[]>;
   portalUserId?: string;
+  associationId?: string;
 }

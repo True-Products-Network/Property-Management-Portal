@@ -13,6 +13,7 @@ export interface Contact {
   id: string;
   contactId: string;
   portalUserId?: string;
+  associationId?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -41,6 +42,7 @@ export interface CreateContactInput {
   firstName: string;
   lastName: string;
   email: string;
+  associationId?: string;
   phone?: string;
   mobilePhone?: string;
   workPhone?: string;
@@ -76,6 +78,11 @@ export async function getContacts(
     // Filter by tenant_id if provided
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
+    }
+    
+    // Filter by association_id if provided (for association isolation)
+    if (params.associationId) {
+      query = query.eq("association_id", params.associationId);
     }
     
     // Filter by portal_user_id if provided
@@ -180,6 +187,7 @@ export async function createContact(
         first_name: input.firstName,
         last_name: input.lastName,
         email: input.email,
+        association_id: input.associationId,
         phone: input.phone,
         mobile_phone: input.mobilePhone,
         work_phone: input.workPhone,
