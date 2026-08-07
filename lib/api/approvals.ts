@@ -14,11 +14,14 @@ export interface Approval {
   approvedAmount?: number;
   status: string;
   requestedBy: string;
+  requestedByName?: string;
   requestedAt: string;
   approvedBy?: string;
+  approvedByName?: string;
   approvedAt?: string;
   denialReason?: string;
   deniedBy?: string;
+  deniedByName?: string;
   deniedAt?: string;
   maintenanceRequestId?: string;
   vendorId?: string;
@@ -99,6 +102,20 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
       return { success: false, error: "Failed to verify user" };
     }
     
+    // Get user's name from contacts table
+    let requesterName = "Unknown";
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("portal_user_id", portalUser?.id || authUserId)
+      .maybeSingle();
+    
+    if (contact) {
+      requesterName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
+    
+    console.log("[createApproval] Requester name:", requesterName);
+    
     if (!portalUser) {
       console.error("[createApproval] No portal user found for auth user:", authUserId);
       
@@ -129,6 +146,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
             maintenance_request_id: input.maintenanceRequestId,
             vendor_id: input.vendorId,
             requested_by: portalUserByEmail.id,
+            requested_by_name: requesterName,
             status: "pending",
           }).select().single();
           
@@ -153,6 +171,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
       maintenance_request_id: input.maintenanceRequestId,
       vendor_id: input.vendorId,
       requested_by: portalUserId,
+      requested_by_name: requesterName,
       status: "pending",
     }).select().single();
     
@@ -176,10 +195,23 @@ export async function approveApproval(id: string, approvedAmount: number, authUs
     
     const portalUserId = portalUser?.id || authUserId;
     
+    // Get approver's name from contacts
+    let approverName = "Unknown";
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("portal_user_id", portalUserId)
+      .maybeSingle();
+    
+    if (contact) {
+      approverName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
+    
     const { data, error } = await supabase.from("approvals").update({
       status: "approved",
       approved_amount: approvedAmount,
       approved_by: portalUserId,
+      approved_by_name: approverName,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", id).select().single();
@@ -204,10 +236,23 @@ export async function rejectApproval(id: string, reason: string, authUserId: str
     
     const portalUserId = portalUser?.id || authUserId;
     
+    // Get denier's name from contacts
+    let denierName = "Unknown";
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("portal_user_id", portalUserId)
+      .maybeSingle();
+    
+    if (contact) {
+      denierName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
+    
     const { data, error } = await supabase.from("approvals").update({
       status: "rejected",
       denial_reason: reason,
       denied_by: portalUserId,
+      denied_by_name: denierName,
       denied_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }).eq("id", id).select().single();
