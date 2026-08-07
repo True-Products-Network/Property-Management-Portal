@@ -8,7 +8,6 @@ import { mapMaintenanceRequest } from "./mappers";
 export interface MaintenanceRequest {
   id: string;
   requestNumber: string;
-  associationId?: string;
   propertyId: string;
   unitId?: string;
   reportedByContactId: string;
@@ -33,7 +32,6 @@ export interface MaintenanceRequest {
 }
 
 export interface CreateMaintenanceInput {
-  associationId?: string;
   propertyId: string;
   unitId?: string;
   reportedByContactId: string;
@@ -57,11 +55,11 @@ export async function getMaintenanceRequests(
     
     let query = supabase
       .from("maintenance_requests")
-      .select("*", { count: "exact" });
+      .select("*, properties!inner(association_id)", { count: "exact" });
     
-    // Filter by association_id for association isolation
+    // Filter by association_id via property join
     if (params.associationId) {
-      query = query.eq("association_id", params.associationId);
+      query = query.eq("properties.association_id", params.associationId);
     }
     
     if (params.propertyId) {
@@ -154,7 +152,6 @@ export async function createMaintenanceRequest(
       .from("maintenance_requests")
       .insert({
         request_number: requestNumber,
-        association_id: input.associationId,
         property_id: input.propertyId,
         unit_id: input.unitId,
         reported_by_contact_id: input.reportedByContactId,

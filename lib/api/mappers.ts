@@ -158,7 +158,6 @@ export function mapMaintenanceRequest(row: any): MaintenanceRequest {
   return {
     id: row.id,
     requestNumber: row.request_number,
-    associationId: row.association_id,
     propertyId: row.property_id,
     unitId: row.unit_id,
     reportedByContactId: row.reported_by_contact_id,
@@ -215,7 +214,6 @@ export function mapInspection(row: any): Inspection {
   return {
     id: row.id,
     inspectionId: row.inspection_id,
-    associationId: row.association_id,
     propertyId: row.property_id,
     unitId: row.unit_id,
     inspectionType: row.inspection_type,

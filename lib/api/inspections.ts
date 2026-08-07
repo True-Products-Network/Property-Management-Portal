@@ -6,7 +6,6 @@ import { mapInspection } from "./mappers";
 export interface Inspection {
   id: string;
   inspectionId: string;
-  associationId?: string;
   propertyId: string;
   unitId?: string;
   inspectionType: string;
@@ -26,7 +25,6 @@ export interface Inspection {
 }
 
 export interface CreateInspectionInput {
-  associationId?: string;
   propertyId: string;
   unitId?: string;
   inspectionType: string;
@@ -46,9 +44,9 @@ export async function getInspections(
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     
-    let query = supabase.from("inspections").select("*", { count: "exact" });
+    let query = supabase.from("inspections").select("*, properties!inner(association_id)", { count: "exact" });
     
-    if (params.associationId) query = query.eq("association_id", params.associationId);
+    if (params.associationId) query = query.eq("properties.association_id", params.associationId);
     if (params.propertyId) query = query.eq("property_id", params.propertyId);
     if (params.filters?.status) query = query.eq("status", params.filters.status);
     if (params.filters?.inspectionType) query = query.eq("inspection_type", params.filters.inspectionType);
@@ -87,7 +85,6 @@ export async function createInspection(input: CreateInspectionInput, userId: str
     
     const { data, error } = await supabase.from("inspections").insert({
       inspection_id: inspectionId,
-      association_id: input.associationId,
       property_id: input.propertyId,
       unit_id: input.unitId,
       inspection_type: input.inspectionType,
