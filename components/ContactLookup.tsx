@@ -26,25 +26,10 @@ interface ContactLookupProps {
   roleFilter?: string;
 }
 
-const CONTACT_ROLES = [
-  // 10 Portal Roles
-  { value: "admin_user", label: "Admin User" },
-  { value: "association_manager", label: "Association Manager" },
-  { value: "board_member", label: "Board Member" },
-  { value: "finance_user", label: "Finance User" },
-  { value: "owner", label: "Owner" },
-  { value: "portfolio_manager", label: "Portfolio Manager" },
-  { value: "resident", label: "Resident" },
-  { value: "staff", label: "Staff" },
-  { value: "vendor_contractor", label: "Vendor Contractor" },
-  { value: "property_manager", label: "Property Manager" },
-  // 5 Additional Roles
-  { value: "emergency_contact", label: "Emergency Contact" },
-  { value: "inspector", label: "Inspector" },
-  { value: "co_owner", label: "Co-Owner" },
-  { value: "maintenance_contact", label: "Maintenance Contact" },
-  { value: "other", label: "Other" },
-];
+interface DropdownOption {
+  value: string;
+  label: string;
+}
 
 export default function ContactLookup({
   value,
@@ -60,14 +45,45 @@ export default function ContactLookup({
   const [existingContacts, setExistingContacts] = useState<Contact[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showNewContactForm, setShowNewContactForm] = useState(false);
-  
+  const [contactRoles, setContactRoles] = useState<DropdownOption[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+
   const [newContact, setNewContact] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
-    role: roleFilter || "vendor_contact",
+    role: roleFilter || "",
   });
+
+  // Fetch contact roles from dropdown_settings
+  useEffect(() => {
+    async function fetchRoles() {
+      setIsLoadingRoles(true);
+      try {
+        const response = await fetch('/api/admin/dropdowns?recordType=contact&fieldName=role');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const roles = result.data.map((item: { value: string; label: string }) => ({
+              value: item.value,
+              label: item.label,
+            }));
+            setContactRoles(roles);
+            // Set default role if roleFilter not provided
+            if (!roleFilter && roles.length > 0) {
+              setNewContact(prev => ({ ...prev, role: roles[0].value }));
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching contact roles:", error);
+      } finally {
+        setIsLoadingRoles(false);
+      }
+    }
+    fetchRoles();
+  }, [roleFilter]);
 
   // Search for existing contacts
   useEffect(() => {
@@ -308,19 +324,26 @@ export default function ContactLookup({
                   </div>
                   <div>
                     <Label>Role</Label>
-                    <select
-                      className="w-full p-2 border rounded-md"
-                      value={newContact.role}
-                      onChange={(e) =>
-                        setNewContact({ ...newContact, role: e.target.value })
-                      }
-                    >
-                      {CONTACT_ROLES.map((role) => (
-                        <option key={role.value} value={role.value}>
-                          {role.label}
-                        </option>
-                      ))}
-                    </select>
+                    {isLoadingRoles ? (
+                      <div className="flex items-center gap-2 p-2 border rounded-md">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm text-gray-500">Loading roles...</span>
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full p-2 border rounded-md"
+                        value={newContact.role}
+                        onChange={(e) =>
+                          setNewContact({ ...newContact, role: e.target.value })
+                        }
+                      >
+                        {contactRoles.map((role) => (
+                          <option key={role.value} value={role.value}>
+                            {role.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button
