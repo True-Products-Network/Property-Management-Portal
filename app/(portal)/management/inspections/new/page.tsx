@@ -355,6 +355,17 @@ function InspectionForm() {
                   label="Inspection Type"
                   required
                   className={errors.inspectionType ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={[
+                    { value: "move_in", label: "Move In" },
+                    { value: "move_out", label: "Move Out" },
+                    { value: "annual", label: "Annual" },
+                    { value: "quarterly", label: "Quarterly" },
+                    { value: "safety", label: "Safety" },
+                    { value: "maintenance", label: "Maintenance" },
+                    { value: "insurance", label: "Insurance" },
+                    { value: "pre_lease", label: "Pre-Lease" },
+                    { value: "other", label: "Other" }
+                  ]}
                 />
                 {errors.inspectionType && <p className="text-sm text-red-500 mt-1">{errors.inspectionType}</p>}
               </div>

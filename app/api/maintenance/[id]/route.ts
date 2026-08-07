@@ -7,7 +7,7 @@ import { z } from "zod";
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  category: z.enum(["HVAC", "Plumbing", "Electrical", "Appliance", "Structural", "Cosmetic", "Safety", "Cleaning", "Landscaping", "Other"]).optional(),
+  category: z.string().optional(), // Allow any string, validation is case-insensitive
   urgency: z.enum(["emergency", "urgent", "normal", "low"]).optional(),
   status: z.enum(["new", "triaged", "pending_approval", "approved", "vendor_assigned", "scheduled", "in_progress", "on_hold", "completed", "closed", "cancelled"]).optional(),
   assignedVendorId: z.string().uuid().optional(),

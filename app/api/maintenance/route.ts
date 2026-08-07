@@ -11,7 +11,7 @@ const createSchema = z.object({
   reportedByContactId: z.string().uuid(),
   title: z.string().min(1),
   description: z.string().optional(),
-  category: z.enum(["HVAC", "Plumbing", "Electrical", "Appliance", "Structural", "Cosmetic", "Safety", "Cleaning", "Landscaping", "Other"]).optional(),
+  category: z.string().optional(), // Allow any string, validation is case-insensitive
   urgency: z.enum(["emergency", "urgent", "normal", "low"]).optional(),
   requestedDate: z.string().optional(),
 });
