@@ -168,7 +168,7 @@ export async function createProperty(
         access_instructions: input.accessInstructions,
         emergency_notes: input.emergencyNotes,
         assigned_staff_id: input.assignedStaffId,
-        // photo_url: input.photoUrl, // Column doesn't exist in database yet
+        photo_url: input.photoUrl,
         created_by: userId,
         updated_by: userId,
       })
@@ -209,7 +209,7 @@ export async function updateProperty(
         access_instructions: input.accessInstructions,
         emergency_notes: input.emergencyNotes,
         assigned_staff_id: input.assignedStaffId,
-        // photo_url: input.photoUrl, // Column doesn't exist in database yet
+        photo_url: input.photoUrl,
         updated_by: userId,
         updated_at: new Date().toISOString(),
       })
