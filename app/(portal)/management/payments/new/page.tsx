@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, CreditCard, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -37,7 +38,7 @@ interface FormData {
   invoiceNumber: string;
 }
 
-const PAYMENT_TYPES = [
+const PAYMENT_TYPE_OPTIONS = [
   { value: "assessment", label: "Assessment" },
   { value: "fee", label: "Fee" },
   { value: "fine", label: "Fine" },
@@ -46,9 +47,16 @@ const PAYMENT_TYPES = [
   { value: "deposit", label: "Deposit" },
 ];
 
-const PROCESSORS = [
+const PROCESSOR_OPTIONS = [
   { value: "stripe", label: "Stripe" },
   { value: "paypal", label: "PayPal" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Pending" },
+  { value: "completed", label: "Completed" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" },
 ];
 
 function PaymentForm() {
@@ -288,21 +296,17 @@ function PaymentForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Payment Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="payment"
+                  fieldName="type"
                   value={formData.paymentType}
-                  onChange={(e) => handleChange("paymentType", e.target.value)}
-                  className={`input w-full ${errors.paymentType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Type</option>
-                  {PAYMENT_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("paymentType", value)}
+                  label="Payment Type"
+                  placeholder="Select Type"
+                  required
+                  className={errors.paymentType ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={PAYMENT_TYPE_OPTIONS}
+                />
                 {errors.paymentType && <p className="text-sm text-red-500 mt-1">{errors.paymentType}</p>}
               </div>
               <div>
@@ -336,35 +340,24 @@ function PaymentForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Processor
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="payment"
+                  fieldName="processor"
                   value={formData.processor}
-                  onChange={(e) => handleChange("processor", e.target.value)}
-                  className="input w-full"
-                >
-                  {PROCESSORS.map((proc) => (
-                    <option key={proc.value} value={proc.value}>
-                      {proc.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("processor", value)}
+                  label="Processor"
+                  defaultOptions={PROCESSOR_OPTIONS}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="payment"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="refunded">Refunded</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={STATUS_OPTIONS}
+                />
               </div>
             </div>
 

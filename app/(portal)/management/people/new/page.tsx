@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, UserPlus, Loader2, Edit3 } from "lucide-react";
 import Link from "next/link";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -72,7 +73,7 @@ const CONTACT_ROLES = [
   { value: "other", label: "Other" },
 ];
 
-const BOARD_POSITIONS = [
+const BOARD_POSITION_OPTIONS = [
   { value: "", label: "Not a Board Member" },
   { value: "president", label: "Board President" },
   { value: "vice_president", label: "Vice President" },
@@ -80,6 +81,23 @@ const BOARD_POSITIONS = [
   { value: "secretary", label: "Secretary" },
   { value: "member_at_large", label: "Member at Large" },
   { value: "committee_chair", label: "Committee Chair" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const PREFERRED_CONTACT_OPTIONS = [
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "mail", label: "Mail" },
+];
+
+const MAILING_PREFERENCE_OPTIONS = [
+  { value: "email", label: "Email" },
+  { value: "physical", label: "Physical Mail" },
+  { value: "both", label: "Both" },
 ];
 
 function ContactForm() {
@@ -499,34 +517,24 @@ function ContactForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Board Position
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="People"
+                  fieldName="Board Position"
                   value={formData.boardPosition}
-                  onChange={(e) => handleChange("boardPosition", e.target.value)}
-                  className="input w-full"
-                >
-                  {BOARD_POSITIONS.map((pos) => (
-                    <option key={pos.value} value={pos.value}>
-                      {pos.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => handleChange("boardPosition", value)}
+                  label="Board Position"
+                  defaultOptions={BOARD_POSITION_OPTIONS}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="People"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={STATUS_OPTIONS}
+                />
               </div>
             </div>
           </CardContent>
@@ -618,33 +626,24 @@ function ContactForm() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Preferred Contact Method
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="People"
+                  fieldName="Preferred Contact Method"
                   value={formData.preferredContactMethod}
-                  onChange={(e) => handleChange("preferredContactMethod", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="sms">SMS/Text</option>
-                  <option value="mail">Mail</option>
-                </select>
+                  onChange={(value) => handleChange("preferredContactMethod", value)}
+                  label="Preferred Contact Method"
+                  defaultOptions={PREFERRED_CONTACT_OPTIONS}
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Mailing Preference
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="People"
+                  fieldName="Mailing Preference"
                   value={formData.mailingPreference}
-                  onChange={(e) => handleChange("mailingPreference", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="email">Email</option>
-                  <option value="mail">Physical Mail</option>
-                  <option value="both">Both</option>
-                </select>
+                  onChange={(value) => handleChange("mailingPreference", value)}
+                  label="Mailing Preference"
+                  defaultOptions={MAILING_PREFERENCE_OPTIONS}
+                />
               </div>
             </div>
 

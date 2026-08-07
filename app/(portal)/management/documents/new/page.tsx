@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, FileText, Loader2, Edit, Upload, Link } from "lucide-react";
 import LinkComponent from "next/link";
 import { EntitlementGuard } from "@/components/entitlements/EntitlementGuard";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -60,7 +61,7 @@ interface FormData {
   fileName: string;
 }
 
-const DOCUMENT_TYPES = [
+const DOCUMENT_TYPE_OPTIONS = [
   { value: "contract", label: "Contract" },
   { value: "lease", label: "Lease Agreement" },
   { value: "bylaws", label: "Bylaws" },
@@ -76,13 +77,20 @@ const DOCUMENT_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-const CATEGORIES = [
+const CATEGORY_OPTIONS = [
   { value: "legal", label: "Legal" },
   { value: "financial", label: "Financial" },
   { value: "operational", label: "Operational" },
   { value: "maintenance", label: "Maintenance" },
   { value: "resident", label: "Resident" },
   { value: "board", label: "Board" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "expired", label: "Expired" },
+  { value: "draft", label: "Draft" },
 ];
 
 type UploadMethod = "file" | "url";
@@ -503,59 +511,45 @@ function NewDocumentForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Document Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Document Record"
+                  fieldName="documentType"
                   value={formData.documentType}
-                  onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
-                  className={`input w-full ${errors.documentType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select type</option>
-                  {DOCUMENT_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, documentType: value })}
+                  label="Document Type"
+                  placeholder="Select type"
+                  required
+                  className={errors.documentType ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={DOCUMENT_TYPE_OPTIONS}
+                />
                 {errors.documentType && (
                   <p className="text-sm text-red-500 mt-1">{errors.documentType}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Category
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Document Record"
+                  fieldName="category"
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="input w-full"
-                >
-                  <option value="">Select category</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, category: value })}
+                  label="Category"
+                  placeholder="Select category"
+                  defaultOptions={CATEGORY_OPTIONS}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Document Record"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                  <option value="pending_review">Pending Review</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, status: value })}
+                  label="Status"
+                  defaultOptions={STATUS_OPTIONS}
+                />
               </div>
 
               <div>
