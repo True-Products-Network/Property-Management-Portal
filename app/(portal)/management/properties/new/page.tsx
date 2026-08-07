@@ -12,6 +12,13 @@ import { DropdownSelect } from "@/components/ui/DropdownSelect";
 interface Association {
   id: string;
   name: string;
+  assignedManagerId?: string;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface PropertyData {
@@ -60,6 +67,7 @@ function NewPropertyForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [formData, setFormData] = useState<FormData>({
     associationId: "",
@@ -88,6 +96,34 @@ function NewPropertyForm() {
       loadPropertyData();
     }
   }, [isEditMode, associations]);
+
+  // Load contacts when association is selected
+  useEffect(() => {
+    if (formData.associationId) {
+      loadContacts(formData.associationId);
+      // Auto-populate assignedStaffId from association's assignedManagerId
+      const assoc = associations.find(a => a.id === formData.associationId);
+      if (assoc?.assignedManagerId && !formData.assignedStaffId) {
+        setFormData(prev => ({ ...prev, assignedStaffId: assoc.assignedManagerId! }));
+      }
+    } else {
+      setContacts([]);
+    }
+  }, [formData.associationId]);
+
+  async function loadContacts(associationId: string) {
+    try {
+      const response = await fetch(`/api/contacts?associationId=${associationId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setContacts(result.data.data || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading contacts:", error);
+    }
+  }
 
   async function loadAssociations() {
     try {
@@ -367,6 +403,28 @@ function NewPropertyForm() {
                   placeholder="e.g., 24"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Assigned Property Manager <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.assignedStaffId}
+                  onChange={(e) => handleChange("assignedStaffId", e.target.value)}
+                  className={`input w-full ${errors.assignedStaffId ? "border-red-500" : ""}`}
+                  required
+                >
+                  <option value="">Select Property Manager</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.firstName} {contact.lastName}
+                    </option>
+                  ))}
+                </select>
+                {errors.assignedStaffId && <p className="text-sm text-red-500 mt-1">{errors.assignedStaffId}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Management Start Date
