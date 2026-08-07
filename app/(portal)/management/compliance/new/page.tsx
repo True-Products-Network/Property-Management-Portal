@@ -66,6 +66,7 @@ interface FormData {
   fineAmount: string;
 }
 
+// Unified category options - same as edit page
 const CATEGORY_OPTIONS = [
   { value: "violation", label: "Violation" },
   { value: "delinquency", label: "Delinquency" },
@@ -73,6 +74,11 @@ const CATEGORY_OPTIONS = [
   { value: "permit", label: "Permit Issue" },
   { value: "safety", label: "Safety Concern" },
   { value: "maintenance", label: "Maintenance Required" },
+  { value: "accessibility", label: "Accessibility" },
+  { value: "environmental", label: "Environmental" },
+  { value: "zoning", label: "Zoning" },
+  { value: "financial", label: "Financial Reporting" },
+  { value: "other", label: "Other" },
 ];
 
 const PRIORITY_OPTIONS = [

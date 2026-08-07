@@ -50,14 +50,18 @@ interface FormData {
   resolutionNotes: string;
 }
 
+// Unified category options - same as new page
 const CATEGORIES = [
-  { value: "safety", label: "Safety Violation" },
+  { value: "violation", label: "Violation" },
+  { value: "delinquency", label: "Delinquency" },
+  { value: "insurance", label: "Insurance Issue" },
+  { value: "permit", label: "Permit Issue" },
+  { value: "safety", label: "Safety Concern" },
+  { value: "maintenance", label: "Maintenance Required" },
   { value: "accessibility", label: "Accessibility" },
   { value: "environmental", label: "Environmental" },
   { value: "zoning", label: "Zoning" },
-  { value: "license", label: "License/Permit" },
   { value: "financial", label: "Financial Reporting" },
-  { value: "insurance", label: "Insurance" },
   { value: "other", label: "Other" },
 ];
 
@@ -103,10 +107,20 @@ export default function EditCompliancePage() {
   }, []);
 
   useEffect(() => {
+    if (formData.associationId) {
+      loadProperties(formData.associationId);
+    } else {
+      setProperties([]);
+      setFormData(prev => ({ ...prev, propertyId: "", unitId: "" }));
+    }
+  }, [formData.associationId]);
+
+  useEffect(() => {
     if (formData.propertyId) {
       loadUnits(formData.propertyId);
     } else {
       setUnits([]);
+      setFormData(prev => ({ ...prev, unitId: "" }));
     }
   }, [formData.propertyId]);
 
@@ -137,7 +151,7 @@ export default function EditCompliancePage() {
             associationId: comp.associationId || "",
             propertyId: comp.propertyId || "",
             unitId: comp.unitId || "",
-            assignedToId: comp.assignedToId || "",
+            assignedToId: comp.assignedTo || "",
             resolutionNotes: comp.resolutionNotes || "",
           });
           if (comp.propertyId) {
@@ -164,6 +178,18 @@ export default function EditCompliancePage() {
       console.error("Error loading data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadProperties(associationId: string) {
+    try {
+      const res = await fetch(`/api/properties?associationId=${associationId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setProperties(data.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading properties:", error);
     }
   }
 
