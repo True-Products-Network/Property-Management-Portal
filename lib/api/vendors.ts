@@ -88,9 +88,22 @@ export async function getVendor(id: string): Promise<ApiResponse<Vendor>> {
   }
 }
 
-export async function createVendor(input: CreateVendorInput, userId: string): Promise<ApiResponse<Vendor>> {
+export async function createVendor(input: CreateVendorInput, authUserId: string): Promise<ApiResponse<Vendor>> {
   try {
     const supabase = await createClient();
+    
+    // Look up portal user ID from auth user ID
+    const { data: portalUser } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    if (!portalUser) {
+      return { success: false, error: "User not found in portal users" };
+    }
+    
+    const userId = portalUser.id;
     const vendorId = `VEND-${Date.now()}`;
     
     const { data, error } = await supabase.from("vendors").insert({
