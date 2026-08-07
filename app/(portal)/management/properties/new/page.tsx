@@ -15,10 +15,12 @@ interface Association {
   assignedManagerId?: string;
 }
 
-interface Contact {
+interface PortalUser {
   id: string;
-  firstName: string;
-  lastName: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  roles: string[];
 }
 
 interface PropertyData {
@@ -67,7 +69,7 @@ function NewPropertyForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [formData, setFormData] = useState<FormData>({
     associationId: "",
@@ -97,31 +99,43 @@ function NewPropertyForm() {
     }
   }, [isEditMode, associations]);
 
-  // Load contacts when association is selected
+  // Load portal users when association is selected
   useEffect(() => {
     if (formData.associationId) {
-      loadContacts(formData.associationId);
+      loadPortalUsers(formData.associationId);
       // Auto-populate assignedStaffId from association's assignedManagerId
       const assoc = associations.find(a => a.id === formData.associationId);
       if (assoc?.assignedManagerId && !formData.assignedStaffId) {
         setFormData(prev => ({ ...prev, assignedStaffId: assoc.assignedManagerId! }));
       }
     } else {
-      setContacts([]);
+      setPortalUsers([]);
     }
   }, [formData.associationId]);
 
-  async function loadContacts(associationId: string) {
+  async function loadPortalUsers(associationId: string) {
     try {
-      const response = await fetch(`/api/contacts?associationId=${associationId}`);
+      // Load portal users with PROPERTY_MANAGER or ASSOCIATION_MANAGER roles for this tenant
+      const response = await fetch(`/api/admin/users?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
-        if (result.success) {
-          setContacts(result.data.data || []);
+        if (result.success && result.data) {
+          // Filter users with property management roles
+          const managers = result.data.filter((user: PortalUser) => 
+            user.roles?.some(role => 
+              ['PROPERTY_MANAGER', 'ASSOCIATION_MANAGER', 'ADMIN_USER'].includes(role)
+            )
+          );
+          setPortalUsers(managers);
+          
+          // If no managers found, show a message but don't block
+          if (managers.length === 0) {
+            console.warn("No property managers found for this association");
+          }
         }
       }
     } catch (error) {
-      console.error("Error loading contacts:", error);
+      console.error("Error loading portal users:", error);
     }
   }
 
@@ -414,12 +428,17 @@ function NewPropertyForm() {
                   required
                 >
                   <option value="">Select Property Manager</option>
-                  {contacts.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.firstName} {contact.lastName}
+                  {portalUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.email})
                     </option>
                   ))}
                 </select>
+                {portalUsers.length === 0 && formData.associationId && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    No property managers found. Please assign a Property Manager to this association first.
+                  </p>
+                )}
                 {errors.assignedStaffId && <p className="text-sm text-red-500 mt-1">{errors.assignedStaffId}</p>}
               </div>
             </div>

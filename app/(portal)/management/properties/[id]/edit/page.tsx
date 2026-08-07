@@ -14,10 +14,12 @@ interface Association {
   assignedManagerId?: string;
 }
 
-interface Contact {
+interface PortalUser {
   id: string;
-  firstName: string;
-  lastName: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  roles: string[];
 }
 
 interface Property {
@@ -46,7 +48,7 @@ export default function EditPropertyPage() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,12 +58,12 @@ export default function EditPropertyPage() {
     loadData();
   }, [propertyId]);
 
-  // Load contacts when association changes
+  // Load portal users when association changes
   useEffect(() => {
     if (formData.associationId) {
-      loadContacts(formData.associationId);
+      loadPortalUsers(formData.associationId);
     } else {
-      setContacts([]);
+      setPortalUsers([]);
     }
   }, [formData.associationId]);
 
@@ -84,9 +86,9 @@ export default function EditPropertyPage() {
         if (assocData.success) setAssociations(assocData.data.data || []);
       }
       
-      // Load contacts for the property's association
+      // Load portal users for the property's association
       if (propData.data.associationId) {
-        await loadContacts(propData.data.associationId);
+        await loadPortalUsers(propData.data.associationId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -95,17 +97,24 @@ export default function EditPropertyPage() {
     }
   }
 
-  async function loadContacts(associationId: string) {
+  async function loadPortalUsers(associationId: string) {
     try {
-      const response = await fetch(`/api/contacts?associationId=${associationId}`);
+      // Load portal users with PROPERTY_MANAGER or ASSOCIATION_MANAGER roles for this tenant
+      const response = await fetch(`/api/admin/users?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
-        if (result.success) {
-          setContacts(result.data.data || []);
+        if (result.success && result.data) {
+          // Filter users with property management roles
+          const managers = result.data.filter((user: PortalUser) => 
+            user.roles?.some(role => 
+              ['PROPERTY_MANAGER', 'ASSOCIATION_MANAGER', 'ADMIN_USER'].includes(role)
+            )
+          );
+          setPortalUsers(managers);
         }
       }
     } catch (error) {
-      console.error("Error loading contacts:", error);
+      console.error("Error loading portal users:", error);
     }
   }
 
@@ -300,12 +309,17 @@ export default function EditPropertyPage() {
                   required
                 >
                   <option value="">Select Property Manager</option>
-                  {contacts.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.firstName} {contact.lastName}
+                  {portalUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.email})
                     </option>
                   ))}
                 </select>
+                {portalUsers.length === 0 && formData.associationId && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    No property managers found. Please assign a Property Manager to this association first.
+                  </p>
+                )}
               </div>
             </div>
 
