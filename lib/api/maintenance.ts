@@ -141,15 +141,6 @@ export async function createMaintenanceRequest(
   try {
     const supabase = await createClient();
     
-    // Look up portal_user_id from contact
-    const { data: contact } = await supabase
-      .from("contacts")
-      .select("portal_user_id")
-      .eq("id", input.reportedByContactId)
-      .maybeSingle();
-    
-    const portalUserId = contact?.portal_user_id || userId;
-    
     const requestNumber = `MNT-${Date.now()}`;
     
     const { data, error } = await supabase
@@ -158,7 +149,7 @@ export async function createMaintenanceRequest(
         request_number: requestNumber,
         property_id: input.propertyId,
         unit_id: input.unitId,
-        reported_by_contact_id: portalUserId,
+        reported_by_contact_id: input.reportedByContactId,
         title: input.title,
         description: input.description,
         category: input.category,
