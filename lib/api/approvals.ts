@@ -86,32 +86,40 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
   try {
     const supabase = await createClient();
     
-    console.log("[createApproval] Looking up contact for auth user:", authUserId);
+    console.log("[createApproval] Looking up portal user for auth user:", authUserId);
     
-    // FK constraints reference contacts(id), not portal_users(id)
-    // Look up the contact by portal_user_id
-    const { data: contact, error: contactError } = await supabase
-      .from("contacts")
-      .select("id, first_name, last_name, email")
-      .eq("portal_user_id", authUserId)
+    // Look up the portal user
+    const { data: portalUser, error: portalUserError } = await supabase
+      .from("portal_users")
+      .select("id, email")
+      .eq("id", authUserId)
       .maybeSingle();
     
-    console.log("[createApproval] Contact lookup result:", { contact, contactError });
+    console.log("[createApproval] Portal user lookup result:", { portalUser, portalUserError });
     
-    if (contactError) {
-      console.error("[createApproval] Error looking up contact:", contactError);
+    if (portalUserError) {
+      console.error("[createApproval] Error looking up portal user:", portalUserError);
       return { success: false, error: "Failed to verify user" };
     }
     
-    if (!contact) {
-      console.error("[createApproval] No contact found for auth user:", authUserId);
-      return { success: false, error: "User not found in contacts" };
+    if (!portalUser) {
+      console.error("[createApproval] No portal user found for auth user:", authUserId);
+      return { success: false, error: "User not found in portal users" };
     }
     
-    const contactId = contact.id;
-    const requesterName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    // Get user's name from contacts table
+    let requesterName = "Unknown";
+    const { data: contact } = await supabase
+      .from("contacts")
+      .select("first_name, last_name")
+      .eq("portal_user_id", authUserId)
+      .maybeSingle();
     
-    console.log("[createApproval] Using contactId:", contactId, "name:", requesterName);
+    if (contact) {
+      requesterName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
+    
+    console.log("[createApproval] Using portalUserId:", portalUser.id, "name:", requesterName);
     
     const approvalId = `APPR-${Date.now()}`;
     
@@ -124,7 +132,7 @@ export async function createApproval(input: CreateApprovalInput, authUserId: str
       requested_amount: input.requestedAmount,
       maintenance_request_id: input.maintenanceRequestId,
       vendor_id: input.vendorId,
-      requested_by: contactId,
+      requested_by: portalUser.id,
       requested_by_name: requesterName,
       status: "pending",
     }).select().single();
@@ -140,23 +148,29 @@ export async function approveApproval(id: string, approvedAmount: number, authUs
   try {
     const supabase = await createClient();
     
-    // FK constraints reference contacts(id), not portal_users(id)
-    // Look up the contact by portal_user_id
+    // Look up the portal user
+    const { data: portalUser } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    // Get approver's name from contacts
+    let approverName = "Unknown";
     const { data: contact } = await supabase
       .from("contacts")
-      .select("id, first_name, last_name")
+      .select("first_name, last_name")
       .eq("portal_user_id", authUserId)
       .maybeSingle();
     
-    const contactId = contact?.id;
-    const approverName = contact 
-      ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown"
-      : "Unknown";
+    if (contact) {
+      approverName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
     
     const { data, error } = await supabase.from("approvals").update({
       status: "approved",
       approved_amount: approvedAmount,
-      approved_by: contactId,
+      approved_by: portalUser?.id,
       approved_by_name: approverName,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -173,23 +187,29 @@ export async function rejectApproval(id: string, reason: string, authUserId: str
   try {
     const supabase = await createClient();
     
-    // FK constraints reference contacts(id), not portal_users(id)
-    // Look up the contact by portal_user_id
+    // Look up the portal user
+    const { data: portalUser } = await supabase
+      .from("portal_users")
+      .select("id")
+      .eq("id", authUserId)
+      .maybeSingle();
+    
+    // Get denier's name from contacts
+    let denierName = "Unknown";
     const { data: contact } = await supabase
       .from("contacts")
-      .select("id, first_name, last_name")
+      .select("first_name, last_name")
       .eq("portal_user_id", authUserId)
       .maybeSingle();
     
-    const contactId = contact?.id;
-    const denierName = contact
-      ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown"
-      : "Unknown";
+    if (contact) {
+      denierName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || "Unknown";
+    }
     
     const { data, error } = await supabase.from("approvals").update({
       status: "rejected",
       denial_reason: reason,
-      denied_by: contactId,
+      denied_by: portalUser?.id,
       denied_by_name: denierName,
       denied_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
