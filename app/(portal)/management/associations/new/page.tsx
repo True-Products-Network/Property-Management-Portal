@@ -15,10 +15,15 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-const FINANCIAL_PLATFORMS = [
+const FINANCIAL_PLATFORM_OPTIONS = [
   { value: "stripe", label: "Stripe" },
   { value: "paypal", label: "PayPal" },
 ];
+
+const MONTH_OPTIONS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+].map(m => ({ value: m, label: m }));
 
 interface Contact {
   id: string;
@@ -541,19 +546,15 @@ export default function NewAssociationPage() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Fiscal Year End (Month)
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Association Company"
+                  fieldName="Fiscal Year End Month"
                   value={formData.fiscalYearEndMonth}
-                  onChange={(e) => setFormData({ ...formData, fiscalYearEndMonth: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                >
-                  <option value="">Select month...</option>
-                  {MONTHS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, fiscalYearEndMonth: value })}
+                  label="Fiscal Year End (Month)"
+                  placeholder="Select month..."
+                  defaultOptions={MONTH_OPTIONS}
+                />
               </div>
 
               <div className="space-y-2">
@@ -571,19 +572,15 @@ export default function NewAssociationPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Annual Meeting Month
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Association Company"
+                  fieldName="Annual Meeting Month"
                   value={formData.annualMeetingMonth}
-                  onChange={(e) => setFormData({ ...formData, annualMeetingMonth: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                >
-                  <option value="">Select month...</option>
-                  {MONTHS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, annualMeetingMonth: value })}
+                  label="Annual Meeting Month"
+                  placeholder="Select month..."
+                  defaultOptions={MONTH_OPTIONS}
+                />
               </div>
 
               <div className="space-y-2">
@@ -600,19 +597,15 @@ export default function NewAssociationPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[var(--main-text)]">
-                  Financial Platform
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Association Company"
+                  fieldName="Financial Platform"
                   value={formData.financialPlatform}
-                  onChange={(e) => setFormData({ ...formData, financialPlatform: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border border-[var(--border-color)] bg-white"
-                >
-                  <option value="">Select platform...</option>
-                  {FINANCIAL_PLATFORMS.map((platform) => (
-                    <option key={platform.value} value={platform.value}>{platform.label}</option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, financialPlatform: value })}
+                  label="Financial Platform"
+                  placeholder="Select platform..."
+                  defaultOptions={FINANCIAL_PLATFORM_OPTIONS}
+                />
               </div>
 
               <div className="space-y-2">

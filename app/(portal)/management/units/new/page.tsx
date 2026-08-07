@@ -312,17 +312,17 @@ function NewUnitForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Unit"
+                  fieldName="status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={[
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                />
               </div>
             </div>
 

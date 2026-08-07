@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Save, Building2, Loader2, Edit } from "lucide-react";
 import Link from "next/link";
+import { DropdownSelect } from "@/components/ui/DropdownSelect";
 
 interface Association {
   id: string;
@@ -304,40 +305,42 @@ function NewPropertyForm() {
                 {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Property Type <span className="text-red-500">*</span>
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Property"
+                  fieldName="Property Type"
                   value={formData.type}
-                  onChange={(e) => handleChange("type", e.target.value)}
-                  className={`input w-full ${errors.type ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Type</option>
-                  <option value="Condominium">Condominium</option>
-                  <option value="Apartment">Apartment</option>
-                  <option value="Townhouse">Townhouse</option>
-                  <option value="Single Family">Single Family</option>
-                  <option value="Commercial">Commercial</option>
-                  <option value="Mixed Use">Mixed Use</option>
-                </select>
+                  onChange={(value) => handleChange("type", value)}
+                  label="Property Type"
+                  placeholder="Select Type"
+                  required
+                  className={errors.type ? "[&_select]:border-red-500" : ""}
+                  defaultOptions={[
+                    { value: "Condominium", label: "Condominium" },
+                    { value: "Apartment", label: "Apartment" },
+                    { value: "Townhouse", label: "Townhouse" },
+                    { value: "Single Family", label: "Single Family" },
+                    { value: "Commercial", label: "Commercial" },
+                    { value: "Mixed Use", label: "Mixed Use" },
+                  ]}
+                />
                 {errors.type && <p className="text-sm text-red-500 mt-1">{errors.type}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
-                </label>
-                <select
+                <DropdownSelect
+                  recordType="Property"
+                  fieldName="Property Status"
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="input w-full"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="under_construction">Under Construction</option>
-                </select>
+                  onChange={(value) => handleChange("status", value)}
+                  label="Status"
+                  defaultOptions={[
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                    { value: "under_construction", label: "Under Construction" },
+                  ]}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">

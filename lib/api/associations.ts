@@ -30,29 +30,29 @@ export interface Association {
 
 export interface CreateAssociationInput {
   name: string;
-  shortName?: string;
-  legalName?: string;
+  shortName?: string | null;
+  legalName?: string | null;
   type: string;
   status?: string;
-  addressStreet?: string;
-  addressCity?: string;
-  addressState?: string;
-  addressZip?: string;
-  mailingAddress?: string;
-  phone?: string;
-  email?: string;
-  taxId?: string;
-  fiscalYear?: string;
-  fiscalYearEndMonth?: string;
-  fiscalYearEndDay?: number;
-  annualMeetingMonth?: string;
-  managementStartDate?: string;
-  assignedManagerId?: string;
-  financialPlatform?: string;
-  financialPortalLink?: string;
-  documentStorageLink?: string;
-  emergencyInstructions?: string;
-  generalNotes?: string;
+  addressStreet?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressZip?: string | null;
+  mailingAddress?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  taxId?: string | null;
+  fiscalYear?: string | null;
+  fiscalYearEndMonth?: string | null;
+  fiscalYearEndDay?: number | null;
+  annualMeetingMonth?: string | null;
+  managementStartDate?: string | null;
+  assignedManagerId?: string | null;
+  financialPlatform?: string | null;
+  financialPortalLink?: string | null;
+  documentStorageLink?: string | null;
+  emergencyInstructions?: string | null;
+  generalNotes?: string | null;
 }
 
 export interface UpdateAssociationInput extends Partial<CreateAssociationInput> {
