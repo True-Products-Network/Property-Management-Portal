@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users, ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Mail, UserX, UserCheck, Users, ArrowLeft, Trash2, Loader2, Shield, X } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ interface User {
   lastName?: string;
   name?: string;
   role?: string;
+  roles?: string[];
   status: string;
   createdAt: string;
   lastSignInAt?: string;
@@ -22,6 +23,13 @@ interface User {
   associationName?: string;
   tenantId?: string;
   tenantName?: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  is_system_role?: boolean;
 }
 
 interface Association {
@@ -48,6 +56,13 @@ export default function UserMaintenancePage() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Role editing state
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -108,6 +123,69 @@ export default function UserMaintenancePage() {
     } finally {
       setActionLoading(null);
     }
+  }
+
+  // Role editing functions
+  async function openRoleDialog(user: User) {
+    setEditingUser(user);
+    setRoleDialogOpen(true);
+    setRoleLoading(true);
+    
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/roles`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setAvailableRoles(result.data.allRoles);
+          // Extract role IDs from userRoles
+          const userRoleIds = result.data.userRoles.map((ur: any) => ur.role_id);
+          setSelectedRoleIds(userRoleIds);
+        }
+      } else {
+        alert('Failed to load roles');
+      }
+    } catch (err) {
+      console.error('Error loading roles:', err);
+      alert('Failed to load roles');
+    } finally {
+      setRoleLoading(false);
+    }
+  }
+
+  async function saveUserRoles() {
+    if (!editingUser) return;
+    
+    setRoleLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${editingUser.id}/roles`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roleIds: selectedRoleIds }),
+      });
+      
+      if (response.ok) {
+        setRoleDialogOpen(false);
+        setEditingUser(null);
+        // Refresh user list
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to update roles');
+      }
+    } catch (err) {
+      console.error('Error updating roles:', err);
+      alert('Failed to update roles');
+    } finally {
+      setRoleLoading(false);
+    }
+  }
+
+  function toggleRole(roleId: string) {
+    setSelectedRoleIds(prev => 
+      prev.includes(roleId) 
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
   }
 
   // Fetch associations and check if platform admin
@@ -495,6 +573,13 @@ export default function UserMaintenancePage() {
                             {actionLoading === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
                           </button>
                         )}
+                        <button 
+                          className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--teal)] rounded-lg hover:bg-[var(--page-background)]"
+                          title="Edit roles"
+                          onClick={() => openRoleDialog(user)}
+                        >
+                          <Shield className="h-4 w-4" />
+                        </button>
                         <div className="relative">
                           <button 
                             className="p-1.5 text-[var(--secondary-text)] hover:text-[var(--main-text)] rounded-lg hover:bg-[var(--page-background)]"
@@ -549,6 +634,78 @@ export default function UserMaintenancePage() {
           </button>
         </div>
       </div>
+
+      {/* Role Edit Dialog */}
+      {roleDialogOpen && editingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+              <h3 className="text-lg font-semibold text-[var(--main-text)]">
+                Edit Roles for {editingUser.name || editingUser.email}
+              </h3>
+              <button 
+                onClick={() => setRoleDialogOpen(false)}
+                className="p-1 text-[var(--secondary-text)] hover:text-[var(--main-text)]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {roleLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--teal)]" />
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  <p className="text-sm text-[var(--secondary-text)] mb-3">
+                    Select one or more roles for this user:
+                  </p>
+                  {availableRoles.map((role) => (
+                    <label 
+                      key={role.id} 
+                      className="flex items-start gap-3 p-3 rounded-lg border border-[var(--border-color)] hover:bg-[var(--page-background)] cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRoleIds.includes(role.id)}
+                        onChange={() => toggleRole(role.id)}
+                        className="mt-1 h-4 w-4 text-[var(--teal)] border-gray-300 rounded focus:ring-[var(--teal)]"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-[var(--main-text)]">{role.name}</p>
+                        {role.description && (
+                          <p className="text-sm text-[var(--secondary-text)]">{role.description}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-end gap-3 p-4 border-t border-[var(--border-color)]">
+              <Button
+                variant="outline"
+                onClick={() => setRoleDialogOpen(false)}
+                disabled={roleLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveUserRoles}
+                disabled={roleLoading}
+                className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white"
+              >
+                {roleLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Save Roles
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
