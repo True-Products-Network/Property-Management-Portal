@@ -100,7 +100,7 @@ export default function EditPropertyPage() {
   async function loadPortalUsers(associationId: string) {
     try {
       // Load portal users with PROPERTY_MANAGER or ASSOCIATION_MANAGER roles for this tenant
-      const response = await fetch(`/api/admin/users?associationId=${associationId}`);
+      const response = await fetch(`/api/portal/users?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
