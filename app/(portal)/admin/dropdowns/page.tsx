@@ -61,9 +61,15 @@ export default function AdminDropdownsPage() {
     const types: RecordTypeInfo[] = [];
     
     Object.entries(dropdowns).forEach(([recordType, fields]) => {
+      // Capitalize first letter of each word
+      const capitalizedLabel = recordType
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+      
       types.push({
         id: recordType,
-        label: recordType,
+        label: capitalizedLabel,
         fields: Object.keys(fields),
       });
     });
