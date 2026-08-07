@@ -132,7 +132,7 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
       return { success: false, error: "Contact not found" };
     }
     
-    return { success: true, data };
+    return { success: true, data: mapContact(data) };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }

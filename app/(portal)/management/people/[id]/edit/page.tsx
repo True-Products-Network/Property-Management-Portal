@@ -120,12 +120,14 @@ export default function EditContactPage() {
       
       const response = await fetch(`/api/contacts/${contactId}`);
       const result = await response.json();
+      console.log("[Edit Contact] API response:", result);
       
       if (!result.success) {
         throw new Error(result.error || "Failed to load contact");
       }
       
       const contact: Contact = result.data;
+      console.log("[Edit Contact] Contact data:", contact);
       setFormData({
         firstName: contact.firstName || "",
         lastName: contact.lastName || "",
