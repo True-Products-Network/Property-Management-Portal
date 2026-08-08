@@ -10,6 +10,7 @@ import {
   createAssociation,
 } from "@/lib/api/associations";
 import { checkRouteEntityLimit } from "@/lib/entitlements/entity-limits";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 import { z } from "zod";
 
 // Validation schema
@@ -44,15 +45,28 @@ const createAssociationSchema = z.object({
 
 // GET /api/associations
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     // Check authentication
     const user = await getSession();
     if (!user) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_LIST",
+        "association",
+        new Error("Unauthorized"),
+        { path: request.nextUrl.pathname }
+      );
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
+
+    context.userId = user.id;
+    context.tenantId = user.businessId;
 
     // Parse query params
     const { searchParams } = new URL(request.url);
@@ -73,13 +87,39 @@ export async function GET(request: NextRequest) {
       filters: status ? { status } : undefined,
     }, user.businessId);
 
+    const duration = Date.now() - startTime;
+
     if (!result.success) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_LIST",
+        "association",
+        new Error(result.error || "Failed to fetch associations"),
+        { page, pageSize, search, status, durationMs: duration }
+      );
       return NextResponse.json(result, { status: 400 });
     }
 
+    // Log successful list operation (low frequency, only log errors for list)
+    // await auditLoggers.apiCall(context, "GET", "/api/associations", 200, duration, true, {
+    //   page,
+    //   pageSize,
+    //   resultCount: result.data?.length || 0,
+    // });
+
     return NextResponse.json(result);
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Error in GET /api/associations:", error);
+    
+    await auditLoggers.error(
+      context,
+      "ASSOCIATION_LIST",
+      "association",
+      error instanceof Error ? error : new Error("Internal server error"),
+      { durationMs: duration }
+    );
+    
     return NextResponse.json(
       {
         success: false,
@@ -92,18 +132,37 @@ export async function GET(request: NextRequest) {
 
 // POST /api/associations
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     // Check authentication
     const user = await getSession();
     if (!user) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_CREATE",
+        "association",
+        new Error("Unauthorized"),
+        { path: request.nextUrl.pathname }
+      );
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    context.userId = user.id;
+    context.tenantId = user.businessId;
+
     // Check admin permission
     if (!isAdmin(user.roles)) {
+      await auditLoggers.securityEvent(
+        context,
+        "ASSOCIATION_CREATE_UNAUTHORIZED",
+        "warning",
+        { roles: user.roles }
+      );
       return NextResponse.json(
         { success: false, error: "Forbidden - Admin access required" },
         { status: 403 }
@@ -113,6 +172,13 @@ export async function POST(request: NextRequest) {
     // Check entity limits
     const limitCheck = await checkRouteEntityLimit(request, "associations");
     if (!limitCheck.allowed) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_CREATE",
+        "association",
+        new Error(limitCheck.error || "Association limit reached"),
+        { limitCheck }
+      );
       return NextResponse.json({ 
         success: false, 
         error: limitCheck.error || "Association limit reached",
@@ -127,6 +193,13 @@ export async function POST(request: NextRequest) {
     const validation = createAssociationSchema.safeParse(body);
 
     if (!validation.success) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_CREATE",
+        "association",
+        new Error("Validation failed"),
+        { validationErrors: validation.error.flatten().fieldErrors }
+      );
       return NextResponse.json(
         {
           success: false,
@@ -142,13 +215,42 @@ export async function POST(request: NextRequest) {
     const result = await createAssociation(validation.data, user.id, user.businessId);
     console.log("[Associations API POST] Create result:", JSON.stringify(result, null, 2));
 
+    const duration = Date.now() - startTime;
+
     if (!result.success) {
+      await auditLoggers.error(
+        context,
+        "ASSOCIATION_CREATE",
+        "association",
+        new Error(result.error || "Failed to create association"),
+        { data: validation.data, durationMs: duration }
+      );
       return NextResponse.json(result, { status: 400 });
     }
 
+    // Log successful creation
+    await auditLoggers.create(
+      context,
+      "association",
+      result.data?.id || "unknown",
+      validation.data.name,
+      validation.data,
+      { durationMs: duration }
+    );
+
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Error in POST /api/associations:", error);
+    
+    await auditLoggers.error(
+      context,
+      "ASSOCIATION_CREATE",
+      "association",
+      error instanceof Error ? error : new Error("Internal server error"),
+      { durationMs: duration }
+    );
+    
     return NextResponse.json(
       {
         success: false,

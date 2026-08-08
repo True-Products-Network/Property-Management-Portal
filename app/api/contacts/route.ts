@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getContacts, createContact } from "@/lib/api/contacts";
 import { isGhlConnected } from "@/lib/ghl/credentials";
 import { pushToGHL } from "@/lib/ghl/sync-engine";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -36,12 +37,25 @@ const createSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const user = await getSession();
     if (!user) {
       console.error("Contacts API: No user session found");
+      await auditLoggers.error(
+        context,
+        "CONTACT_LIST",
+        "contact",
+        new Error("Unauthorized"),
+        { path: request.nextUrl.pathname }
+      );
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    context.userId = user.id;
+    context.tenantId = user.businessId;
 
     const { searchParams } = new URL(request.url);
     const queryParams = {
@@ -70,23 +84,55 @@ export async function GET(request: NextRequest) {
     console.log("Contacts API: Fetching with params:", queryParams, "tenant:", tenantId);
     const result = await getContacts(queryParams, tenantId);
 
+    const duration = Date.now() - startTime;
+
     if (!result.success) {
       console.error("Contacts API: getContacts failed:", result.error);
+      await auditLoggers.error(
+        context,
+        "CONTACT_LIST",
+        "contact",
+        new Error(result.error || "Failed to fetch contacts"),
+        { queryParams, durationMs: duration }
+      );
       return NextResponse.json(result, { status: 400 });
     }
     
     console.log("Contacts API: Success, returned", result.data?.data?.length || 0, "contacts");
     return NextResponse.json(result);
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Contacts API: Unexpected error:", error);
+    await auditLoggers.error(
+      context,
+      "CONTACT_LIST",
+      "contact",
+      error instanceof Error ? error : new Error("Internal server error"),
+      { durationMs: duration }
+    );
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const user = await getSession();
-    if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+      await auditLoggers.error(
+        context,
+        "CONTACT_CREATE",
+        "contact",
+        new Error("Unauthorized"),
+        { path: request.nextUrl.pathname }
+      );
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    context.userId = user.id;
+    context.tenantId = user.businessId;
 
     const body = await request.json();
     console.log("[Contacts API] Received body:", JSON.stringify(body, null, 2));
@@ -94,6 +140,13 @@ export async function POST(request: NextRequest) {
     const validation = createSchema.safeParse(body);
     if (!validation.success) {
       console.error("[Contacts API] Validation failed:", validation.error.flatten().fieldErrors);
+      await auditLoggers.error(
+        context,
+        "CONTACT_CREATE",
+        "contact",
+        new Error("Validation failed"),
+        { validationErrors: validation.error.flatten().fieldErrors }
+      );
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
@@ -112,8 +165,18 @@ export async function POST(request: NextRequest) {
     console.log("[Contacts API] Creating contact with data:", validation.data, "userId:", user.id, "tenantId:", tenantId);
     const result = await createContact(validation.data, user.id, tenantId);
     console.log("[Contacts API] createContact result:", result);
+    
+    const duration = Date.now() - startTime;
+
     if (!result.success) {
       console.error("[Contacts API] createContact failed:", result.error);
+      await auditLoggers.error(
+        context,
+        "CONTACT_CREATE",
+        "contact",
+        new Error(result.error || "Failed to create contact"),
+        { data: validation.data, durationMs: duration }
+      );
       return NextResponse.json(result, { status: 400 });
     }
 
@@ -135,12 +198,30 @@ export async function POST(request: NextRequest) {
       ghlMessage = "GHL not connected. Contact admin to enable GHL integration for automatic sync.";
     }
 
+    // Log successful creation
+    await auditLoggers.create(
+      context,
+      "contact",
+      result.data?.id || "unknown",
+      `${validation.data.firstName} ${validation.data.lastName}`,
+      validation.data,
+      { ghlSync: ghlSyncResult, durationMs: duration }
+    );
+
     return NextResponse.json({
       ...result,
       ghlSync: ghlSyncResult,
       ghlMessage: ghlMessage,
     }, { status: 201 });
   } catch (error) {
+    const duration = Date.now() - startTime;
+    await auditLoggers.error(
+      context,
+      "CONTACT_CREATE",
+      "contact",
+      error instanceof Error ? error : new Error("Internal server error"),
+      { durationMs: duration }
+    );
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }

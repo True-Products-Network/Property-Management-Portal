@@ -43,6 +43,15 @@ interface AuditEvent {
   ipAddress: string;
   userAgent: string;
   severity: "info" | "warning" | "error" | "critical";
+  success?: boolean;
+  statusLabel?: string;
+  requestMethod?: string;
+  requestPath?: string;
+  responseStatus?: number;
+  durationMs?: number;
+  beforeValues?: Record<string, unknown>;
+  afterValues?: Record<string, unknown>;
+  errorMessage?: string;
 }
 
 const ACTION_ICONS: Record<string, React.ElementType> = {
@@ -115,6 +124,7 @@ export default function AuditLogPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAction, setFilterAction] = useState<string>("");
   const [filterSeverity, setFilterSeverity] = useState<string>("");
+  const [filterSuccess, setFilterSuccess] = useState<string>("");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
     start: "",
@@ -320,8 +330,11 @@ export default function AuditLogPage() {
 
     const matchesAction = filterAction === "" || event.action === filterAction;
     const matchesSeverity = filterSeverity === "" || event.severity === filterSeverity;
+    const matchesSuccess = filterSuccess === "" || 
+      (filterSuccess === "success" && event.success === true) ||
+      (filterSuccess === "failed" && event.success === false);
 
-    return matchesSearch && matchesAction && matchesSeverity;
+    return matchesSearch && matchesAction && matchesSeverity && matchesSuccess;
   });
 
   const uniqueActions = Array.from(new Set(events.map((e) => e.action)));
@@ -331,6 +344,8 @@ export default function AuditLogPage() {
     info: events.filter((e) => e.severity === "info").length,
     warning: events.filter((e) => e.severity === "warning").length,
     error: events.filter((e) => e.severity === "error" || e.severity === "critical").length,
+    success: events.filter((e) => e.success === true).length,
+    failed: events.filter((e) => e.success === false).length,
   };
 
   if (isLoading) {
@@ -364,11 +379,23 @@ export default function AuditLogPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-[var(--secondary-text)]">Total Events</p>
             <p className="text-2xl font-semibold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-[var(--secondary-text)]">Success</p>
+            <p className="text-2xl font-semibold text-green-600">{stats.success}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-[var(--secondary-text)]">Failed</p>
+            <p className="text-2xl font-semibold text-red-600">{stats.failed}</p>
           </CardContent>
         </Card>
         <Card>
@@ -427,6 +454,15 @@ export default function AuditLogPage() {
               <option value="error">Error</option>
               <option value="critical">Critical</option>
             </select>
+            <select
+              value={filterSuccess}
+              onChange={(e) => setFilterSuccess(e.target.value)}
+              className="input"
+            >
+              <option value="">All Status</option>
+              <option value="success">Success</option>
+              <option value="failed">Failed</option>
+            </select>
           </div>
         </CardContent>
       </Card>
@@ -463,6 +499,11 @@ export default function AuditLogPage() {
                             {event.entityType}
                           </Badge>
                           <Badge className={getSeverityColor(event.severity)}>{event.severity}</Badge>
+                          {event.success !== undefined && (
+                            <Badge className={event.success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                              {event.success ? "Success" : "Failed"}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-[var(--secondary-text)] truncate">
                           {event.userName} • {event.entityName}
@@ -512,6 +553,36 @@ export default function AuditLogPage() {
                               <p className="text-[var(--secondary-text)] text-sm mb-1">Details</p>
                               <pre className="text-xs bg-white p-2 rounded border border-[var(--border-color)] overflow-x-auto">
                                 {JSON.stringify(event.details, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {(event.beforeValues || event.afterValues) && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {event.beforeValues && (
+                                <div>
+                                  <p className="text-[var(--secondary-text)] text-sm mb-1">Before</p>
+                                  <pre className="text-xs bg-white p-2 rounded border border-[var(--border-color)] overflow-x-auto">
+                                    {JSON.stringify(event.beforeValues, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                              {event.afterValues && (
+                                <div>
+                                  <p className="text-[var(--secondary-text)] text-sm mb-1">After</p>
+                                  <pre className="text-xs bg-white p-2 rounded border border-[var(--border-color)] overflow-x-auto">
+                                    {JSON.stringify(event.afterValues, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {event.errorMessage && (
+                            <div>
+                              <p className="text-red-600 text-sm mb-1">Error</p>
+                              <pre className="text-xs bg-red-50 text-red-700 p-2 rounded border border-red-200 overflow-x-auto">
+                                {event.errorMessage}
                               </pre>
                             </div>
                           )}

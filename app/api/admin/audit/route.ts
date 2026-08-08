@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get("offset") || "0");
     const action = searchParams.get("action");
     const severity = searchParams.get("severity");
+    const success = searchParams.get("success");
+    const entityType = searchParams.get("entityType");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -40,6 +42,14 @@ export async function GET(request: NextRequest) {
 
     if (severity) {
       query = query.eq("severity", severity);
+    }
+
+    if (success !== null && success !== undefined) {
+      query = query.eq("success", success === "true");
+    }
+
+    if (entityType) {
+      query = query.eq("entity_type", entityType);
     }
 
     if (startDate) {
@@ -77,26 +87,16 @@ export async function GET(request: NextRequest) {
       }, {});
     }
 
-    const enrichedEvents = (events || []).map((event: { 
-      user_id: string; 
-      action: string; 
-      entity_type: string; 
-      entity_id: string;
-      details: { entity_name?: string };
-      created_at: string;
-      ip_address: string;
-      user_agent: string;
-      severity: string;
-      id: string;
-    }) => ({
+    const enrichedEvents = (events || []).map((event: any) => ({
       ...event,
       userName: userMap[event.user_id]?.name || (event.user_id === "system" ? "System" : "Unknown"),
       userEmail: userMap[event.user_id]?.email || "-",
-      entityName: event.details?.entity_name || `${event.entity_type} ${event.entity_id?.slice(0, 8)}`,
+      entityName: event.entity_name || event.details?.entity_name || `${event.entity_type} ${event.entity_id?.slice(0, 8)}`,
       timestamp: event.created_at,
       ipAddress: event.ip_address,
       userAgent: event.user_agent,
       severity: event.severity || "info",
+      statusLabel: event.success === true ? "Success" : event.success === false ? "Failed" : "Unknown",
     }));
 
     return NextResponse.json({ success: true, data: enrichedEvents });
