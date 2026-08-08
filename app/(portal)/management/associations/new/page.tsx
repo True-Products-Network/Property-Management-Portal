@@ -366,6 +366,14 @@ export default function NewAssociationPage() {
                 onChange={(value) => setFormData({ ...formData, type: value })}
                 placeholder="Select type..."
                 required
+                defaultOptions={[
+                  { value: "condominium", label: "Condominium" },
+                  { value: "hoa", label: "HOA" },
+                  { value: "cooperative", label: "Cooperative" },
+                  { value: "commercial", label: "Commercial" },
+                  { value: "mixed_use", label: "Mixed Use" },
+                  { value: "other", label: "Other" },
+                ]}
               />
 
               <DropdownSelect

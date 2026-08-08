@@ -312,6 +312,14 @@ export default function EditAssociationPage() {
                   value={formData.type || ""}
                   onChange={(value) => handleChange("type", value)}
                   required
+                  defaultOptions={[
+                    { value: "Condominium", label: "Condominium" },
+                    { value: "HOA", label: "HOA" },
+                    { value: "Cooperative", label: "Cooperative" },
+                    { value: "Commercial", label: "Commercial" },
+                    { value: "Mixed Use", label: "Mixed Use" },
+                    { value: "Other", label: "Other" },
+                  ]}
                 />
               </div>
 
