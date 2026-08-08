@@ -27,9 +27,9 @@ CREATE INDEX IF NOT EXISTS idx_compliance_property ON compliance_matters(propert
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS property_id UUID REFERENCES properties(id);
 CREATE INDEX IF NOT EXISTS idx_documents_property ON documents(property_id);
 
--- Payments - add property_id if missing
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS property_id UUID REFERENCES properties(id);
-CREATE INDEX IF NOT EXISTS idx_payments_property ON payments(property_id);
+-- Payment Records - add property_id if missing
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS property_id UUID REFERENCES properties(id);
+CREATE INDEX IF NOT EXISTS idx_payment_records_property ON payment_records(property_id);
 
 -- ============================================
 -- STEP 3: Verify unit_id columns exist where needed
@@ -43,9 +43,9 @@ CREATE INDEX IF NOT EXISTS idx_compliance_unit ON compliance_matters(unit_id);
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id);
 CREATE INDEX IF NOT EXISTS idx_documents_unit ON documents(unit_id);
 
--- Payments can optionally reference a Unit
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id);
-CREATE INDEX IF NOT EXISTS idx_payments_unit ON payments(unit_id);
+-- Payment Records can optionally reference a Unit
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id);
+CREATE INDEX IF NOT EXISTS idx_payment_records_unit ON payment_records(unit_id);
 
 -- Maintenance already has unit_id (correct)
 -- Inspections already has unit_id (correct)
@@ -140,4 +140,4 @@ COMMENT ON TABLE maintenance_requests IS 'Property-level entity. Links to Proper
 COMMENT ON TABLE inspections IS 'Property-level entity. Links to Property (required) and optionally Unit. Access controlled via Property → Association chain.';
 COMMENT ON TABLE compliance_matters IS 'Association-level entity. Links to Association (required) and optionally Property or Unit.';
 COMMENT ON TABLE documents IS 'Association-level entity. Links to Association (required) and optionally Property or Unit.';
-COMMENT ON TABLE payments IS 'Association-level entity. Links to Association (required) and optionally Property or Unit.';
+COMMENT ON TABLE payment_records IS 'Association-level entity. Links to Association (required) and optionally Property or Unit.';
