@@ -556,33 +556,90 @@ export default function EditAssociationPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Number of Properties with +/- buttons */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
                   Number of Properties
                 </label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formData.propertyCount || ""}
-                  onChange={(e) => handleChange("propertyCount", parseInt(e.target.value) || "")}
-                  placeholder="e.g., 5"
-                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const current = formData.propertyCount || 0;
+                      if (current > 0) {
+                        handleChange("propertyCount", current - 1);
+                      }
+                    }}
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.propertyCount || 0}
+                    onChange={(e) => handleChange("propertyCount", parseInt(e.target.value) || 0)}
+                    className="text-center"
+                    style={{ width: "80px" }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const current = formData.propertyCount || 0;
+                      handleChange("propertyCount", current + 1);
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
               </div>
 
+              {/* Number of Units with +/- buttons */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
                   Number of Units
                 </label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formData.unitCount || ""}
-                  onChange={(e) => handleChange("unitCount", parseInt(e.target.value) || "")}
-                  placeholder="e.g., 120"
-                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const current = formData.unitCount || 0;
+                      if (current > 0) {
+                        handleChange("unitCount", current - 1);
+                      }
+                    }}
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.unitCount || 0}
+                    onChange={(e) => handleChange("unitCount", parseInt(e.target.value) || 0)}
+                    className="text-center"
+                    style={{ width: "80px" }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const current = formData.unitCount || 0;
+                      handleChange("unitCount", current + 1);
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
               </div>
             </div>
 
+            {/* Assigned Property Manager */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-[var(--main-text)]">
                 Assigned Property Manager
@@ -594,7 +651,6 @@ export default function EditAssociationPage() {
                       <span className="text-sm font-medium">
                         {formData.assignedManagerName || "Selected Manager"}
                       </span>
-                      <span className="text-xs text-gray-500 block">ID: {formData.assignedManagerId}</span>
                     </div>
                     <Button
                       type="button"

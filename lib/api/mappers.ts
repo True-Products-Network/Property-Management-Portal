@@ -56,6 +56,7 @@ export function mapAssociation(row: any): Association {
     annualMeetingMonth: row.annual_meeting_month,
     managementStartDate: row.management_start_date,
     assignedManagerId: row.assigned_manager_id,
+    assignedManagerName: row.contacts ? `${row.contacts.first_name} ${row.contacts.last_name}` : undefined,
     financialPlatform: row.financial_platform,
     financialPortalLink: row.financial_portal_link,
     documentStorageLink: row.document_storage_link,

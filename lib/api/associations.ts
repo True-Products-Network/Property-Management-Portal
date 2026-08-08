@@ -27,6 +27,7 @@ export interface Association {
   annualMeetingMonth?: string;
   managementStartDate?: string;
   assignedManagerId?: string;
+  assignedManagerName?: string;
   financialPlatform?: string;
   financialPortalLink?: string;
   documentStorageLink?: string;
@@ -149,7 +150,7 @@ export async function getAssociation(
     
     const { data, error } = await supabase
       .from("associations")
-      .select("*")
+      .select("*, contacts:assigned_manager_id(first_name, last_name)")
       .eq("id", id)
       .single();
     
