@@ -3,7 +3,21 @@
 -- Ensure proper property_id columns exist for Association-level entities
 
 -- ============================================
--- STEP 1: Remove association_id from Property-level entities
+-- STEP 1: Drop policies that depend on association_id
+-- ============================================
+
+-- Drop maintenance policies that depend on association_id
+DROP POLICY IF EXISTS "Users can view maintenance in their associations" ON maintenance_requests;
+DROP POLICY IF EXISTS "Users can insert maintenance in their associations" ON maintenance_requests;
+DROP POLICY IF EXISTS "Users can update maintenance in their associations" ON maintenance_requests;
+
+-- Drop inspections policies that depend on association_id
+DROP POLICY IF EXISTS "Users can view inspections in their associations" ON inspections;
+DROP POLICY IF EXISTS "Users can insert inspections in their associations" ON inspections;
+DROP POLICY IF EXISTS "Users can update inspections in their associations" ON inspections;
+
+-- ============================================
+-- STEP 2: Remove association_id from Property-level entities
 -- ============================================
 
 -- Maintenance Requests should be Property-level (not Association-level)
@@ -15,7 +29,7 @@ ALTER TABLE maintenance_requests DROP COLUMN IF EXISTS association_id;
 ALTER TABLE inspections DROP COLUMN IF EXISTS association_id;
 
 -- ============================================
-=== STEP 2: Ensure property_id exists on Association-level entities
+-- STEP 3: Ensure property_id exists on Association-level entities
 -- These entities are owned by Association but can optionally reference a Property
 -- ============================================
 
@@ -32,7 +46,7 @@ ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS property_id UUID REFERENCES
 CREATE INDEX IF NOT EXISTS idx_payment_records_property ON payment_records(property_id);
 
 -- ============================================
--- STEP 3: Verify unit_id columns exist where needed
+-- STEP 4: Verify unit_id columns exist where needed
 -- ============================================
 
 -- Compliance can optionally reference a Unit
@@ -51,17 +65,10 @@ CREATE INDEX IF NOT EXISTS idx_payment_records_unit ON payment_records(unit_id);
 -- Inspections already has unit_id (correct)
 
 -- ============================================
--- STEP 4: Update RLS policies for corrected hierarchy
+-- STEP 5: Update RLS policies for corrected hierarchy
 -- ============================================
 
--- Drop old policies that referenced association_id for maintenance/inspections
-DROP POLICY IF EXISTS "Users can view maintenance in their associations" ON maintenance_requests;
-DROP POLICY IF EXISTS "Users can insert maintenance in their associations" ON maintenance_requests;
-DROP POLICY IF EXISTS "Users can update maintenance in their associations" ON maintenance_requests;
-
-DROP POLICY IF EXISTS "Users can view inspections in their associations" ON inspections;
-DROP POLICY IF EXISTS "Users can insert inspections in their associations" ON inspections;
-DROP POLICY IF EXISTS "Users can update inspections in their associations" ON inspections;
+-- Note: Old policies were already dropped in Step 1
 
 -- Create new policies for maintenance_requests (via property → association)
 CREATE POLICY "Users can view maintenance via property" ON maintenance_requests
@@ -126,14 +133,14 @@ CREATE POLICY "Users can update inspections via property" ON inspections
     );
 
 -- ============================================
--- STEP 5: Clean up old indexes
+-- STEP 6: Clean up old indexes
 -- ============================================
 
 DROP INDEX IF EXISTS idx_maintenance_association;
 DROP INDEX IF EXISTS idx_inspections_association;
 
 -- ============================================
--- STEP 6: Add helpful comments
+-- STEP 7: Add helpful comments
 -- ============================================
 
 COMMENT ON TABLE maintenance_requests IS 'Property-level entity. Links to Property (required) and optionally Unit. Access controlled via Property → Association chain.';
