@@ -232,7 +232,7 @@ export default function NewAssociationPage() {
         name: formData.name,
         shortName: formData.shortName || undefined,
         legalName: formData.legalName || undefined,
-        type: formData.type.charAt(0).toUpperCase() + formData.type.slice(1), // Convert to proper case
+        type: formData.type,
         addressStreet: formData.addressStreet || undefined,
         addressCity: formData.addressCity || undefined,
         addressState: formData.addressState || undefined,
@@ -366,14 +366,6 @@ export default function NewAssociationPage() {
                 onChange={(value) => setFormData({ ...formData, type: value })}
                 placeholder="Select type..."
                 required
-                defaultOptions={[
-                  { value: "condominium", label: "Condominium" },
-                  { value: "hoa", label: "HOA" },
-                  { value: "cooperative", label: "Cooperative" },
-                  { value: "commercial", label: "Commercial" },
-                  { value: "mixed_use", label: "Mixed Use" },
-                  { value: "other", label: "Other" },
-                ]}
               />
 
               <DropdownSelect

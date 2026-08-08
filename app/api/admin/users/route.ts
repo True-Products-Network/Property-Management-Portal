@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 
 interface Association {
   id: string;
@@ -8,6 +9,9 @@ interface Association {
 
 // GET /api/admin/users - Get all users from contacts table
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const supabase = await createClient();
     
@@ -15,11 +19,14 @@ export async function GET(request: NextRequest) {
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !authUser) {
+      await auditLoggers.error(context, "ADMIN_USER_LIST", "user", new Error("Unauthorized"), { path: request.nextUrl.pathname });
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
+    
+    context.userId = authUser.id;
 
     // Check if current user is admin
     console.log("[Admin Users API] Checking admin status for user ID:", authUser.id);
@@ -66,6 +73,7 @@ export async function GET(request: NextRequest) {
     // Allow access if user is admin in any context
     if (!currentUser?.is_admin && !isPlatformAdmin && !isTenantAdmin && !isAdminRole) {
       console.error("[Admin Users API] User is not admin:", authUser.id);
+      await auditLoggers.securityEvent(context, "ADMIN_ACCESS_DENIED", "warning", { reason: "User is not admin", userId: authUser.id });
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 }
@@ -191,6 +199,9 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const duration = Date.now() - startTime;
+    await auditLoggers.view(context, "user", "admin-list", "Admin User List", { count: mappedUsers.length, durationMs: duration });
+    
     return NextResponse.json({
       success: true,
       data: mappedUsers,
@@ -200,7 +211,9 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("[Admin Users API] Unexpected error:", error);
+    await auditLoggers.error(context, "ADMIN_USER_LIST", "user", error instanceof Error ? error : new Error("Internal server error"), { durationMs: duration });
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

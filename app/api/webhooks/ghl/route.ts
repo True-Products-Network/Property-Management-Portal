@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { queueSync } from "@/lib/ghl/sync-engine";
 import { EntityType } from "@/lib/ghl/field-mapper";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 
 // Webhook verification using HMAC
 import { createHmac } from "crypto";
@@ -162,6 +163,9 @@ async function processWebhookEvent(
  * POST handler for GHL webhooks
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     // Get raw body for signature verification
     const rawBody = await request.text();
@@ -170,6 +174,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Verify signature
     if (!verifyWebhookSignature(rawBody, signature)) {
       console.error("[GHL Webhook] Invalid signature");
+      await auditLoggers.securityEvent(context, "GHL_WEBHOOK_INVALID_SIGNATURE", "warning", { signature });
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
@@ -179,10 +184,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       payload = JSON.parse(rawBody);
     } catch {
       console.error("[GHL Webhook] Invalid JSON payload");
+      await auditLoggers.error(context, "GHL_WEBHOOK", "webhook", new Error("Invalid JSON payload"), { rawBody: rawBody.substring(0, 500) });
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
     const { event, id: eventId, data, timestamp } = payload;
+    context.tenantId = data?.locationId as string || "unknown";
 
     // Check for duplicate events
     if (await isDuplicateEvent(eventId)) {
@@ -198,6 +205,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.error("[GHL Webhook] Error processing event:", error);
     });
 
+    const duration = Date.now() - startTime;
+    await auditLoggers.apiCall(context, "POST", "/api/webhooks/ghl", 200, duration, true, { event, eventId });
+
     // Return success immediately
     return NextResponse.json({
       status: "received",
@@ -205,7 +215,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       eventId,
     });
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("[GHL Webhook] Error handling webhook:", error);
+    await auditLoggers.error(context, "GHL_WEBHOOK", "webhook", error instanceof Error ? error : new Error("Internal server error"), { durationMs: duration });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

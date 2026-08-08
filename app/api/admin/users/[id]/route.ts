@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 
 // DELETE /api/admin/users/[id] - Delete a user
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const { id } = await params;
     const supabase = await createClient();
@@ -13,8 +17,11 @@ export async function DELETE(
     // Check if user is authenticated
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
+      await auditLoggers.error(context, "ADMIN_USER_DELETE", "user", new Error("Unauthorized"), { path: request.nextUrl.pathname });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    
+    context.userId = authUser.id;
 
     // Check if user is admin
     const { data: currentUser } = await supabase
@@ -33,11 +40,13 @@ export async function DELETE(
     const isAdmin = currentUser?.is_admin || platformRole?.role === "PLATFORM_ADMIN";
 
     if (!isAdmin) {
+      await auditLoggers.securityEvent(context, "ADMIN_ACCESS_DENIED", "warning", { reason: "Admin access required", userId: authUser.id });
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
     // Prevent deleting yourself
     if (id === authUser.id) {
+      await auditLoggers.error(context, "ADMIN_USER_DELETE", "user", new Error("Cannot delete your own account"), { userId: id });
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
     }
 
@@ -65,6 +74,7 @@ export async function DELETE(
     }
 
     if (!contact) {
+      await auditLoggers.error(context, "ADMIN_USER_DELETE", "user", new Error("Contact not found"), { userId: id });
       return NextResponse.json({ error: "Contact not found" }, { status: 404 });
     }
 
@@ -95,9 +105,13 @@ export async function DELETE(
 
     if (contactError) {
       console.error("Error deleting contact:", contactError);
+      await auditLoggers.error(context, "ADMIN_USER_DELETE", "user", new Error("Failed to delete user"), { userId: id, error: contactError.message });
       return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
     }
 
+    const duration = Date.now() - startTime;
+    const contactName = contact ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() : "unknown";
+    
     // Create audit log entry
     await supabase.from("platform_audit_events").insert({
       event_type: "USER_DELETED",
@@ -105,15 +119,19 @@ export async function DELETE(
       entity_id: id,
       details: {
         email: contact?.email,
-        name: contact ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() : null,
+        name: contactName,
         deleted_by: authUser.id,
       },
       created_by: authUser.id,
     });
 
+    await auditLoggers.delete(context, "user", id, contactName || contact?.email || "unknown", { email: contact?.email, contactId: contact?.id }, { durationMs: duration });
+
     return NextResponse.json({ success: true });
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Error in DELETE /api/admin/users/[id]:", error);
+    await auditLoggers.error(context, "ADMIN_USER_DELETE", "user", error instanceof Error ? error : new Error("Internal server error"), { durationMs: duration });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -123,6 +141,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const { id } = await params;
     const supabase = await createClient();
@@ -130,8 +151,11 @@ export async function GET(
     // Check if user is authenticated
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) {
+      await auditLoggers.error(context, "ADMIN_USER_VIEW", "user", new Error("Unauthorized"), { path: request.nextUrl.pathname });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    
+    context.userId = authUser.id;
 
     // Check if user is admin
     const { data: currentUser } = await supabase
@@ -150,6 +174,7 @@ export async function GET(
     const isAdmin = currentUser?.is_admin || platformRole?.role === "PLATFORM_ADMIN";
 
     if (!isAdmin) {
+      await auditLoggers.securityEvent(context, "ADMIN_ACCESS_DENIED", "warning", { reason: "Admin access required", userId: authUser.id });
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -183,15 +208,22 @@ export async function GET(
     }
 
     if (!contact) {
+      await auditLoggers.error(context, "ADMIN_USER_VIEW", "user", new Error("User not found"), { userId: id });
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    const duration = Date.now() - startTime;
+    const contactName = contact ? `${contact.first_name || ''} ${contact.last_name || ''}`.trim() : "unknown";
+    await auditLoggers.view(context, "user", id, contactName || contact.email || "unknown", { durationMs: duration });
 
     return NextResponse.json({
       success: true,
       data: contact,
     });
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Error in GET /api/admin/users/[id]:", error);
+    await auditLoggers.error(context, "ADMIN_USER_VIEW", "user", error instanceof Error ? error : new Error("Internal server error"), { durationMs: duration });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

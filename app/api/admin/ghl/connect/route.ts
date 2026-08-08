@@ -3,24 +3,31 @@ import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
 import { createClient } from "@/lib/supabase/server";
 import { encrypt } from "@/lib/ghl/crypto";
-import { AuditLogger } from "@/lib/audit/logger";
+import { auditLoggers, extractAuditContext } from "@/lib/audit/enhanced-logger";
 
 // POST /api/admin/ghl/connect - Connect association to GHL
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const context = extractAuditContext(request);
+  
   try {
     const user = await getSession();
 
     if (!user || !isAdmin(user.roles)) {
+      await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Unauthorized"), { path: request.nextUrl.pathname });
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
       );
     }
+    
+    context.userId = user.id;
 
     const body = await request.json();
     const { associationId, credentials } = body;
 
     if (!associationId) {
+      await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Association ID is required"), { body });
       return NextResponse.json(
         { error: "Association ID is required" },
         { status: 400 }
@@ -28,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!credentials || !credentials.type) {
+      await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Credentials are required"), { body });
       return NextResponse.json(
         { error: "Credentials are required" },
         { status: 400 }
@@ -45,17 +53,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (assocError || !association) {
+      await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Association not found"), { associationId });
       return NextResponse.json(
         { error: "Association not found" },
         { status: 404 }
       );
     }
+    
+    context.tenantId = associationId;
 
     if (type === "oauth") {
       // OAuth Token connection
       const { accessToken, refreshToken, locationId: providedLocationId } = credentials;
 
       if (!accessToken || !refreshToken) {
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Both access token and refresh token are required"), { type: "oauth" });
         return NextResponse.json(
           { error: "Both access token and refresh token are required" },
           { status: 400 }
@@ -64,6 +76,7 @@ export async function POST(request: NextRequest) {
 
       // Basic validation
       if (accessToken.length < 20) {
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Access token appears to be invalid (too short)"), { type: "oauth" });
         return NextResponse.json(
           { error: "Access token appears to be invalid (too short)" },
           { status: 400 }
@@ -156,6 +169,7 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error("Error storing credentials:", insertError);
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Failed to store credentials"), { type: "oauth", error: insertError.message });
         return NextResponse.json(
           { error: "Failed to store credentials" },
           { status: 500 }
@@ -173,25 +187,16 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", associationId);
 
-      // Log audit event
-      const auditLogger = new AuditLogger();
-      await auditLogger.logAuditEvent({
-        actorId: user.id,
-        role: user.roles?.join(",") || "admin",
-        action: "ghl_connected",
-        associationId: associationId,
-        recordType: "integration",
-        recordId: locationData.id || providedLocationId,
-        newValue: {
-          connectionType: "oauth",
-          locationId: locationData.id || providedLocationId,
-          locationName: locationData.name,
-          companyId: locationData.companyId,
-          apiVersion: apiVersionUsed,
-          testSuccess,
-        },
-        reason: testSuccess ? "OAuth connection successful" : "Credentials saved but test failed",
-      });
+      const duration = Date.now() - startTime;
+      await auditLoggers.create(context, "integration", locationData.id || providedLocationId || "unknown", `GHL OAuth Connection - ${locationData.name || "unknown"}`, {
+        connectionType: "oauth",
+        locationId: locationData.id || providedLocationId,
+        locationName: locationData.name,
+        companyId: locationData.companyId,
+        apiVersion: apiVersionUsed,
+        testSuccess,
+        testError: testError || undefined,
+      }, { durationMs: duration, associationId, associationName: association.name });
 
       return NextResponse.json({
         success: true,
@@ -212,6 +217,7 @@ export async function POST(request: NextRequest) {
       const { apiKey, locationId: providedLocationId } = credentials;
 
       if (!apiKey) {
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("API key is required"), { type: "api_key" });
         return NextResponse.json(
           { error: "API key is required" },
           { status: 400 }
@@ -220,6 +226,7 @@ export async function POST(request: NextRequest) {
 
       // Basic validation
       if (apiKey.length < 10) {
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("API key appears to be invalid (too short)"), { type: "api_key" });
         return NextResponse.json(
           { error: "API key appears to be invalid (too short)" },
           { status: 400 }
@@ -299,6 +306,7 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error("Error storing credentials:", insertError);
+        await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Failed to store credentials"), { type: "api_key", error: insertError.message });
         return NextResponse.json(
           { error: "Failed to store credentials" },
           { status: 500 }
@@ -315,24 +323,15 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", associationId);
 
-      // Log audit event
-      const auditLogger = new AuditLogger();
-      await auditLogger.logAuditEvent({
-        actorId: user.id,
-        role: user.roles?.join(",") || "admin",
-        action: "ghl_connected",
-        associationId: associationId,
-        recordType: "integration",
-        recordId: locationData.id || providedLocationId,
-        newValue: {
-          connectionType: "api_key",
-          locationId: locationData.id || providedLocationId,
-          locationName: locationData.name,
-          apiVersion: apiVersionUsed,
-          testSuccess,
-        },
-        reason: testSuccess ? "API Key connection successful" : "Credentials saved but test failed",
-      });
+      const duration = Date.now() - startTime;
+      await auditLoggers.create(context, "integration", locationData.id || providedLocationId || "unknown", `GHL API Key Connection - ${locationData.name || "unknown"}`, {
+        connectionType: "api_key",
+        locationId: locationData.id || providedLocationId,
+        locationName: locationData.name,
+        apiVersion: apiVersionUsed,
+        testSuccess,
+        testError: testError || undefined,
+      }, { durationMs: duration, associationId, associationName: association.name });
 
       return NextResponse.json({
         success: true,
@@ -348,13 +347,16 @@ export async function POST(request: NextRequest) {
       });
 
     } else {
+      await auditLoggers.error(context, "GHL_CONNECT", "integration", new Error("Invalid connection type"), { type: credentials?.type });
       return NextResponse.json(
         { error: "Invalid connection type. Use 'oauth' or 'api_key'." },
         { status: 400 }
       );
     }
   } catch (error) {
+    const duration = Date.now() - startTime;
     console.error("Error connecting to GHL:", error);
+    await auditLoggers.error(context, "GHL_CONNECT", "integration", error instanceof Error ? error : new Error("Unknown error"), { durationMs: duration });
     return NextResponse.json(
       { error: "Failed to connect: " + (error instanceof Error ? error.message : "Unknown error") },
       { status: 500 }
