@@ -107,7 +107,6 @@ function getRoleVariations(roleName: string): string[] {
   // Add common variations
   const commonVariations: Record<string, string[]> = {
     "ADMIN_USER": ["Admin User"],
-    "BUSINESS_ADMIN": ["Business Admin"],
     "PORTFOLIO_MANAGER": ["Portfolio Manager"],
     "ASSOCIATION_MANAGER": ["Association Manager"],
     "PROPERTY_MANAGER": ["Property Manager"],
@@ -294,18 +293,18 @@ function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[
   if (permissions.some((p: any) => p.module === "dashboard" && p.read)) {
     const dashboardItems = [];
     
-    // Check if user has Portfolio Manager role
+    // Check if user has Portfolio Manager role (or Admin User who sees both)
     const hasPortfolioManager = roleNames.some(r => 
-      r === "Portfolio Manager" || r === "PORTFOLIO_MANAGER"
+      r === "Portfolio Manager" || r === "PORTFOLIO_MANAGER" ||
+      r === "Admin User" || r === "ADMIN_USER"
     );
     
-    // Check if user has Association Manager or other association-level role
+    // Check if user has Association Manager or other association-level role (or Admin User who sees both)
     const hasAssociationRole = roleNames.some(r => 
       r === "Association Manager" || r === "ASSOCIATION_MANAGER" ||
       r === "Property Manager" || r === "PROPERTY_MANAGER" ||
       r === "Board Member" || r === "BOARD_MEMBER" ||
-      r === "Admin User" || r === "ADMIN_USER" ||
-      r === "Business Admin" || r === "BUSINESS_ADMIN"
+      r === "Admin User" || r === "ADMIN_USER"
     );
     
     // Portfolio Manager sees "Portfolio"
