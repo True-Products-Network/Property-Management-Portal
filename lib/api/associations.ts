@@ -63,6 +63,8 @@ export interface CreateAssociationInput {
   documentStorageLink?: string | null;
   emergencyInstructions?: string | null;
   generalNotes?: string | null;
+  propertyCount?: number | null;
+  unitCount?: number | null;
 }
 
 export interface UpdateAssociationInput extends Partial<CreateAssociationInput> {
@@ -225,6 +227,8 @@ export async function createAssociation(
         document_storage_link: input.documentStorageLink,
         emergency_instructions: input.emergencyInstructions,
         general_notes: input.generalNotes,
+        property_count: input.propertyCount,
+        unit_count: input.unitCount,
         business_id: businessId,
         created_by: creatorContact?.id || null,
         updated_by: creatorContact?.id || null,
@@ -295,6 +299,8 @@ export async function updateAssociation(
         document_storage_link: input.documentStorageLink,
         emergency_instructions: input.emergencyInstructions,
         general_notes: input.generalNotes,
+        property_count: input.propertyCount,
+        unit_count: input.unitCount,
         updated_by: updaterContact?.id || null,
         updated_at: new Date().toISOString(),
       })

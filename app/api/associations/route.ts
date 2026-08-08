@@ -15,18 +15,31 @@ import { z } from "zod";
 // Validation schema
 const createAssociationSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  shortName: z.string().optional(),
   legalName: z.string().optional(),
   type: z.string().min(1, "Type is required"),
+  status: z.string().optional().default("active"),
   addressStreet: z.string().optional(),
   addressCity: z.string().optional(),
   addressState: z.string().optional(),
   addressZip: z.string().optional(),
+  mailingAddress: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  taxId: z.string().optional(),
   fiscalYear: z.string().optional(),
+  fiscalYearEndMonth: z.string().optional(),
+  fiscalYearEndDay: z.number().optional(),
   annualMeetingMonth: z.string().optional(),
   managementStartDate: z.string().optional(),
   assignedManagerId: z.string().uuid().optional(),
+  financialPlatform: z.string().optional(),
+  financialPortalLink: z.string().optional(),
+  documentStorageLink: z.string().optional(),
+  emergencyInstructions: z.string().optional(),
+  generalNotes: z.string().optional(),
+  propertyCount: z.number().optional(),
+  unitCount: z.number().optional(),
 });
 
 // GET /api/associations
