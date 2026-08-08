@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
 
     // Build menu from permissions
     const permissions = roleData.permissions || [];
-    const menu = buildMenuFromPermissions(permissions);
+    const menu = buildMenuFromPermissions(permissions, roleData.name);
 
     return NextResponse.json({
       success: true,
@@ -180,7 +180,7 @@ function getPlatformAdminMenu(): any[] {
 }
 
 // Build menu structure from permissions for regular users
-function buildMenuFromPermissions(permissions: any[]): any[] {
+function buildMenuFromPermissions(permissions: any[], roleName: string): any[] {
   const menuGroups: Record<string, any> = {
     dashboard: { id: "dashboard", label: "Dashboard", items: [] },
     entities: { id: "entities", label: "Entities", items: [] },
@@ -266,12 +266,14 @@ function buildMenuFromPermissions(permissions: any[]): any[] {
   // Build final menu array, only including groups with items
   const menu = [];
   
-  // Dashboard always first
+  // Dashboard always first - label depends on role
   if (permissions.some((p: any) => p.module === "dashboard" && p.read)) {
+    // Portfolio Manager sees "Portfolio", others see "Dashboard"
+    const isPortfolioManager = roleName === "Portfolio Manager" || roleName === "PORTFOLIO_MANAGER";
     menu.push({
       id: "dashboard",
       items: [
-        { label: "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
+        { label: isPortfolioManager ? "Portfolio" : "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
       ],
     });
   }
