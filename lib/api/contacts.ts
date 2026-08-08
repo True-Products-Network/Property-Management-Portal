@@ -34,6 +34,7 @@ export interface Contact {
   portalInvitationStatus: string;
   portalInvitedAt?: string;
   allowLogin?: boolean;
+  roles?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -73,7 +74,7 @@ export async function getContacts(
     
     let query = supabase
       .from("contacts")
-      .select("*", { count: "exact" });
+      .select("*, contact_roles(role)", { count: "exact" });
     
     // Filter by tenant_id if provided
     if (tenantId) {

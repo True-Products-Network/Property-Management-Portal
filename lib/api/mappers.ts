@@ -149,6 +149,7 @@ export function mapContact(row: any): Contact {
     portalInvitationStatus: row.portal_invitation_status,
     portalInvitedAt: row.portal_invited_at,
     allowLogin: row.allow_login,
+    roles: row.contact_roles?.map((r: any) => r.role) || [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
