@@ -189,12 +189,12 @@ CREATE POLICY "Users can insert inspections in their associations" ON inspection
 -- ============================================
 
 -- Function to check if user is portfolio admin (can see all associations)
-CREATE OR REPLACE FUNCTION is_portfolio_admin(user_id UUID)
+CREATE OR REPLACE FUNCTION is_portfolio_admin(user_id TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
     RETURN EXISTS (
         SELECT 1 FROM user_roles 
-        WHERE user_id = $1 
+        WHERE user_id = $1::UUID 
         AND role IN ('PORTFOLIO_MANAGER', 'ADMIN_USER', 'PLATFORM_ADMIN')
         AND revoked_at IS NULL
     );
@@ -202,13 +202,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to get user's association IDs
-CREATE OR REPLACE FUNCTION get_user_association_ids(user_id UUID)
+CREATE OR REPLACE FUNCTION get_user_association_ids(user_id TEXT)
 RETURNS TABLE(association_id UUID) AS $$
 BEGIN
     RETURN QUERY
     SELECT DISTINCT ur.association_id
     FROM user_roles ur
-    WHERE ur.user_id = $1
+    WHERE ur.user_id = $1::UUID
     AND ur.association_id IS NOT NULL
     AND ur.revoked_at IS NULL;
 END;
