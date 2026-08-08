@@ -6,7 +6,7 @@
 -- STEP 1: Rename existing dashboard module to portfolio
 -- ============================================
 
-UPDATE portal_roles
+UPDATE roles
 SET permissions = (
     SELECT jsonb_agg(
         CASE 
@@ -27,7 +27,7 @@ WHERE EXISTS (
 -- ============================================
 
 -- Portfolio Manager gets portfolio view
-UPDATE portal_roles
+UPDATE roles
 SET permissions = permissions || '[
   {
     "module": "portfolio",
@@ -44,7 +44,7 @@ AND NOT EXISTS (
 );
 
 -- Business Admin gets portfolio view
-UPDATE portal_roles
+UPDATE roles
 SET permissions = permissions || '[
   {
     "module": "portfolio",
@@ -64,7 +64,7 @@ AND NOT EXISTS (
 -- STEP 3: Update association_dashboard to dashboard
 -- ============================================
 
-UPDATE portal_roles
+UPDATE roles
 SET permissions = (
     SELECT jsonb_agg(
         CASE 
@@ -85,7 +85,7 @@ WHERE EXISTS (
 -- ============================================
 
 -- Association Manager gets dashboard
-UPDATE portal_roles
+UPDATE roles
 SET permissions = permissions || '[
   {
     "module": "dashboard",
@@ -102,7 +102,7 @@ AND NOT EXISTS (
 );
 
 -- Property Manager gets dashboard
-UPDATE portal_roles
+UPDATE roles
 SET permissions = permissions || '[
   {
     "module": "dashboard",
@@ -119,7 +119,7 @@ AND NOT EXISTS (
 );
 
 -- Board Member gets dashboard
-UPDATE portal_roles
+UPDATE roles
 SET permissions = permissions || '[
   {
     "module": "dashboard",
@@ -134,12 +134,3 @@ AND NOT EXISTS (
   SELECT 1 FROM jsonb_array_elements(permissions) AS perm
   WHERE perm->>'module' = 'dashboard'
 );
-
--- ============================================
--- STEP 5: Sync to roles table
--- ============================================
-
-UPDATE roles r
-SET permissions = pr.permissions
-FROM portal_roles pr
-WHERE r.name = pr.name;
