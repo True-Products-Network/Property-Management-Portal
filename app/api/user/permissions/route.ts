@@ -30,11 +30,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get user's role from user_metadata for regular users
+    // Get user's roles from user_metadata for regular users
     const userRoles = user.user_metadata?.roles || [];
-    const primaryRole = userRoles[0];
 
-    if (!primaryRole) {
+    if (userRoles.length === 0) {
       return NextResponse.json({ 
         permissions: [],
         menu: [],
@@ -43,78 +42,51 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Try to find role - handle different naming conventions
-    // user_metadata might have "ADMIN_USER" but portal_roles has "Admin User"
-    const roleVariations = [
-      primaryRole, // exact match
-      primaryRole.replace(/_/g, " "), // ADMIN_USER -> ADMIN USER
-      primaryRole.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()), // ADMIN_USER -> Admin User (title case)
-      primaryRole.replace(/_/g, "_"), // just in case
-    ];
-    
-    // Also add common variations
-    if (primaryRole === "ADMIN_USER") {
-      roleVariations.push("Admin User");
-    } else if (primaryRole === "PORTFOLIO_MANAGER") {
-      roleVariations.push("Portfolio Manager");
-    } else if (primaryRole === "ASSOCIATION_MANAGER") {
-      roleVariations.push("Association Manager");
-    } else if (primaryRole === "PROPERTY_MANAGER") {
-      roleVariations.push("Property Manager");
-    } else if (primaryRole === "BOARD_MEMBER") {
-      roleVariations.push("Board Member");
-    } else if (primaryRole === "VENDOR_CONTRACTOR") {
-      roleVariations.push("Vendor Contractor");
-    } else if (primaryRole === "RESIDENT") {
-      roleVariations.push("Resident");
-    } else if (primaryRole === "OWNER") {
-      roleVariations.push("Owner");
-    } else if (primaryRole === "STAFF") {
-      roleVariations.push("Staff");
-    } else if (primaryRole === "FINANCE_USER") {
-      roleVariations.push("Finance User");
+    // Get variations for all user roles
+    const allRoleVariations: string[] = [];
+    for (const userRole of userRoles) {
+      const variations = getRoleVariations(userRole);
+      allRoleVariations.push(...variations);
     }
 
-    // Fetch role details from roles table - try different name formats
-    let roleData = null;
-    for (const roleName of roleVariations) {
-      const { data, error } = await supabase
-        .from("roles")
-        .select("name, description, permissions, requires_mfa")
-        .eq("name", roleName)
-        .eq("is_active", true)
-        .maybeSingle();
-      
-      if (data) {
-        roleData = data;
-        break;
-      }
-    }
+    // Fetch all role details from roles table
+    const { data: roleDataList, error: rolesError } = await supabase
+      .from("roles")
+      .select("name, description, permissions, requires_mfa")
+      .in("name", allRoleVariations)
+      .eq("is_active", true);
 
-    if (!roleData) {
-      console.error("Role not found in roles:", primaryRole, "tried:", roleVariations);
+    if (rolesError || !roleDataList || roleDataList.length === 0) {
+      console.error("Roles not found:", userRoles, "tried:", allRoleVariations);
       return NextResponse.json({ 
         permissions: [],
         menu: [],
-        role: primaryRole,
+        role: userRoles[0],
         isPlatformAdmin: false,
       });
     }
 
+    // Merge permissions from all roles (OR logic - if any role has permission, user has it)
+    const mergedPermissions = mergePermissions(roleDataList.map((r: { permissions: any }) => r.permissions || []));
+    
+    // Collect all role names for menu labeling
+    const roleNames = roleDataList.map((r: { name: string }) => r.name);
 
+    // Build menu from merged permissions
+    const menu = buildMenuFromPermissions(mergedPermissions, roleNames);
 
-    // Build menu from permissions
-    const permissions = roleData.permissions || [];
-    const menu = buildMenuFromPermissions(permissions, roleData.name);
+    // Return primary role info (first role) but include all roles
+    const primaryRoleData = roleDataList[0];
 
     return NextResponse.json({
       success: true,
       role: {
-        name: roleData.name,
-        description: roleData.description,
-        requires_mfa: roleData.requires_mfa,
+        name: primaryRoleData.name,
+        description: primaryRoleData.description,
+        requires_mfa: primaryRoleData.requires_mfa,
       },
-      permissions: permissions,
+      roles: roleNames,
+      permissions: mergedPermissions,
       menu: menu,
       isPlatformAdmin: false,
     });
@@ -122,6 +94,57 @@ export async function GET(request: NextRequest) {
     console.error("Error in GET /api/user/permissions:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+// Get all possible variations of a role name for matching
+function getRoleVariations(roleName: string): string[] {
+  const variations = [
+    roleName, // exact match
+    roleName.replace(/_/g, " "), // ADMIN_USER -> ADMIN USER
+    roleName.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()), // ADMIN_USER -> Admin User
+  ];
+
+  // Add common variations
+  const commonVariations: Record<string, string[]> = {
+    "ADMIN_USER": ["Admin User"],
+    "PORTFOLIO_MANAGER": ["Portfolio Manager"],
+    "ASSOCIATION_MANAGER": ["Association Manager"],
+    "PROPERTY_MANAGER": ["Property Manager"],
+    "BOARD_MEMBER": ["Board Member"],
+    "VENDOR_CONTRACTOR": ["Vendor Contractor"],
+    "RESIDENT": ["Resident"],
+    "OWNER": ["Owner"],
+    "STAFF": ["Staff"],
+    "FINANCE_USER": ["Finance User"],
+  };
+
+  if (commonVariations[roleName]) {
+    variations.push(...commonVariations[roleName]);
+  }
+
+  return [...new Set(variations)];
+}
+
+// Merge permissions from multiple roles (OR logic)
+function mergePermissions(permissionsList: any[][]): any[] {
+  const permissionMap = new Map<string, any>();
+
+  for (const permissions of permissionsList) {
+    for (const perm of permissions) {
+      const existing = permissionMap.get(perm.module);
+      if (existing) {
+        // OR the permissions together
+        existing.read = existing.read || perm.read;
+        existing.write = existing.write || perm.write;
+        existing.delete = existing.delete || perm.delete;
+        existing.approve = existing.approve || perm.approve;
+      } else {
+        permissionMap.set(perm.module, { ...perm });
+      }
+    }
+  }
+
+  return Array.from(permissionMap.values());
 }
 
 // Platform Admin permissions (full access)
@@ -180,7 +203,7 @@ function getPlatformAdminMenu(): any[] {
 }
 
 // Build menu structure from permissions for regular users
-function buildMenuFromPermissions(permissions: any[], roleName: string): any[] {
+function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[] {
   const menuGroups: Record<string, any> = {
     dashboard: { id: "dashboard", label: "Dashboard", items: [] },
     entities: { id: "entities", label: "Entities", items: [] },
@@ -266,15 +289,53 @@ function buildMenuFromPermissions(permissions: any[], roleName: string): any[] {
   // Build final menu array, only including groups with items
   const menu = [];
   
-  // Dashboard always first - label depends on role
+  // Dashboard/Portfolio menu items - depends on roles
   if (permissions.some((p: any) => p.module === "dashboard" && p.read)) {
-    // Portfolio Manager sees "Portfolio", others see "Dashboard"
-    const isPortfolioManager = roleName === "Portfolio Manager" || roleName === "PORTFOLIO_MANAGER";
+    const dashboardItems = [];
+    
+    // Check if user has Portfolio Manager role
+    const hasPortfolioManager = roleNames.some(r => 
+      r === "Portfolio Manager" || r === "PORTFOLIO_MANAGER"
+    );
+    
+    // Check if user has Association Manager or other association-level role
+    const hasAssociationRole = roleNames.some(r => 
+      r === "Association Manager" || r === "ASSOCIATION_MANAGER" ||
+      r === "Property Manager" || r === "PROPERTY_MANAGER" ||
+      r === "Board Member" || r === "BOARD_MEMBER" ||
+      r === "Admin User" || r === "ADMIN_USER"
+    );
+    
+    // Portfolio Manager sees "Portfolio"
+    if (hasPortfolioManager) {
+      dashboardItems.push({ 
+        label: "Portfolio", 
+        href: "/management/overview", 
+        icon: "LayoutDashboard" 
+      });
+    }
+    
+    // Association roles see "Dashboard" (or both if they have both roles)
+    if (hasAssociationRole) {
+      dashboardItems.push({ 
+        label: "Dashboard", 
+        href: "/management/overview", 
+        icon: "LayoutDashboard" 
+      });
+    }
+    
+    // If neither specific role matched but they have dashboard permission, show Dashboard
+    if (dashboardItems.length === 0) {
+      dashboardItems.push({ 
+        label: "Dashboard", 
+        href: "/management/overview", 
+        icon: "LayoutDashboard" 
+      });
+    }
+    
     menu.push({
       id: "dashboard",
-      items: [
-        { label: isPortfolioManager ? "Portfolio" : "Dashboard", href: "/management/overview", icon: "LayoutDashboard" },
-      ],
+      items: dashboardItems,
     });
   }
 
