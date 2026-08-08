@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       page: parseInt(searchParams.get("page") || "1"),
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       search: searchParams.get("search") || undefined,
+      associationId: searchParams.get("associationId") || undefined,
       propertyId: searchParams.get("propertyId") || undefined,
       unitId: searchParams.get("unitId") || undefined,
       status: searchParams.get("status") || undefined,
