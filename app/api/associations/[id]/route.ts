@@ -30,6 +30,8 @@ const updateSchema = z.object({
   documentStorageLink: z.string().optional().nullable(),
   emergencyInstructions: z.string().optional().nullable(),
   generalNotes: z.string().optional().nullable(),
+  propertyCount: z.number().optional().nullable(),
+  unitCount: z.number().optional().nullable(),
 });
 
 export async function GET(
