@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Loader2,
   Calendar,
+  Cog,
 } from "lucide-react";
 
 interface AuditEvent {
@@ -372,10 +373,18 @@ export default function AuditLogPage() {
             <p className="text-[var(--secondary-text)] mt-1">System activity and security events</p>
           </div>
         </div>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/audit/settings">
+            <Button variant="outline">
+              <Cog className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

@@ -4,6 +4,93 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 
+export interface AuditSettings {
+  enabled: boolean;
+  logSuccessfulReads: boolean;
+  logFailedReads: boolean;
+  logSuccessfulWrites: boolean;
+  logFailedWrites: boolean;
+  logAuthentication: boolean;
+  logSecurityEvents: boolean;
+  retentionDays: number;
+}
+
+const DEFAULT_SETTINGS: AuditSettings = {
+  enabled: true,
+  logSuccessfulReads: false,
+  logFailedReads: true,
+  logSuccessfulWrites: true,
+  logFailedWrites: true,
+  logAuthentication: true,
+  logSecurityEvents: true,
+  retentionDays: 90,
+};
+
+// Cache settings for 1 minute to avoid repeated DB calls
+let cachedSettings: AuditSettings | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 60000; // 1 minute
+
+// Get audit settings from database
+async function getAuditSettings(): Promise<AuditSettings> {
+  const now = Date.now();
+  
+  // Return cached settings if still valid
+  if (cachedSettings && (now - cacheTimestamp) < CACHE_TTL) {
+    return cachedSettings;
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "audit_settings")
+      .single();
+
+    if (error || !data) {
+      cachedSettings = DEFAULT_SETTINGS;
+    } else {
+      cachedSettings = { ...DEFAULT_SETTINGS, ...data.value };
+    }
+  } catch {
+    cachedSettings = DEFAULT_SETTINGS;
+  }
+
+  cacheTimestamp = now;
+  return cachedSettings || DEFAULT_SETTINGS;
+}
+
+// Check if logging should occur based on settings
+async function shouldLog(
+  action: string,
+  success: boolean,
+  isRead: boolean
+): Promise<boolean> {
+  const settings = await getAuditSettings();
+
+  // Master switch
+  if (!settings.enabled) return false;
+
+  // Authentication events
+  if (action.includes("LOGIN") || action.includes("LOGOUT")) {
+    return settings.logAuthentication;
+  }
+
+  // Security events
+  if (action.includes("SECURITY") || action.includes("UNAUTHORIZED")) {
+    return settings.logSecurityEvents;
+  }
+
+  // Read operations
+  if (isRead) {
+    return success ? settings.logSuccessfulReads : settings.logFailedReads;
+  }
+
+  // Write operations (create, update, delete)
+  return success ? settings.logSuccessfulWrites : settings.logFailedWrites;
+}
+
 export interface AuditContext {
   userId?: string;
   tenantId?: string;
@@ -63,6 +150,15 @@ export function extractAuditContext(request: NextRequest): Partial<AuditContext>
 // Main audit logging function
 export async function logAudit(entry: AuditEntry): Promise<void> {
   try {
+    // Determine if this is a read operation
+    const isRead = entry.action.includes("_VIEW") || entry.action.includes("_LIST") || entry.action === "API_CALL";
+    
+    // Check if we should log based on settings
+    const shouldLogEntry = await shouldLog(entry.action, entry.success, isRead);
+    if (!shouldLogEntry) {
+      return; // Skip logging based on settings
+    }
+
     const supabase = await createClient();
     
     const { error } = await supabase.from("audit_logs").insert({

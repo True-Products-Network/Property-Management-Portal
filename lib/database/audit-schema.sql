@@ -1,6 +1,19 @@
 -- Enhanced Audit Logging Schema
 -- Run this in Supabase SQL Editor
 
+-- Create system_settings table if not exists
+CREATE TABLE IF NOT EXISTS system_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key VARCHAR(255) UNIQUE NOT NULL,
+    value JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_by UUID
+);
+
+-- Create index for system_settings
+CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
+
 -- Add success column to existing audit_logs table
 ALTER TABLE audit_logs 
 ADD COLUMN IF NOT EXISTS success BOOLEAN DEFAULT true,
