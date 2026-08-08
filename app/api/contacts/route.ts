@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
       sortBy: searchParams.get("sortBy") || "last_name",
       sortOrder: (searchParams.get("sortOrder") || "asc") as "asc" | "desc",
       portalUserId: searchParams.get("portalUserId") || undefined,
+      associationId: searchParams.get("associationId") || undefined,
     };
     
     // Get tenant_id for filtering
