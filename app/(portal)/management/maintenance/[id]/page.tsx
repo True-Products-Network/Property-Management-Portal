@@ -31,6 +31,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +96,7 @@ interface Vendor {
   primaryContactName?: string;
   primaryContactEmail?: string;
   primaryContactPhone?: string;
+  category?: string;
 }
 
 interface Contact {
@@ -292,6 +295,19 @@ export default function MaintenanceRequestDetailPage() {
   const [isLoadingRelated, setIsLoadingRelated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("activity");
+
+  // Modal states
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showCostModal, setShowCostModal] = useState(false);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoadingVendors, setIsLoadingVendors] = useState(false);
+  
+  // Cost form state
+  const [costForm, setCostForm] = useState({
+    estimatedCost: "",
+    actualCost: "",
+    approvedAmount: "",
+  });
 
   // Fetch maintenance request
   useEffect(() => {
@@ -544,6 +560,112 @@ export default function MaintenanceRequestDetailPage() {
     } catch (error) {
       console.error("Error updating status:", error);
       alert(error instanceof Error ? error.message : "Failed to update status");
+    }
+  }
+
+  // Load vendors for assignment
+  async function loadVendors() {
+    setIsLoadingVendors(true);
+    try {
+      const response = await fetch("/api/vendors");
+      const result = await response.json();
+      if (result.success) {
+        setVendors(result.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading vendors:", error);
+    } finally {
+      setIsLoadingVendors(false);
+    }
+  }
+
+  // Open vendor assignment modal
+  function openVendorModal() {
+    setShowVendorModal(true);
+    loadVendors();
+  }
+
+  // Assign vendor to maintenance request
+  async function assignVendor(vendorId: string) {
+    try {
+      const response = await fetch(`/api/maintenance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignedVendorId: vendorId, status: "vendor_assigned" }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to assign vendor");
+      }
+
+      setShowVendorModal(false);
+      await loadRequest();
+    } catch (error) {
+      console.error("Error assigning vendor:", error);
+      alert(error instanceof Error ? error.message : "Failed to assign vendor");
+    }
+  }
+
+  // Open cost update modal
+  function openCostModal() {
+    setCostForm({
+      estimatedCost: request?.estimatedCost?.toString() || "",
+      actualCost: request?.actualCost?.toString() || "",
+      approvedAmount: request?.approvedAmount?.toString() || "",
+    });
+    setShowCostModal(true);
+  }
+
+  // Update costs
+  async function updateCosts() {
+    try {
+      const body: any = {};
+      if (costForm.estimatedCost !== "") body.estimatedCost = parseFloat(costForm.estimatedCost);
+      if (costForm.actualCost !== "") body.actualCost = parseFloat(costForm.actualCost);
+      if (costForm.approvedAmount !== "") body.approvedAmount = parseFloat(costForm.approvedAmount);
+
+      const response = await fetch(`/api/maintenance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update costs");
+      }
+
+      setShowCostModal(false);
+      await loadRequest();
+    } catch (error) {
+      console.error("Error updating costs:", error);
+      alert(error instanceof Error ? error.message : "Failed to update costs");
+    }
+  }
+
+  // Escalate to emergency
+  async function handleEscalate() {
+    try {
+      const response = await fetch(`/api/maintenance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urgency: "emergency" }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to escalate");
+      }
+
+      await loadRequest();
+      alert("Maintenance request escalated to emergency");
+    } catch (error) {
+      console.error("Error escalating:", error);
+      alert(error instanceof Error ? error.message : "Failed to escalate");
     }
   }
 
@@ -974,19 +1096,19 @@ export default function MaintenanceRequestDetailPage() {
           </Button>
         )}
         {!request.assignedVendorId && (
-          <Button variant="outline">
+          <Button variant="outline" onClick={openVendorModal}>
             <Truck className="w-4 h-4 mr-2" />
             Assign Vendor
           </Button>
         )}
         {request.status !== "completed" && request.status !== "closed" && (
-          <Button variant="outline">
+          <Button variant="outline" onClick={openCostModal}>
             <DollarSign className="w-4 h-4 mr-2" />
             Update Cost
           </Button>
         )}
         {request.urgency !== "emergency" && request.status !== "completed" && request.status !== "closed" && (
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleEscalate}>
             <AlertCircle className="w-4 h-4 mr-2" />
             Escalate
           </Button>
@@ -1002,6 +1124,130 @@ export default function MaintenanceRequestDetailPage() {
           </Button>
         )}
       </div>
+
+      {/* Vendor Assignment Modal */}
+      {showVendorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Assign Vendor</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowVendorModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {isLoadingVendors ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : vendors.length === 0 ? (
+                <p className="text-center text-gray-500 py-4">No vendors found</p>
+              ) : (
+                <div className="space-y-2">
+                  {vendors.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => assignVendor(v.id)}
+                      className="w-full text-left p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                    >
+                      <p className="font-medium">{v.companyName}</p>
+                      {v.primaryContactName && (
+                        <p className="text-sm text-gray-500">{v.primaryContactName}</p>
+                      )}
+                      {v.category && (
+                        <p className="text-xs text-gray-400">{v.category}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cost Update Modal */}
+      {showCostModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Update Costs</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowCostModal(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <Label htmlFor="estimated-cost">Estimated Cost ($)</Label>
+                <Input
+                  id="estimated-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costForm.estimatedCost}
+                  onChange={(e) => setCostForm({ ...costForm, estimatedCost: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="actual-cost">Actual Cost ($)</Label>
+                <Input
+                  id="actual-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costForm.actualCost}
+                  onChange={(e) => setCostForm({ ...costForm, actualCost: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="approved-amount">Approved Amount ($)</Label>
+                <Input
+                  id="approved-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costForm.approvedAmount}
+                  onChange={(e) => setCostForm({ ...costForm, approvedAmount: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={updateCosts}
+                  className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCostModal(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
