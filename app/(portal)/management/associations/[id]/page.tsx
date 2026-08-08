@@ -343,7 +343,7 @@ export default function AssociationDetailPage() {
         <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-[var(--page-background)] p-1 text-[var(--secondary-text)] flex-wrap gap-1">
           <TabsTrigger value="overview" className="px-3 py-1.5 text-sm">Overview</TabsTrigger>
           <TabsTrigger value="properties" className="px-3 py-1.5 text-sm">Properties ({properties.length})</TabsTrigger>
-          <TabsTrigger value="contacts" className="px-3 py-1.5 text-sm">Contacts ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="people" className="px-3 py-1.5 text-sm">People ({contacts.length})</TabsTrigger>
           <TabsTrigger value="maintenance" className="px-3 py-1.5 text-sm">Maintenance ({maintenanceRequests.length})</TabsTrigger>
           <TabsTrigger value="documents" className="px-3 py-1.5 text-sm">Documents ({documents.length})</TabsTrigger>
           <TabsTrigger value="compliance" className="px-3 py-1.5 text-sm">Compliance ({complianceItems.length})</TabsTrigger>
@@ -556,14 +556,14 @@ export default function AssociationDetailPage() {
           </div>
         </TabsContent>
 
-        {/* Contacts Tab */}
-        <TabsContent value="contacts" className="space-y-4">
+        {/* People Tab */}
+        <TabsContent value="people" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium">Contacts ({contacts.length})</h3>
+            <h3 className="text-lg font-medium">People ({contacts.length})</h3>
             <Link href={`/management/people/new?associationId=${association.id}`}>
               <Button size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Contact
+                Add Person
               </Button>
             </Link>
           </div>
@@ -575,13 +575,13 @@ export default function AssociationDetailPage() {
                     <div className="w-10 h-10 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
                       <Users className="h-5 w-5 text-[var(--teal)]" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <Link href={`/management/people/${contact.id}`}>
-                        <p className="font-medium hover:text-[var(--teal)] transition-colors">
+                        <p className="font-medium hover:text-[var(--teal)] transition-colors truncate">
                           {contact.firstName} {contact.lastName}
                         </p>
                       </Link>
-                      <p className="text-sm text-[var(--secondary-text)]">{contact.email}</p>
+                      <p className="text-sm text-[var(--secondary-text)] truncate">{contact.email}</p>
                       {contact.roles && contact.roles.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {contact.roles.map((role) => (
@@ -597,7 +597,7 @@ export default function AssociationDetailPage() {
               </Card>
             ))}
             {contacts.length === 0 && (
-              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No contacts found</p>
+              <p className="text-[var(--secondary-text)] col-span-2 text-center py-8">No people found</p>
             )}
           </div>
         </TabsContent>
