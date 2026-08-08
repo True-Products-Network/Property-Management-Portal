@@ -30,10 +30,10 @@ ALTER TABLE compliance_matters ADD COLUMN IF NOT EXISTS association_id UUID REFE
 CREATE INDEX IF NOT EXISTS idx_compliance_association ON compliance_matters(association_id);
 
 -- ============================================
--- PAYMENTS (isolated per association)
+-- PAYMENT_RECORDS (isolated per association)
 -- ============================================
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
-CREATE INDEX IF NOT EXISTS idx_payments_association ON payments(association_id);
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
+CREATE INDEX IF NOT EXISTS idx_payment_records_association ON payment_records(association_id);
 
 -- ============================================
 -- DOCUMENTS (isolated per association)
@@ -73,7 +73,7 @@ END $$;
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE compliance_matters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payment_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 
@@ -81,7 +81,7 @@ ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view contacts in their tenant" ON contacts;
 DROP POLICY IF EXISTS "Users can view maintenance in their tenant" ON maintenance_requests;
 DROP POLICY IF EXISTS "Users can view compliance in their tenant" ON compliance_matters;
-DROP POLICY IF EXISTS "Users can view payments in their tenant" ON payments;
+DROP POLICY IF EXISTS "Users can view payments in their tenant" ON payment_records;
 DROP POLICY IF EXISTS "Users can view documents in their tenant" ON documents;
 DROP POLICY IF EXISTS "Users can view inspections in their tenant" ON inspections;
 
@@ -145,14 +145,14 @@ CREATE POLICY "Users can update compliance in their associations" ON compliance_
         OR is_portfolio_admin(auth.uid())
     );
 
--- Payments: isolated by association
-CREATE POLICY "Users can view payments in their associations" ON payments
+-- Payment Records: isolated by association
+CREATE POLICY "Users can view payments in their associations" ON payment_records
     FOR SELECT USING (
         association_id IN (SELECT get_user_association_ids(auth.uid()))
         OR is_portfolio_admin(auth.uid())
     );
 
-CREATE POLICY "Users can insert payments in their associations" ON payments
+CREATE POLICY "Users can insert payments in their associations" ON payment_records
     FOR INSERT WITH CHECK (
         association_id IN (SELECT get_user_association_ids(auth.uid()))
         OR is_portfolio_admin(auth.uid())
