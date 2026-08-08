@@ -29,6 +29,7 @@ interface MaintenanceRequest {
   urgency?: string;
   category?: string;
   propertyId: string;
+  propertyName?: string;
   unitId?: string;
   reportedByContactId: string;
   assignedVendorId?: string;
@@ -405,10 +406,10 @@ export default function MaintenancePage() {
               </thead>
               <tbody>
                 {filteredRequests.map((request) => {
-                  const property = properties[request.propertyId];
                   const unit = request.unitId ? units[request.unitId] : null;
                   const vendor = request.assignedVendorId ? vendors[request.assignedVendorId] : null;
                   const reporter = contacts[request.reportedByContactId];
+                  const hasPropertyName = request.propertyName && request.propertyName !== "Unknown Property";
 
                   return (
                     <tr
@@ -431,12 +432,16 @@ export default function MaintenancePage() {
                         <div className="text-sm">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
-                            <Link
-                              href={`/management/properties/${request.propertyId}`}
-                              className="text-[var(--teal)] hover:underline"
-                            >
-                              {property?.name || "Unknown Property"}
-                            </Link>
+                            {hasPropertyName ? (
+                              <Link
+                                href={`/management/properties/${request.propertyId}`}
+                                className="text-[var(--teal)] hover:underline"
+                              >
+                                {request.propertyName}
+                              </Link>
+                            ) : (
+                              <span className="text-[var(--secondary-text)]">Unknown Property</span>
+                            )}
                           </div>
                           {unit && (
                             <div className="flex items-center gap-2 mt-1">

@@ -159,6 +159,7 @@ export function mapMaintenanceRequest(row: any): MaintenanceRequest {
     id: row.id,
     requestNumber: row.request_number,
     propertyId: row.property_id,
+    propertyName: row.properties?.name,
     unitId: row.unit_id,
     reportedByContactId: row.reported_by_contact_id,
     assignedVendorId: row.assigned_vendor_id,

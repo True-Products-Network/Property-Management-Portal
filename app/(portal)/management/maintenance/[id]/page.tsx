@@ -44,6 +44,11 @@ interface MaintenanceRequest {
   urgency?: string;
   category?: string;
   propertyId: string;
+  propertyName?: string;
+  property?: {
+    name: string;
+    association_id?: string;
+  };
   unitId?: string;
   reportedByContactId: string;
   assignedVendorId?: string;
@@ -326,29 +331,51 @@ export default function MaintenanceRequestDetailPage() {
     setIsLoadingRelated(true);
     
     try {
-      // Load property
+      // Load property - first try to use data from the maintenance request API
       if (requestData.propertyId) {
-        try {
-          const propResponse = await fetch(`/api/properties/${requestData.propertyId}`);
-          const propResult = await propResponse.json();
-          if (propResult.success) {
-            setProperty(propResult.data);
-            
-            // Load association if property has one
-            if (propResult.data.associationId) {
-              try {
-                const assocResponse = await fetch(`/api/associations/${propResult.data.associationId}`);
-                const assocResult = await assocResponse.json();
-                if (assocResult.success) {
-                  setAssociation(assocResult.data);
-                }
-              } catch (e) {
-                console.error("Error loading association:", e);
+        // Use property data from the joined query if available
+        if (requestData.property?.name) {
+          setProperty({
+            id: requestData.propertyId,
+            name: requestData.property.name,
+          });
+          
+          // Load association if property has one
+          if (requestData.property.association_id) {
+            try {
+              const assocResponse = await fetch(`/api/associations/${requestData.property.association_id}`);
+              const assocResult = await assocResponse.json();
+              if (assocResult.success) {
+                setAssociation(assocResult.data);
               }
+            } catch (e) {
+              console.error("Error loading association:", e);
             }
           }
-        } catch (e) {
-          console.error("Error loading property:", e);
+        } else {
+          // Fallback: fetch property directly
+          try {
+            const propResponse = await fetch(`/api/properties/${requestData.propertyId}`);
+            const propResult = await propResponse.json();
+            if (propResult.success) {
+              setProperty(propResult.data);
+              
+              // Load association if property has one
+              if (propResult.data.associationId) {
+                try {
+                  const assocResponse = await fetch(`/api/associations/${propResult.data.associationId}`);
+                  const assocResult = await assocResponse.json();
+                  if (assocResult.success) {
+                    setAssociation(assocResult.data);
+                  }
+                } catch (e) {
+                  console.error("Error loading association:", e);
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Error loading property:", e);
+          }
         }
       }
 
@@ -378,29 +405,29 @@ export default function MaintenanceRequestDetailPage() {
         }
       }
 
-      // Load reporter - look up by portal_user_id since reportedByContactId is now portal_user ID
+      // Load reporter - try direct fetch first (reportedByContactId is usually a contact ID)
       if (requestData.reportedByContactId) {
         try {
           console.log("[Maintenance View] Loading reporter for ID:", requestData.reportedByContactId);
           
-          // First try to find contact by portal_user_id
-          const contactsResponse = await fetch(`/api/contacts?portalUserId=${requestData.reportedByContactId}`);
-          const contactsResult = await contactsResponse.json();
-          console.log("[Maintenance View] Contacts by portalUserId result:", contactsResult);
+          // Try direct fetch first - reportedByContactId is typically a contact ID
+          const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
+          const contactResult = await contactResponse.json();
+          console.log("[Maintenance View] Direct contact result:", contactResult);
           
-          if (contactsResult.success && contactsResult.data?.length > 0) {
-            setReporter(contactsResult.data[0]);
-            console.log("[Maintenance View] Reporter found by portalUserId:", contactsResult.data[0]);
+          if (contactResult.success) {
+            setReporter(contactResult.data);
+            console.log("[Maintenance View] Reporter found by direct ID:", contactResult.data);
           } else {
-            // Fallback: try direct fetch in case it's still a contact ID
-            console.log("[Maintenance View] Trying direct contact fetch...");
-            const contactResponse = await fetch(`/api/contacts/${requestData.reportedByContactId}`);
-            const contactResult = await contactResponse.json();
-            console.log("[Maintenance View] Direct contact result:", contactResult);
+            // Fallback: try to find contact by portal_user_id
+            console.log("[Maintenance View] Trying portalUserId lookup...");
+            const contactsResponse = await fetch(`/api/contacts?portalUserId=${requestData.reportedByContactId}`);
+            const contactsResult = await contactsResponse.json();
+            console.log("[Maintenance View] Contacts by portalUserId result:", contactsResult);
             
-            if (contactResult.success) {
-              setReporter(contactResult.data);
-              console.log("[Maintenance View] Reporter found by direct ID:", contactResult.data);
+            if (contactsResult.success && contactsResult.data?.length > 0) {
+              setReporter(contactsResult.data[0]);
+              console.log("[Maintenance View] Reporter found by portalUserId:", contactsResult.data[0]);
             } else {
               console.log("[Maintenance View] Reporter not found");
             }
@@ -659,8 +686,20 @@ export default function MaintenanceRequestDetailPage() {
                   </div>
                 )}
               </>
+            ) : request.property?.name ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">{request.property.name}</p>
+                </div>
+                {association && (
+                  <div>
+                    <p className="text-xs text-[var(--secondary-text)]">Association</p>
+                    <p className="text-sm">{association.name}</p>
+                  </div>
+                )}
+              </>
             ) : (
-              <p className="text-sm text-[var(--secondary-text)]">Loading...</p>
+              <p className="text-sm text-[var(--secondary-text)]">Unknown Property</p>
             )}
           </div>
         </InfoCard>
