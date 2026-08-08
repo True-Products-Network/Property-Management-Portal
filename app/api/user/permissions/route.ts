@@ -107,6 +107,7 @@ function getRoleVariations(roleName: string): string[] {
   // Add common variations
   const commonVariations: Record<string, string[]> = {
     "ADMIN_USER": ["Admin User"],
+    "BUSINESS_ADMIN": ["Business Admin"],
     "PORTFOLIO_MANAGER": ["Portfolio Manager"],
     "ASSOCIATION_MANAGER": ["Association Manager"],
     "PROPERTY_MANAGER": ["Property Manager"],
@@ -303,7 +304,8 @@ function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[
       r === "Association Manager" || r === "ASSOCIATION_MANAGER" ||
       r === "Property Manager" || r === "PROPERTY_MANAGER" ||
       r === "Board Member" || r === "BOARD_MEMBER" ||
-      r === "Admin User" || r === "ADMIN_USER"
+      r === "Admin User" || r === "ADMIN_USER" ||
+      r === "Business Admin" || r === "BUSINESS_ADMIN"
     );
     
     // Portfolio Manager sees "Portfolio"
