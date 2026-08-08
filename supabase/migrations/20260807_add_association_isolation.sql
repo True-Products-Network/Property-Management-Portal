@@ -91,97 +91,68 @@ DROP POLICY IF EXISTS "Users can view inspections in their tenant" ON inspection
 -- Contacts: isolated by association
 CREATE POLICY "Users can view contacts in their associations" ON contacts
     FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can insert contacts in their associations" ON contacts
     FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can update contacts in their associations" ON contacts
     FOR UPDATE USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
--- Maintenance: isolated by association
-CREATE POLICY "Users can view maintenance in their associations" ON maintenance_requests
-    FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
-    );
-
-CREATE POLICY "Users can insert maintenance in their associations" ON maintenance_requests
-    FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
-    );
-
-CREATE POLICY "Users can update maintenance in their associations" ON maintenance_requests
-    FOR UPDATE USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
-    );
+-- Note: Maintenance and Inspections policies are in the entity hierarchy migration
+-- They use property->association join instead of direct association_id
 
 -- Compliance: isolated by association
 CREATE POLICY "Users can view compliance in their associations" ON compliance_matters
     FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can insert compliance in their associations" ON compliance_matters
     FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can update compliance in their associations" ON compliance_matters
     FOR UPDATE USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 -- Payment Records: isolated by association
 CREATE POLICY "Users can view payments in their associations" ON payment_records
     FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can insert payments in their associations" ON payment_records
     FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 -- Documents: isolated by association
 CREATE POLICY "Users can view documents in their associations" ON documents
     FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 CREATE POLICY "Users can insert documents in their associations" ON documents
     FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
-    );
-
--- Inspections: isolated by association
-CREATE POLICY "Users can view inspections in their associations" ON inspections
-    FOR SELECT USING (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
-    );
-
-CREATE POLICY "Users can insert inspections in their associations" ON inspections
-    FOR INSERT WITH CHECK (
-        association_id IN (SELECT get_user_association_ids(auth.uid()))
-        OR is_portfolio_admin(auth.uid())
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
 -- ============================================

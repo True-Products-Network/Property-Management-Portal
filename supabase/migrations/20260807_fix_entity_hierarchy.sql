@@ -69,8 +69,8 @@ CREATE POLICY "Users can view maintenance via property" ON maintenance_requests
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = maintenance_requests.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
@@ -79,8 +79,8 @@ CREATE POLICY "Users can insert maintenance via property" ON maintenance_request
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = maintenance_requests.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
@@ -89,8 +89,8 @@ CREATE POLICY "Users can update maintenance via property" ON maintenance_request
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = maintenance_requests.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
@@ -100,8 +100,8 @@ CREATE POLICY "Users can view inspections via property" ON inspections
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = inspections.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
@@ -110,8 +110,8 @@ CREATE POLICY "Users can insert inspections via property" ON inspections
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = inspections.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
@@ -120,8 +120,8 @@ CREATE POLICY "Users can update inspections via property" ON inspections
         EXISTS (
             SELECT 1 FROM properties p
             WHERE p.id = inspections.property_id
-            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()))
-                OR is_portfolio_admin(auth.uid()))
+            AND (p.association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+                OR is_portfolio_admin(auth.uid()::TEXT))
         )
     );
 
