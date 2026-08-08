@@ -2,60 +2,79 @@
 -- Shared entities (vendors, portal_users) remain tenant-scoped
 
 -- ============================================
--- CONTACTS (isolated per association)
+-- STEP 0: Create helper functions FIRST (needed by policies)
 -- ============================================
+
+-- Function to check if user is portfolio admin (can see all associations)
+CREATE OR REPLACE FUNCTION is_portfolio_admin(user_id TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_roles 
+        WHERE user_id = $1::UUID 
+        AND role IN ('PORTFOLIO_MANAGER', 'ADMIN_USER', 'PLATFORM_ADMIN')
+        AND revoked_at IS NULL
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's association IDs
+CREATE OR REPLACE FUNCTION get_user_association_ids(user_id TEXT)
+RETURNS TABLE(association_id UUID) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT ur.association_id
+    FROM user_roles ur
+    WHERE ur.user_id = $1::UUID
+    AND ur.association_id IS NOT NULL
+    AND ur.revoked_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- STEP 1: Add columns and indexes
+-- ============================================
+
+-- CONTACTS (isolated per association)
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_contacts_association ON contacts(association_id);
 
--- ============================================
 -- PROPERTIES (isolated per association)
--- ============================================
 -- Already has association_id, just verify index
 CREATE INDEX IF NOT EXISTS idx_properties_association ON properties(association_id);
 
--- ============================================
 -- UNITS (isolated per association via property)
 -- Already linked through properties
 
--- ============================================
--- MAINTENANCE REQUESTS (isolated per association)
--- ============================================
+-- MAINTENANCE REQUESTS - NOTE: These are Property-level, not Association-level
+-- association_id will be removed in the entity hierarchy migration
+-- Keeping this for backward compatibility during transition
 ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_association ON maintenance_requests(association_id);
 
--- ============================================
 -- COMPLIANCE MATTERS (isolated per association)
--- ============================================
 ALTER TABLE compliance_matters ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_compliance_association ON compliance_matters(association_id);
 
--- ============================================
 -- PAYMENT_RECORDS (isolated per association)
--- ============================================
 ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_payment_records_association ON payment_records(association_id);
 
--- ============================================
 -- DOCUMENTS (isolated per association)
--- ============================================
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_documents_association ON documents(association_id);
 
--- ============================================
 -- APPROVALS (isolated per association)
--- ============================================
 -- Already has association_id, verify index
 CREATE INDEX IF NOT EXISTS idx_approvals_association ON approvals(association_id);
 
--- ============================================
--- INSPECTIONS (isolated per association)
--- ============================================
+-- INSPECTIONS - NOTE: These are Property-level, not Association-level
+-- association_id will be removed in the entity hierarchy migration
+-- Keeping this for backward compatibility during transition
 ALTER TABLE inspections ADD COLUMN IF NOT EXISTS association_id UUID REFERENCES associations(id);
 CREATE INDEX IF NOT EXISTS idx_inspections_association ON inspections(association_id);
 
--- ============================================
 -- COMMENTS/NOTES (isolated per association)
--- ============================================
 -- Add if exists
 DO $$
 BEGIN
@@ -66,10 +85,9 @@ BEGIN
 END $$;
 
 -- ============================================
--- UPDATE RLS POLICIES
+-- STEP 2: Enable RLS
 -- ============================================
 
--- Enable RLS on all tables if not already
 ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE compliance_matters ENABLE ROW LEVEL SECURITY;
@@ -77,7 +95,10 @@ ALTER TABLE payment_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inspections ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies to recreate with association filtering
+-- ============================================
+-- STEP 3: Drop old policies
+-- ============================================
+
 DROP POLICY IF EXISTS "Users can view contacts in their tenant" ON contacts;
 DROP POLICY IF EXISTS "Users can view maintenance in their tenant" ON maintenance_requests;
 DROP POLICY IF EXISTS "Users can view compliance in their tenant" ON compliance_matters;
@@ -85,8 +106,12 @@ DROP POLICY IF EXISTS "Users can view payments in their tenant" ON payment_recor
 DROP POLICY IF EXISTS "Users can view documents in their tenant" ON documents;
 DROP POLICY IF EXISTS "Users can view inspections in their tenant" ON inspections;
 
--- Create new policies with association isolation
--- Portfolio admins can see all associations, association admins only their own
+-- ============================================
+-- STEP 4: Create new policies
+-- ============================================
+
+-- Note: Maintenance and Inspections policies will be updated in entity hierarchy migration
+-- They will use property->association join instead of direct association_id
 
 -- Contacts: isolated by association
 CREATE POLICY "Users can view contacts in their associations" ON contacts
@@ -107,8 +132,24 @@ CREATE POLICY "Users can update contacts in their associations" ON contacts
         OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
--- Note: Maintenance and Inspections policies are in the entity hierarchy migration
--- They use property->association join instead of direct association_id
+-- Maintenance: isolated by association (temporary - will be updated)
+CREATE POLICY "Users can view maintenance in their associations" ON maintenance_requests
+    FOR SELECT USING (
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
+    );
+
+CREATE POLICY "Users can insert maintenance in their associations" ON maintenance_requests
+    FOR INSERT WITH CHECK (
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
+    );
+
+CREATE POLICY "Users can update maintenance in their associations" ON maintenance_requests
+    FOR UPDATE USING (
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
+    );
 
 -- Compliance: isolated by association
 CREATE POLICY "Users can view compliance in their associations" ON compliance_matters
@@ -155,32 +196,15 @@ CREATE POLICY "Users can insert documents in their associations" ON documents
         OR is_portfolio_admin(auth.uid()::TEXT)
     );
 
--- ============================================
--- HELPER FUNCTIONS
--- ============================================
-
--- Function to check if user is portfolio admin (can see all associations)
-CREATE OR REPLACE FUNCTION is_portfolio_admin(user_id TEXT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM user_roles 
-        WHERE user_id = $1::UUID 
-        AND role IN ('PORTFOLIO_MANAGER', 'ADMIN_USER', 'PLATFORM_ADMIN')
-        AND revoked_at IS NULL
+-- Inspections: isolated by association (temporary - will be updated)
+CREATE POLICY "Users can view inspections in their associations" ON inspections
+    FOR SELECT USING (
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
     );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to get user's association IDs
-CREATE OR REPLACE FUNCTION get_user_association_ids(user_id TEXT)
-RETURNS TABLE(association_id UUID) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT DISTINCT ur.association_id
-    FROM user_roles ur
-    WHERE ur.user_id = $1::UUID
-    AND ur.association_id IS NOT NULL
-    AND ur.revoked_at IS NULL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+CREATE POLICY "Users can insert inspections in their associations" ON inspections
+    FOR INSERT WITH CHECK (
+        association_id IN (SELECT get_user_association_ids(auth.uid()::TEXT))
+        OR is_portfolio_admin(auth.uid()::TEXT)
+    );
