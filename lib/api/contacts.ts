@@ -74,7 +74,7 @@ export async function getContacts(
     
     let query = supabase
       .from("contacts")
-      .select("*, contact_roles(role)", { count: "exact" });
+      .select("*, contact_roles!contact_id(role)", { count: "exact" });
     
     // Filter by tenant_id if provided
     if (tenantId) {

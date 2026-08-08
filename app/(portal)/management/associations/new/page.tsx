@@ -117,11 +117,18 @@ export default function NewAssociationPage() {
     try {
       const response = await fetch(`/api/contacts?limit=100`);
       const result = await response.json();
+      console.log("[LoadContacts] API response:", result);
       if (result.success) {
-        setExistingContacts(result.data?.data || []);
+        const contactsData = result.data?.data || [];
+        console.log("[LoadContacts] Loaded contacts:", contactsData.length);
+        setExistingContacts(contactsData);
+      } else {
+        console.error("[LoadContacts] API returned error:", result.error);
+        alert("Failed to load contacts: " + (result.error || "Unknown error"));
       }
     } catch (error) {
-      console.error("Error loading contacts:", error);
+      console.error("[LoadContacts] Error loading contacts:", error);
+      alert("Error loading contacts. Please try again.");
     } finally {
       setIsSearching(false);
     }
