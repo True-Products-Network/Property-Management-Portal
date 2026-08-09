@@ -45,6 +45,8 @@ interface Contact {
   emergencyContactPhone?: string;
   emergencyContactRelationship?: string;
   roles?: string[];
+  boardPosition?: string;
+  status?: string;
 }
 
 interface FormData {
@@ -66,6 +68,8 @@ interface FormData {
   emergencyContactPhone: string;
   emergencyContactRelationship: string;
   roles: string[];
+  boardPosition: string;
+  status: string;
 }
 
 const CONTACT_METHODS = [
@@ -101,6 +105,8 @@ export default function EditContactPage() {
     preferredContactMethod: "email",
     mailingPreference: "email",
     roles: [],
+    boardPosition: "",
+    status: "active",
     emailPermission: false,
     smsPermission: false,
     mailingAddressStreet: "",
@@ -150,6 +156,8 @@ export default function EditContactPage() {
         emergencyContactPhone: contact.emergencyContactPhone || "",
         emergencyContactRelationship: contact.emergencyContactRelationship || "",
         roles: contact.roles || [],
+        boardPosition: contact.boardPosition || "",
+        status: contact.status || "active",
       });
     } catch (error) {
       console.error("Error loading contact:", error);
@@ -203,6 +211,8 @@ export default function EditContactPage() {
           emergencyContactPhone: formData.emergencyContactPhone || undefined,
           emergencyContactRelationship: formData.emergencyContactRelationship || undefined,
           roles: formData.roles,
+          boardPosition: formData.boardPosition || undefined,
+          status: formData.status,
         }),
       });
 
@@ -361,50 +371,91 @@ export default function EditContactPage() {
           </CardContent>
         </Card>
 
-        {/* Roles */}
+        {/* Roles & Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Roles</CardTitle>
+            <CardTitle>Roles & Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { value: "owner", label: "Owner" },
-                { value: "co_owner", label: "Co-Owner" },
-                { value: "tenant", label: "Tenant" },
-                { value: "occupant", label: "Occupant" },
-                { value: "board_president", label: "Board President" },
-                { value: "board_treasurer", label: "Board Treasurer" },
-                { value: "board_secretary", label: "Board Secretary" },
-                { value: "board_member", label: "Board Member" },
-                { value: "property_manager", label: "Property Manager" },
-                { value: "assistant_manager", label: "Assistant Manager" },
-                { value: "maintenance_staff", label: "Maintenance Staff" },
-                { value: "vendor_contact", label: "Vendor Contact" },
-                { value: "emergency_contact", label: "Emergency Contact" },
-                { value: "other", label: "Other" },
-              ].map((role) => (
-                <div key={role.value} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id={`role-${role.value}`}
-                    checked={formData.roles?.includes(role.value)}
-                    onChange={(e) => {
-                      const currentRoles = formData.roles || [];
-                      if (e.target.checked) {
-                        handleChange("roles", [...currentRoles, role.value]);
-                      } else {
-                        handleChange("roles", currentRoles.filter((r) => r !== role.value));
-                      }
-                    }}
-                    className="rounded border-[var(--border-color)]"
-                  />
-                  <label htmlFor={`role-${role.value}`} className="text-sm text-[var(--main-text)]">
-                    {role.label}
-                  </label>
-                </div>
-              ))}
+          <CardContent className="space-y-4">
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleChange("status", e.target.value)}
+                className="input w-full"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+                <option value="suspended">Suspended</option>
+              </select>
             </div>
+
+            {/* Roles */}
+            <div>
+              <label className="block text-sm font-medium text-[var(--main-text)] mb-2">
+                Roles
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "admin_user", label: "Admin User" },
+                  { value: "association_manager", label: "Association Manager" },
+                  { value: "board_member", label: "Board Member" },
+                  { value: "finance_user", label: "Finance User" },
+                  { value: "owner", label: "Owner" },
+                  { value: "portfolio_manager", label: "Portfolio Manager" },
+                  { value: "property_manager", label: "Property Manager" },
+                  { value: "resident", label: "Resident" },
+                  { value: "staff", label: "Staff" },
+                  { value: "vendor_contractor", label: "Vendor/Contractor" },
+                ].map((role) => (
+                  <div key={role.value} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`role-${role.value}`}
+                      checked={formData.roles?.includes(role.value)}
+                      onChange={(e) => {
+                        const currentRoles = formData.roles || [];
+                        if (e.target.checked) {
+                          handleChange("roles", [...currentRoles, role.value]);
+                        } else {
+                          handleChange("roles", currentRoles.filter((r) => r !== role.value));
+                        }
+                      }}
+                      className="rounded border-[var(--border-color)]"
+                    />
+                    <label htmlFor={`role-${role.value}`} className="text-sm text-[var(--main-text)]">
+                      {role.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Board Position */}
+            {formData.roles?.includes("board_member") && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Board Position
+                </label>
+                <select
+                  value={formData.boardPosition}
+                  onChange={(e) => handleChange("boardPosition", e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Select Position</option>
+                  <option value="president">President</option>
+                  <option value="vice_president">Vice President</option>
+                  <option value="treasurer">Treasurer</option>
+                  <option value="secretary">Secretary</option>
+                  <option value="member_at_large">Member at Large</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            )}
           </CardContent>
         </Card>
 
