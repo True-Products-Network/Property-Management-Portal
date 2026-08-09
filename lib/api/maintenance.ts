@@ -107,7 +107,7 @@ export async function getMaintenanceRequests(
     return {
       success: true,
       data: {
-        data: data || [],
+        data: (data || []).map(mapMaintenanceRequest),
         total: count || 0,
         page,
         pageSize,
@@ -137,7 +137,7 @@ export async function getMaintenanceRequest(id: string): Promise<ApiResponse<Mai
       return { success: false, error: "Maintenance request not found" };
     }
     
-    return { success: true, data };
+    return { success: true, data: mapMaintenanceRequest(data) };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
