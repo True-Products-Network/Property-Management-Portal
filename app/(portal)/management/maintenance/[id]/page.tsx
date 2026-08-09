@@ -480,7 +480,7 @@ export default function MaintenanceRequestDetailPage() {
         type: "status_change",
         title: "Status Updated",
         description: `Status changed to ${statusConfig[requestData.status]?.label || requestData.status}`,
-        timestamp: requestData.updatedAt,
+        timestamp: requestData.updatedAt || requestData.createdAt || new Date().toISOString(),
         user: "System",
       });
     }
@@ -491,7 +491,7 @@ export default function MaintenanceRequestDetailPage() {
         type: "vendor_assigned",
         title: "Vendor Assigned",
         description: "Vendor assigned to job",
-        timestamp: requestData.updatedAt,
+        timestamp: requestData.updatedAt || requestData.createdAt || new Date().toISOString(),
         user: "System",
       });
     }
@@ -766,13 +766,13 @@ export default function MaintenanceRequestDetailPage() {
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
               <p className="text-sm font-medium">
-                {new Date(request.createdAt).toLocaleString()}
+                {request.createdAt ? new Date(request.createdAt).toLocaleString() : "-"}
               </p>
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Last Updated</p>
               <p className="text-sm font-medium">
-                {new Date(request.updatedAt).toLocaleString()}
+                {request.updatedAt ? new Date(request.updatedAt).toLocaleString() : "-"}
               </p>
             </div>
             {request.requestedDate && (
