@@ -44,6 +44,7 @@ interface Contact {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelationship?: string;
+  roles?: string[];
 }
 
 interface FormData {
@@ -64,6 +65,7 @@ interface FormData {
   emergencyContactName: string;
   emergencyContactPhone: string;
   emergencyContactRelationship: string;
+  roles: string[];
 }
 
 const CONTACT_METHODS = [
@@ -98,6 +100,7 @@ export default function EditContactPage() {
     workPhone: "",
     preferredContactMethod: "email",
     mailingPreference: "email",
+    roles: [],
     emailPermission: false,
     smsPermission: false,
     mailingAddressStreet: "",
@@ -146,6 +149,7 @@ export default function EditContactPage() {
         emergencyContactName: contact.emergencyContactName || "",
         emergencyContactPhone: contact.emergencyContactPhone || "",
         emergencyContactRelationship: contact.emergencyContactRelationship || "",
+        roles: contact.roles || [],
       });
     } catch (error) {
       console.error("Error loading contact:", error);
@@ -198,6 +202,7 @@ export default function EditContactPage() {
           emergencyContactName: formData.emergencyContactName || undefined,
           emergencyContactPhone: formData.emergencyContactPhone || undefined,
           emergencyContactRelationship: formData.emergencyContactRelationship || undefined,
+          roles: formData.roles,
         }),
       });
 
@@ -352,6 +357,46 @@ export default function EditContactPage() {
                   placeholder="e.g., (555) 456-7890"
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Roles */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Roles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {[
+                { value: "property_manager", label: "Property Manager" },
+                { value: "association_manager", label: "Association Manager" },
+                { value: "board_member", label: "Board Member" },
+                { value: "owner", label: "Owner" },
+                { value: "tenant", label: "Tenant" },
+                { value: "vendor", label: "Vendor" },
+                { value: "staff", label: "Staff" },
+              ].map((role) => (
+                <div key={role.value} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id={`role-${role.value}`}
+                    checked={formData.roles?.includes(role.value)}
+                    onChange={(e) => {
+                      const currentRoles = formData.roles || [];
+                      if (e.target.checked) {
+                        handleChange("roles", [...currentRoles, role.value]);
+                      } else {
+                        handleChange("roles", currentRoles.filter((r) => r !== role.value));
+                      }
+                    }}
+                    className="rounded border-[var(--border-color)]"
+                  />
+                  <label htmlFor={`role-${role.value}`} className="text-sm text-[var(--main-text)]">
+                    {role.label}
+                  </label>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
