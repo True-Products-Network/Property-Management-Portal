@@ -468,9 +468,9 @@ export default function MaintenanceRequestDetailPage() {
         id: "1",
         type: "created",
         title: "Request Created",
-        description: `Maintenance request ${requestData.requestNumber} submitted`,
-        timestamp: requestData.createdAt,
-        user: "System",
+        description: `Maintenance request ${requestData.requestNumber || requestData.id?.slice(0, 8)} submitted`,
+        timestamp: requestData.createdAt || new Date().toISOString(),
+        user: requestData.submittedByName || "System",
       },
     ];
 
@@ -766,13 +766,13 @@ export default function MaintenanceRequestDetailPage() {
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
               <p className="text-sm font-medium">
-                {new Date(request.createdAt).toLocaleString()}
+                {request.createdAt ? new Date(request.createdAt).toLocaleString() : "Just now"}
               </p>
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Last Updated</p>
               <p className="text-sm font-medium">
-                {new Date(request.updatedAt).toLocaleString()}
+                {request.updatedAt ? new Date(request.updatedAt).toLocaleString() : "Just now"}
               </p>
             </div>
             {request.requestedDate && (
