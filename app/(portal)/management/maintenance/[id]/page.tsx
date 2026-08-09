@@ -1077,7 +1077,7 @@ export default function MaintenanceRequestDetailPage() {
                       {event.title}
                     </p>
                     <span className="text-xs text-[var(--secondary-text)]">
-                      {new Date(event.timestamp).toLocaleString()}
+                      {event.timestamp ? new Date(event.timestamp).toLocaleString() : "-"}
                     </span>
                   </div>
                   <p className="text-sm text-[var(--secondary-text)] mt-1">
