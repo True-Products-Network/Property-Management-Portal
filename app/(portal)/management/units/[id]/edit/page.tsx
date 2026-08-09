@@ -16,6 +16,20 @@ interface Property {
   associationName: string;
 }
 
+interface DropdownValue {
+  id: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+}
+
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 interface Unit {
   id: string;
   propertyId: string;
@@ -35,6 +49,8 @@ interface Unit {
   moveOutDate?: string;
   mailingAddress?: string;
   accessNotes?: string;
+  primaryContactId?: string;
+  residentName?: string;
 }
 
 export default function EditUnitPage() {
@@ -44,6 +60,8 @@ export default function EditUnitPage() {
   
   const [unit, setUnit] = useState<Unit | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [unitTypeOptions, setUnitTypeOptions] = useState<DropdownValue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +69,7 @@ export default function EditUnitPage() {
 
   useEffect(() => {
     loadData();
+    loadDropdownSettings();
   }, [unitId]);
 
   async function loadData() {
@@ -71,10 +90,32 @@ export default function EditUnitPage() {
         const propsData = await propsRes.json();
         if (propsData.success) setProperties(propsData.data.data || []);
       }
+
+      // Load contacts for primary contact selection
+      const contactsRes = await fetch("/api/contacts");
+      if (contactsRes.ok) {
+        const contactsData = await contactsRes.json();
+        if (contactsData.success) setContacts(contactsData.data.data || []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function loadDropdownSettings() {
+    try {
+      // Load unit types from dropdown settings
+      const typeRes = await fetch("/api/dropdowns/Unit/unit_type");
+      if (typeRes.ok) {
+        const typeData = await typeRes.json();
+        if (typeData.success) {
+          setUnitTypeOptions(typeData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
+        }
+      }
+    } catch (error) {
+      console.error("Error loading dropdown settings:", error);
     }
   }
 
@@ -232,14 +273,23 @@ export default function EditUnitPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <DropdownSelect
-                recordType="Unit"
-                fieldName="Unit Type"
-                value={formData.type || ""}
-                onChange={(value) => handleChange("type", value)}
-                placeholder="Select Type"
-                label="Unit Type"
-              />
+              <div>
+                <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                  Unit Type
+                </label>
+                <select
+                  value={formData.type || ""}
+                  onChange={(e) => handleChange("type", e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Select Type</option>
+                  {unitTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Floor
@@ -286,6 +336,40 @@ export default function EditUnitPage() {
                   onChange={(e) => handleChange("bathrooms", parseFloat(e.target.value) || "")}
                   placeholder="e.g., 1.5"
                 />
+              </div>
+            </div>
+
+            {/* Primary Contact & Resident */}
+            <div className="border-t border-[var(--border-color)] pt-4 mt-4">
+              <h4 className="text-sm font-medium text-[var(--main-text)] mb-3">Contact Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                    Primary Contact
+                  </label>
+                  <select
+                    value={formData.primaryContactId || ""}
+                    onChange={(e) => handleChange("primaryContactId", e.target.value)}
+                    className="input w-full"
+                  >
+                    <option value="">Select Primary Contact</option>
+                    {contacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.firstName} {contact.lastName} ({contact.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
+                    Resident/Owner Name
+                  </label>
+                  <Input
+                    value={formData.residentName || ""}
+                    onChange={(e) => handleChange("residentName", e.target.value)}
+                    placeholder="e.g., John Doe"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
