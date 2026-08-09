@@ -14,12 +14,12 @@ interface Association {
   assignedManagerId?: string;
 }
 
-interface PortalUser {
+interface Contact {
   id: string;
-  email: string;
   firstName?: string;
   lastName?: string;
-  roles: string[];
+  email?: string;
+  roles?: string[];
 }
 
 interface Property {
@@ -48,7 +48,7 @@ export default function EditPropertyPage() {
   
   const [property, setProperty] = useState<Property | null>(null);
   const [associations, setAssociations] = useState<Association[]>([]);
-  const [portalUsers, setPortalUsers] = useState<PortalUser[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +58,12 @@ export default function EditPropertyPage() {
     loadData();
   }, [propertyId]);
 
-  // Load portal users when association changes
+  // Load contacts when association changes
   useEffect(() => {
     if (formData.associationId) {
-      loadPortalUsers(formData.associationId);
+      loadContacts(formData.associationId);
     } else {
-      setPortalUsers([]);
+      setContacts([]);
     }
   }, [formData.associationId]);
 
@@ -86,9 +86,9 @@ export default function EditPropertyPage() {
         if (assocData.success) setAssociations(assocData.data.data || []);
       }
       
-      // Load portal users for the property's association
+      // Load contacts for the property's association
       if (propData.data.associationId) {
-        await loadPortalUsers(propData.data.associationId);
+        await loadContacts(propData.data.associationId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -97,24 +97,24 @@ export default function EditPropertyPage() {
     }
   }
 
-  async function loadPortalUsers(associationId: string) {
+  async function loadContacts(associationId: string) {
     try {
-      // Load portal users with PROPERTY_MANAGER or ASSOCIATION_MANAGER roles for this tenant
-      const response = await fetch(`/api/portal/users?associationId=${associationId}`);
+      // Load contacts with property_manager role for this association
+      const response = await fetch(`/api/contacts?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          // Filter users with property management roles
-          const managers = result.data.filter((user: PortalUser) => 
-            user.roles?.some(role => 
-              ['PROPERTY_MANAGER', 'ASSOCIATION_MANAGER', 'ADMIN_USER'].includes(role)
+          // Filter contacts with property_manager role
+          const managers = result.data.data.filter((contact: Contact) => 
+            contact.roles?.some((role: string) => 
+              ['property_manager', 'manager', 'board_member'].includes(role.toLowerCase())
             )
           );
-          setPortalUsers(managers);
+          setContacts(managers);
         }
       }
     } catch (error) {
-      console.error("Error loading portal users:", error);
+      console.error("Error loading contacts:", error);
     }
   }
 
@@ -309,15 +309,15 @@ export default function EditPropertyPage() {
                   required
                 >
                   <option value="">Select Property Manager</option>
-                  {portalUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName} ({user.email})
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.firstName} {contact.lastName} {contact.email ? `(${contact.email})` : ""}
                     </option>
                   ))}
                 </select>
-                {portalUsers.length === 0 && formData.associationId && (
+                {contacts.length === 0 && formData.associationId && (
                   <p className="text-sm text-amber-600 mt-1">
-                    No property managers found. Please assign a Property Manager to this association first.
+                    No property managers found. Please add a contact with Property Manager role to this association first.
                   </p>
                 )}
               </div>
