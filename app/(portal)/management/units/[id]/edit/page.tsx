@@ -110,13 +110,13 @@ export default function EditUnitPage() {
     try {
       console.log("[Unit Edit] Loading dropdown settings");
       // Load unit types from dropdown settings
-      const typeRes = await fetch("/api/dropdowns/Unit/unit_type");
+      const typeRes = await fetch("/api/dropdowns?recordType=Unit&fieldName=unit_type");
       console.log("[Unit Edit] Unit type response:", typeRes.status);
       if (typeRes.ok) {
         const typeData = await typeRes.json();
         console.log("[Unit Edit] Unit type data:", typeData);
         if (typeData.success) {
-          setUnitTypeOptions(typeData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
+          setUnitTypeOptions(typeData.data);
         }
       }
     } catch (error) {

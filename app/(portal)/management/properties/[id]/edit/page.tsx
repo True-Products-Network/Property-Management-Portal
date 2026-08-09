@@ -106,15 +106,10 @@ export default function EditPropertyPage() {
         const result = await response.json();
         console.log("[Property Edit] Contacts loaded:", result);
         if (result.success && result.data) {
-          // Filter contacts with property_manager role
-          const managers = result.data.data.filter((contact: Contact) => 
-            contact.roles?.some((role: string) => 
-              ['property_manager', 'manager', 'board_member'].includes(role.toLowerCase())
-            )
-          );
-          console.log("[Property Edit] Filtered managers:", managers);
+          // Show all contacts (not just managers) since roles may vary
+          console.log("[Property Edit] All contacts:", result.data.data);
           console.log("[Property Edit] Current assignedStaffId:", formData.assignedStaffId);
-          setContacts(managers);
+          setContacts(result.data.data);
         }
       }
     } catch (error) {
