@@ -23,7 +23,10 @@ ADD COLUMN IF NOT EXISTS request_path TEXT,
 ADD COLUMN IF NOT EXISTS response_status INTEGER,
 ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id),
 ADD COLUMN IF NOT EXISTS before_values JSONB,
-ADD COLUMN IF NOT EXISTS after_values JSONB;
+ADD COLUMN IF NOT EXISTS after_values JSONB,
+ADD COLUMN IF NOT EXISTS correlation_id VARCHAR(255),
+ADD COLUMN IF NOT EXISTS error_message TEXT,
+ADD COLUMN IF NOT EXISTS error_stack TEXT;
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_audit_logs_success ON audit_logs(success);

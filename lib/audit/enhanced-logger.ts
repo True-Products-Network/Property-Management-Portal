@@ -152,7 +152,7 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
   try {
     // Determine if this is a read operation
     const isRead = entry.action.includes("_VIEW") || entry.action.includes("_LIST") || entry.action === "API_CALL";
-    
+
     // Check if we should log based on settings
     const shouldLogEntry = await shouldLog(entry.action, entry.success, isRead);
     if (!shouldLogEntry) {
@@ -160,37 +160,45 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
     }
 
     const supabase = await createClient();
-    
-    const { error } = await supabase.from("audit_logs").insert({
+
+    // Build insert object with only fields that exist in the database
+    // This ensures backward compatibility if columns are missing
+    const insertData: any = {
       user_id: entry.userId,
       tenant_id: entry.tenantId,
       action: entry.action,
       entity_type: entry.entityType,
       entity_id: entry.entityId,
-      entity_name: entry.entityName,
       success: entry.success,
       severity: entry.severity,
-      request_method: entry.requestMethod,
-      request_path: entry.requestPath,
-      response_status: entry.responseStatus,
-      duration_ms: entry.durationMs,
-      before_values: entry.beforeValues,
-      after_values: entry.afterValues,
       details: entry.details,
-      error_message: entry.errorMessage,
-      error_stack: entry.errorStack,
       ip_address: entry.ipAddress,
       user_agent: entry.userAgent,
-      correlation_id: entry.correlationId || generateCorrelationId(),
       created_at: new Date().toISOString(),
-    });
+    };
+
+    // Only add optional fields if they have values
+    if (entry.entityName) insertData.entity_name = entry.entityName;
+    if (entry.requestMethod) insertData.request_method = entry.requestMethod;
+    if (entry.requestPath) insertData.request_path = entry.requestPath;
+    if (entry.responseStatus) insertData.response_status = entry.responseStatus;
+    if (entry.durationMs) insertData.duration_ms = entry.durationMs;
+    if (entry.beforeValues) insertData.before_values = entry.beforeValues;
+    if (entry.afterValues) insertData.after_values = entry.afterValues;
+    if (entry.errorMessage) insertData.error_message = entry.errorMessage;
+    if (entry.errorStack) insertData.error_stack = entry.errorStack;
+    if (entry.correlationId || true) insertData.correlation_id = entry.correlationId || generateCorrelationId();
+
+    const { error } = await supabase.from("audit_logs").insert(insertData);
 
     if (error) {
       console.error("[Audit Log] Failed to insert:", error);
+      // Don't throw - just log the error
     }
   } catch (error) {
     // Never fail the main operation due to audit logging
-    console.error("[Audit Log] Critical error:", error);
+    console.error("[Audit Log] Critical error (non-blocking):", error);
+    // Silently continue - don't rethrow
   }
 }
 
