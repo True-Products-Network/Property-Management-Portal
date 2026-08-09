@@ -167,6 +167,8 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
   try {
     const supabase = await createClient();
     
+    console.log("[getContact] Fetching contact:", id);
+    
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
@@ -174,6 +176,7 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
       .single();
     
     if (error) {
+      console.error("[getContact] Error fetching contact:", error);
       return { success: false, error: error.message };
     }
     
@@ -181,8 +184,25 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
       return { success: false, error: "Contact not found" };
     }
     
-    return { success: true, data: mapContact(data) };
+    // Fetch roles for this contact
+    console.log("[getContact] Fetching roles for contact:", id);
+    const { data: rolesData, error: rolesError } = await supabase
+      .from("contact_roles")
+      .select("role_type, is_active")
+      .eq("contact_id", id)
+      .eq("is_active", true);
+    
+    console.log("[getContact] Roles data:", rolesData, "Error:", rolesError);
+    
+    // Merge contact with roles
+    const contactWithRoles = {
+      ...data,
+      contact_roles: rolesData?.map((r: any) => ({ role_type: r.role_type })) || [],
+    };
+    
+    return { success: true, data: mapContact(contactWithRoles) };
   } catch (error) {
+    console.error("[getContact] Unexpected error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
