@@ -114,12 +114,16 @@ export async function getContacts(
     const contactIds = (contactsData || []).map((c: any) => c.id);
     let rolesMap: Record<string, string[]> = {};
 
+    console.log("[Contacts API] Fetching roles for contacts:", contactIds);
+
     if (contactIds.length > 0) {
       const { data: rolesData, error: rolesError } = await supabase
         .from("contact_roles")
         .select("contact_id, role_type")
         .in("contact_id", contactIds)
         .eq("is_active", true);
+
+      console.log("[Contacts API] Roles data:", rolesData, "Error:", rolesError);
 
       if (!rolesError && rolesData) {
         rolesMap = rolesData.reduce((acc: Record<string, string[]>, role: any) => {
@@ -131,6 +135,8 @@ export async function getContacts(
         }, {});
       }
     }
+
+    console.log("[Contacts API] Roles map:", rolesMap);
 
     // Merge contacts with their roles
     const contactsWithRoles = (contactsData || []).map((contact: any) => ({
