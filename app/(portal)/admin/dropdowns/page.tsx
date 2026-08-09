@@ -75,6 +75,7 @@ const recordTypeIcons: Record<string, LucideIcon> = {
   "inspection": ClipboardCheck,
   "compliance": Shield,
   "vendor": Truck,
+  "vendor company": Truck,
   "approval": CheckCircle2,
   "role": Key,
   "workflow": Briefcase,
