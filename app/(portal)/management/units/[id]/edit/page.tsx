@@ -294,6 +294,11 @@ export default function EditUnitPage() {
                     </option>
                   ))}
                 </select>
+                {formData.type && unitTypeOptions.length > 0 && !unitTypeOptions.find(o => o.value === formData.type) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Saved value "{formData.type}" not in dropdown options
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
