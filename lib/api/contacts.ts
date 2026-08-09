@@ -288,6 +288,8 @@ export async function updateContact(
 ): Promise<ApiResponse<Contact>> {
   try {
     const supabase = await createClient();
+    // Use service client for roles operations to bypass RLS
+    const serviceSupabase = createServiceClient();
     
     // Get the contact ID for this user (for FK constraints)
     const { data: userContact } = await supabase
@@ -333,7 +335,7 @@ export async function updateContact(
     // Update roles if provided
     if (input.roles !== undefined && data?.id) {
       // First, delete existing roles (clean slate approach)
-      await supabase
+      await serviceSupabase
         .from("contact_roles")
         .delete()
         .eq("contact_id", data.id);
@@ -346,7 +348,7 @@ export async function updateContact(
           is_active: true,
         }));
 
-        const { error: rolesError } = await supabase
+        const { error: rolesError } = await serviceSupabase
           .from("contact_roles")
           .insert(rolesToInsert);
 
