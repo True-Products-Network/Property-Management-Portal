@@ -766,13 +766,13 @@ export default function MaintenanceRequestDetailPage() {
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
               <p className="text-sm font-medium">
-                {request.createdAt ? new Date(request.createdAt).toLocaleString() : "Just now"}
+                {new Date(request.createdAt).toLocaleString()}
               </p>
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Last Updated</p>
               <p className="text-sm font-medium">
-                {request.updatedAt ? new Date(request.updatedAt).toLocaleString() : "Just now"}
+                {new Date(request.updatedAt).toLocaleString()}
               </p>
             </div>
             {request.requestedDate && (

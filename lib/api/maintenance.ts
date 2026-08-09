@@ -10,8 +10,15 @@ export interface MaintenanceRequest {
   requestNumber: string;
   propertyId: string;
   propertyName?: string;
+  property?: {
+    name: string;
+    association_id?: string;
+  };
   unitId?: string;
   unitName?: string;
+  unit?: {
+    unit_number?: string;
+  };
   reportedByContactId?: string;
   reportedByName?: string;
   submittedByName?: string;

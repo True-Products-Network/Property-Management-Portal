@@ -162,8 +162,15 @@ export function mapMaintenanceRequest(row: any): MaintenanceRequest {
     requestNumber: row.request_number,
     propertyId: row.property_id,
     propertyName: row.properties?.name,
+    property: row.properties ? {
+      name: row.properties.name,
+      association_id: row.properties.association_id,
+    } : undefined,
     unitId: row.unit_id,
-    unitName: row.unit_name || (row.unit_id ? `Unit ${row.units?.unit_number || ''}` : "Common Area"),
+    unitName: row.unit_name || (row.unit_id && row.units ? `Unit ${row.units.unit_number}` : "Common Area"),
+    unit: row.units ? {
+      unit_number: row.units.unit_number,
+    } : undefined,
     reportedByContactId: row.reported_by_contact_id,
     reportedByName: row.reported_by_name || (row.reported_by_contact ? `${row.reported_by_contact.first_name || ''} ${row.reported_by_contact.last_name || ''}`.trim() : "Unknown"),
     submittedByName: row.submitted_by_name || "System",
