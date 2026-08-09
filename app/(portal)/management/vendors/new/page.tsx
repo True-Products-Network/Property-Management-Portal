@@ -254,7 +254,7 @@ function NewVendorForm() {
                   Vendor Type <span className="text-red-500">*</span>
                 </label>
                 <DropdownSelect
-                  recordType="Vendor"
+                  recordType="Vendor Company"
                   fieldName="Vendor Type"
                   value={formData.category}
                   onChange={(value) => handleChange("category", value)}
@@ -268,8 +268,8 @@ function NewVendorForm() {
                   Vendor Status
                 </label>
                 <DropdownSelect
-                  recordType="Vendor"
-                  fieldName="vendor_status"
+                  recordType="Vendor Company"
+                  fieldName="Vendor Status"
                   value={formData.status}
                   onChange={(value) => handleChange("status", value)}
                   placeholder="Select Vendor Status"

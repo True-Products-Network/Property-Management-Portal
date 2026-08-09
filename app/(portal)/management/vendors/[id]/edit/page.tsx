@@ -91,7 +91,7 @@ export default function EditVendorPage() {
       console.log("[Vendor Edit] Loading dropdown options");
       
       // Load vendor types
-      const typeRes = await fetch("/api/dropdowns?recordType=Vendor&fieldName=Vendor%20Type");
+      const typeRes = await fetch("/api/dropdowns?recordType=Vendor%20Company&fieldName=Vendor%20Type");
       console.log("[Vendor Edit] Vendor Type response:", typeRes.status);
       if (typeRes.ok) {
         const typeData = await typeRes.json();
@@ -102,7 +102,7 @@ export default function EditVendorPage() {
       }
       
       // Load vendor statuses
-      const statusRes = await fetch("/api/dropdowns?recordType=Vendor&fieldName=vendor_status");
+      const statusRes = await fetch("/api/dropdowns?recordType=Vendor%20Company&fieldName=Vendor%20Status");
       console.log("[Vendor Edit] Vendor Status response:", statusRes.status);
       if (statusRes.ok) {
         const statusData = await statusRes.json();
