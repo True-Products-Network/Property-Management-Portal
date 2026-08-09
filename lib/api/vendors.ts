@@ -92,11 +92,11 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
   try {
     const supabase = await createClient();
     
-    // Look up portal user ID from auth user ID
-    console.log("[createVendor] Looking up portal user for authUserId:", authUserId);
+    // Look up contact ID from portal user - vendors.created_by references contacts(id)
+    console.log("[createVendor] Looking up contact for authUserId:", authUserId);
     const { data: portalUser, error: portalError } = await supabase
       .from("portal_users")
-      .select("id")
+      .select("id, ghl_contact_id")
       .eq("id", authUserId)
       .maybeSingle();
     
@@ -112,7 +112,17 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
       return { success: false, error: "User not found in portal users" };
     }
     
-    const userId = portalUser.id;
+    // Get the contact ID from portal user's ghl_contact_id
+    // vendors.created_by references contacts(id), not portal_users(id)
+    const contactId = portalUser.ghl_contact_id;
+    if (!contactId) {
+      console.error("[createVendor] Portal user has no ghl_contact_id:", portalUser);
+      return { success: false, error: "User contact not found" };
+    }
+    
+    console.log("[createVendor] Using contact ID for created_by:", contactId);
+    
+    const userId = contactId;
     const vendorId = `VEND-${Date.now()}`;
     
     // Normalize category to proper case for CHECK constraint
