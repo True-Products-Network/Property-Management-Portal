@@ -58,6 +58,7 @@ export interface CreateContactInput {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelationship?: string;
+  roles?: string[];
 }
 
 export async function getContacts(
@@ -249,8 +250,34 @@ export async function createContact(
     if (error) {
       return { success: false, error: error.message };
     }
+
+    // Insert roles if provided
+    if (input.roles && input.roles.length > 0 && data?.id) {
+      const rolesToInsert = input.roles.map((role: string) => ({
+        contact_id: data.id,
+        role_type: role,
+        is_active: true,
+        assigned_at: new Date().toISOString(),
+        assigned_by: creatorContact?.id || null,
+      }));
+
+      const { error: rolesError } = await supabase
+        .from("contact_roles")
+        .insert(rolesToInsert);
+
+      if (rolesError) {
+        console.error("[createContact] Error inserting roles:", rolesError);
+      }
+    }
+
+    // Fetch the contact with roles to return
+    const { data: contactWithRoles } = await supabase
+      .from("contacts")
+      .select("*, contact_roles(role_type, is_active)")
+      .eq("id", data.id)
+      .single();
     
-    return { success: true, data, message: "Contact created successfully" };
+    return { success: true, data: contactWithRoles || data, message: "Contact created successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
@@ -304,8 +331,43 @@ export async function updateContact(
     if (error) {
       return { success: false, error: error.message };
     }
+
+    // Update roles if provided
+    if (input.roles !== undefined && data?.id) {
+      // First, deactivate existing roles
+      await supabase
+        .from("contact_roles")
+        .update({ is_active: false })
+        .eq("contact_id", data.id);
+
+      // Insert new roles
+      if (input.roles.length > 0) {
+        const rolesToInsert = input.roles.map((role: string) => ({
+          contact_id: data.id,
+          role_type: role,
+          is_active: true,
+          assigned_at: new Date().toISOString(),
+          assigned_by: contactId,
+        }));
+
+        const { error: rolesError } = await supabase
+          .from("contact_roles")
+          .insert(rolesToInsert);
+
+        if (rolesError) {
+          console.error("[updateContact] Error inserting roles:", rolesError);
+        }
+      }
+    }
+
+    // Fetch the contact with roles to return
+    const { data: contactWithRoles } = await supabase
+      .from("contacts")
+      .select("*, contact_roles(role_type, is_active)")
+      .eq("id", data.id)
+      .single();
     
-    return { success: true, data, message: "Contact updated successfully" };
+    return { success: true, data: contactWithRoles || data, message: "Contact updated successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
