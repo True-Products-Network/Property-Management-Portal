@@ -163,7 +163,7 @@ export function mapMaintenanceRequest(row: any): MaintenanceRequest {
     propertyId: row.property_id,
     propertyName: row.properties?.name,
     unitId: row.unit_id,
-    unitName: row.unit_id ? `Unit ${row.units?.unit_number} || ''}` : "Common Area"),
+    unitName: row.unit_id ? `Unit ${row.units?.unit_number} || ''}` : "Common Area",
 reportedByContactId: row.reported_by_contact_id,
 reportedByName: row.reported_by_contact ? `${row.reported_by_contact.first_name || ''} ${row.reported_by_contact.last_name || ''}` .trim() : "Unknown",
 submittedByName: row.submitted_by_name || "System",
