@@ -28,6 +28,11 @@ interface Vendor {
   workersCompExpiry?: string;
 }
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
 interface FormData {
   companyName: string;
   doingBusinessAs: string;
@@ -55,6 +60,8 @@ export default function EditVendorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [vendorTypeOptions, setVendorTypeOptions] = useState<DropdownOption[]>([]);
+  const [vendorStatusOptions, setVendorStatusOptions] = useState<DropdownOption[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     companyName: "",
@@ -76,7 +83,38 @@ export default function EditVendorPage() {
 
   useEffect(() => {
     loadVendor();
+    loadDropdownOptions();
   }, [vendorId]);
+
+  async function loadDropdownOptions() {
+    try {
+      console.log("[Vendor Edit] Loading dropdown options");
+      
+      // Load vendor types
+      const typeRes = await fetch("/api/dropdowns?recordType=Vendor&fieldName=Vendor%20Type");
+      console.log("[Vendor Edit] Vendor Type response:", typeRes.status);
+      if (typeRes.ok) {
+        const typeData = await typeRes.json();
+        console.log("[Vendor Edit] Vendor Type data:", typeData);
+        if (typeData.success) {
+          setVendorTypeOptions(typeData.data);
+        }
+      }
+      
+      // Load vendor statuses
+      const statusRes = await fetch("/api/dropdowns?recordType=Vendor&fieldName=vendor_status");
+      console.log("[Vendor Edit] Vendor Status response:", statusRes.status);
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        console.log("[Vendor Edit] Vendor Status data:", statusData);
+        if (statusData.success) {
+          setVendorStatusOptions(statusData.data);
+        }
+      }
+    } catch (error) {
+      console.error("[Vendor Edit] Error loading dropdowns:", error);
+    }
+  }
 
   async function loadVendor() {
     try {
@@ -91,6 +129,9 @@ export default function EditVendorPage() {
       }
       
       const vendor: Vendor = result.data;
+      console.log("[Vendor Edit] Loaded vendor:", vendor);
+      console.log("[Vendor Edit] Vendor category:", vendor.category);
+      console.log("[Vendor Edit] Vendor status:", vendor.status);
       setFormData({
         companyName: vendor.companyName || "",
         doingBusinessAs: vendor.doingBusinessAs || "",
@@ -267,27 +308,46 @@ export default function EditVendorPage() {
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Vendor Type <span className="text-red-500">*</span>
                 </label>
-                <DropdownSelect
-                  recordType="Vendor"
-                  fieldName="Vendor Type"
-                  value={formData.category}
-                  onChange={(value) => handleChange("category", value)}
-                  placeholder="Select Vendor Type"
-                  className={errors.category ? "border-red-500" : ""}
-                />
+                <select
+                  value={formData.category || ""}
+                  onChange={(e) => handleChange("category", e.target.value)}
+                  className={`input w-full ${errors.category ? "border-red-500" : ""}`}
+                >
+                  <option value="">Select Vendor Type</option>
+                  {vendorTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {formData.category && vendorTypeOptions.length > 0 && !vendorTypeOptions.find(o => o.value === formData.category) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Saved value "{formData.category}" not in dropdown options
+                  </p>
+                )}
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Vendor Status
                 </label>
-                <DropdownSelect
-                  recordType="Vendor"
-                  fieldName="vendor_status"
-                  value={formData.status}
-                  onChange={(value) => handleChange("status", value)}
-                  placeholder="Select Vendor Status"
-                />
+                <select
+                  value={formData.status || ""}
+                  onChange={(e) => handleChange("status", e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Select Vendor Status</option>
+                  {vendorStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {formData.status && vendorStatusOptions.length > 0 && !vendorStatusOptions.find(o => o.value === formData.status) && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Saved value "{formData.status}" not in dropdown options
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
