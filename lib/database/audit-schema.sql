@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
 -- Add success column to existing audit_logs table
 ALTER TABLE audit_logs 
 ADD COLUMN IF NOT EXISTS success BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'info',
 ADD COLUMN IF NOT EXISTS duration_ms INTEGER,
 ADD COLUMN IF NOT EXISTS request_method VARCHAR(10),
 ADD COLUMN IF NOT EXISTS request_path TEXT,
@@ -26,7 +27,8 @@ ADD COLUMN IF NOT EXISTS before_values JSONB,
 ADD COLUMN IF NOT EXISTS after_values JSONB,
 ADD COLUMN IF NOT EXISTS correlation_id VARCHAR(255),
 ADD COLUMN IF NOT EXISTS error_message TEXT,
-ADD COLUMN IF NOT EXISTS error_stack TEXT;
+ADD COLUMN IF NOT EXISTS error_stack TEXT,
+ADD COLUMN IF NOT EXISTS entity_name TEXT;
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_audit_logs_success ON audit_logs(success);

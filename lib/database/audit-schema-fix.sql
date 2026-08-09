@@ -4,6 +4,7 @@
 -- Add all missing columns that the enhanced logger expects
 ALTER TABLE audit_logs 
 ADD COLUMN IF NOT EXISTS success BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'info',
 ADD COLUMN IF NOT EXISTS duration_ms INTEGER,
 ADD COLUMN IF NOT EXISTS request_method VARCHAR(10),
 ADD COLUMN IF NOT EXISTS request_path TEXT,
