@@ -41,7 +41,7 @@ interface Contact {
   emailPermission: boolean;
   smsPermission: boolean;
   portalInvitationStatus: string;
-  roles?: string[];
+  roles?: string[]; // Array of role types from contact_roles
   createdAt: string;
 }
 
