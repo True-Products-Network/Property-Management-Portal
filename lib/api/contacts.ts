@@ -35,6 +35,8 @@ export interface Contact {
   portalInvitedAt?: string;
   allowLogin?: boolean;
   roles?: string[];
+  boardPosition?: string;
+  status?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +61,8 @@ export interface CreateContactInput {
   emergencyContactPhone?: string;
   emergencyContactRelationship?: string;
   roles?: string[];
+  boardPosition?: string;
+  status?: string;
 }
 
 export async function getContacts(
@@ -111,42 +115,8 @@ export async function getContacts(
       return { success: false, error: contactsError.message };
     }
 
-    // Fetch roles for all contacts
-    const contactIds = (contactsData || []).map((c: any) => c.id);
-    let rolesMap: Record<string, string[]> = {};
-
-    console.log("[Contacts API] Fetching roles for contacts:", contactIds);
-
-    if (contactIds.length > 0) {
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("contact_roles")
-        .select("contact_id, role_type")
-        .in("contact_id", contactIds)
-        .eq("is_active", true);
-
-      console.log("[Contacts API] Roles data:", rolesData, "Error:", rolesError);
-
-      if (!rolesError && rolesData) {
-        rolesMap = rolesData.reduce((acc: Record<string, string[]>, role: any) => {
-          if (!acc[role.contact_id]) {
-            acc[role.contact_id] = [];
-          }
-          acc[role.contact_id].push(role.role_type);
-          return acc;
-        }, {});
-      }
-    }
-
-    console.log("[Contacts API] Roles map:", rolesMap);
-
-    // Merge contacts with their roles
-    const contactsWithRoles = (contactsData || []).map((contact: any) => ({
-      ...contact,
-      contact_roles: rolesMap[contact.id]?.map((role_type: string) => ({ role_type })) || [],
-    }));
-
     // Map the database rows to Contact interface with camelCase properties
-    const mappedContacts = contactsWithRoles.map(mapContact);
+    const mappedContacts = (contactsData || []).map(mapContact);
     
     return {
       success: true,
@@ -167,8 +137,6 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
   try {
     const supabase = await createClient();
     
-    console.log("[getContact] Fetching contact:", id);
-    
     const { data, error } = await supabase
       .from("contacts")
       .select("*")
@@ -176,7 +144,6 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
       .single();
     
     if (error) {
-      console.error("[getContact] Error fetching contact:", error);
       return { success: false, error: error.message };
     }
     
@@ -184,25 +151,8 @@ export async function getContact(id: string): Promise<ApiResponse<Contact>> {
       return { success: false, error: "Contact not found" };
     }
     
-    // Fetch roles for this contact
-    console.log("[getContact] Fetching roles for contact:", id);
-    const { data: rolesData, error: rolesError } = await supabase
-      .from("contact_roles")
-      .select("role_type, is_active")
-      .eq("contact_id", id)
-      .eq("is_active", true);
-    
-    console.log("[getContact] Roles data:", rolesData, "Error:", rolesError);
-    
-    // Merge contact with roles
-    const contactWithRoles = {
-      ...data,
-      contact_roles: rolesData?.map((r: any) => ({ role_type: r.role_type })) || [],
-    };
-    
-    return { success: true, data: mapContact(contactWithRoles) };
+    return { success: true, data: mapContact(data) };
   } catch (error) {
-    console.error("[getContact] Unexpected error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
@@ -259,6 +209,9 @@ export async function createContact(
         emergency_contact_name: input.emergencyContactName,
         emergency_contact_phone: input.emergencyContactPhone,
         emergency_contact_relationship: input.emergencyContactRelationship,
+        roles: input.roles || [],
+        board_position: input.boardPosition,
+        status: input.status || "active",
         tenant_id: effectiveTenantId,
         allow_login: false,
         created_by: creatorContact?.id || null,
@@ -270,32 +223,8 @@ export async function createContact(
     if (error) {
       return { success: false, error: error.message };
     }
-
-    // Insert roles if provided
-    if (input.roles && input.roles.length > 0 && data?.id) {
-      const rolesToInsert = input.roles.map((role: string) => ({
-        contact_id: data.id,
-        role_type: role,
-        is_active: true,
-      }));
-
-      const { error: rolesError } = await supabase
-        .from("contact_roles")
-        .insert(rolesToInsert);
-
-      if (rolesError) {
-        console.error("[createContact] Error inserting roles:", rolesError);
-      }
-    }
-
-    // Fetch the contact with roles to return
-    const { data: contactWithRoles } = await supabase
-      .from("contacts")
-      .select("*, contact_roles(role_type, is_active)")
-      .eq("id", data.id)
-      .single();
     
-    return { success: true, data: contactWithRoles || data, message: "Contact created successfully" };
+    return { success: true, data: data, message: "Contact created successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
@@ -321,29 +250,42 @@ export async function updateContact(
     const contactId = userContact?.id || userId;
     console.log("[updateContact] Using contactId:", contactId, "for userId:", userId);
     
+    const updateData: any = {
+      first_name: input.firstName,
+      last_name: input.lastName,
+      email: input.email,
+      phone: input.phone,
+      mobile_phone: input.mobilePhone,
+      work_phone: input.workPhone,
+      preferred_contact_method: input.preferredContactMethod,
+      mailing_preference: input.mailingPreference,
+      email_permission: input.emailPermission,
+      sms_permission: input.smsPermission,
+      mailing_address_street: input.mailingAddressStreet,
+      mailing_address_city: input.mailingAddressCity,
+      mailing_address_state: input.mailingAddressState,
+      mailing_address_zip: input.mailingAddressZip,
+      emergency_contact_name: input.emergencyContactName,
+      emergency_contact_phone: input.emergencyContactPhone,
+      emergency_contact_relationship: input.emergencyContactRelationship,
+      updated_by: contactId,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only update roles/boardPosition/status if provided
+    if (input.roles !== undefined) {
+      updateData.roles = input.roles;
+    }
+    if (input.boardPosition !== undefined) {
+      updateData.board_position = input.boardPosition;
+    }
+    if (input.status !== undefined) {
+      updateData.status = input.status;
+    }
+
     const { data, error } = await supabase
       .from("contacts")
-      .update({
-        first_name: input.firstName,
-        last_name: input.lastName,
-        email: input.email,
-        phone: input.phone,
-        mobile_phone: input.mobilePhone,
-        work_phone: input.workPhone,
-        preferred_contact_method: input.preferredContactMethod,
-        mailing_preference: input.mailingPreference,
-        email_permission: input.emailPermission,
-        sms_permission: input.smsPermission,
-        mailing_address_street: input.mailingAddressStreet,
-        mailing_address_city: input.mailingAddressCity,
-        mailing_address_state: input.mailingAddressState,
-        mailing_address_zip: input.mailingAddressZip,
-        emergency_contact_name: input.emergencyContactName,
-        emergency_contact_phone: input.emergencyContactPhone,
-        emergency_contact_relationship: input.emergencyContactRelationship,
-        updated_by: contactId,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id)
       .select()
       .single();
@@ -351,41 +293,8 @@ export async function updateContact(
     if (error) {
       return { success: false, error: error.message };
     }
-
-    // Update roles if provided
-    if (input.roles !== undefined && data?.id) {
-      // First, delete existing roles (clean slate approach)
-      await serviceSupabase
-        .from("contact_roles")
-        .delete()
-        .eq("contact_id", data.id);
-
-      // Insert new roles
-      if (input.roles.length > 0) {
-        const rolesToInsert = input.roles.map((role: string) => ({
-          contact_id: data.id,
-          role_type: role,
-          is_active: true,
-        }));
-
-        const { error: rolesError } = await serviceSupabase
-          .from("contact_roles")
-          .insert(rolesToInsert);
-
-        if (rolesError) {
-          console.error("[updateContact] Error inserting roles:", rolesError);
-        }
-      }
-    }
-
-    // Fetch the contact with roles to return
-    const { data: contactWithRoles } = await supabase
-      .from("contacts")
-      .select("*, contact_roles(role_type, is_active)")
-      .eq("id", data.id)
-      .single();
     
-    return { success: true, data: contactWithRoles || data, message: "Contact updated successfully" };
+    return { success: true, data: data, message: "Contact updated successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
