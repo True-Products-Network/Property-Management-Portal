@@ -324,13 +324,16 @@ export default function MaintenanceRequestDetailPage() {
       setIsLoading(true);
       setError(null);
 
+      console.log("[Maintenance Detail] Loading request:", id);
       const response = await fetch(`/api/maintenance/${id}`);
       const result = await response.json();
+      console.log("[Maintenance Detail] API result:", result);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to load maintenance request");
       }
 
+      console.log("[Maintenance Detail] Setting request data:", result.data);
       setRequest(result.data);
       
       // Load related data
@@ -339,7 +342,7 @@ export default function MaintenanceRequestDetailPage() {
       // Generate timeline from request data
       generateTimeline(result.data);
     } catch (error) {
-      console.error("Error loading maintenance request:", error);
+      console.error("[Maintenance Detail] Error loading maintenance request:", error);
       setError(error instanceof Error ? error.message : "Failed to load maintenance request");
     } finally {
       setIsLoading(false);
@@ -699,6 +702,8 @@ export default function MaintenanceRequestDetailPage() {
     );
   }
 
+  console.log("[Maintenance Detail] Rendering with request:", request);
+  
   const status = statusConfig[request.status] || { label: request.status, color: "bg-gray-100 text-gray-700" };
   const priority = priorityConfig[request.urgency || "normal"] || { label: request.urgency || "Normal", color: "bg-gray-100 text-gray-700" };
 

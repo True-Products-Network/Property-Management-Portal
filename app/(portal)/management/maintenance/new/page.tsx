@@ -237,8 +237,11 @@ function MaintenanceRequestForm() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log("[Maintenance Save] Response:", result);
         if (result.success) {
           const redirectId = isEditMode ? editId : result.data.id;
+          console.log("[Maintenance Save] Redirecting to:", `/management/maintenance/${redirectId}`);
+          console.log("[Maintenance Save] Response data:", result.data);
           router.push(`/management/maintenance/${redirectId}`);
         } else {
           alert(result.error || `Failed to ${isEditMode ? "update" : "create"} maintenance request`);
