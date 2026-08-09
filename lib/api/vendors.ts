@@ -106,11 +106,16 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
     const userId = portalUser.id;
     const vendorId = `VEND-${Date.now()}`;
     
+    // Normalize category to proper case for CHECK constraint
+    const normalizedCategory = input.category 
+      ? input.category.charAt(0).toUpperCase() + input.category.slice(1).toLowerCase()
+      : undefined;
+    
     const { data, error } = await supabase.from("vendors").insert({
       vendor_id: vendorId,
       company_name: input.companyName,
       doing_business_as: input.doingBusinessAs,
-      category: input.category,
+      category: normalizedCategory,
       primary_contact_name: input.primaryContactName,
       email: input.email,
       phone: input.phone,
