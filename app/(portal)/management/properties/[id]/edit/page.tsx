@@ -99,10 +99,12 @@ export default function EditPropertyPage() {
 
   async function loadContacts(associationId: string) {
     try {
-      // Load contacts with property_manager role for this association
+      console.log("[Property Edit] Loading contacts for association:", associationId);
+      // Load contacts for this association
       const response = await fetch(`/api/contacts?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
+        console.log("[Property Edit] Contacts loaded:", result);
         if (result.success && result.data) {
           // Filter contacts with property_manager role
           const managers = result.data.data.filter((contact: Contact) => 
@@ -110,11 +112,13 @@ export default function EditPropertyPage() {
               ['property_manager', 'manager', 'board_member'].includes(role.toLowerCase())
             )
           );
+          console.log("[Property Edit] Filtered managers:", managers);
+          console.log("[Property Edit] Current assignedStaffId:", formData.assignedStaffId);
           setContacts(managers);
         }
       }
     } catch (error) {
-      console.error("Error loading contacts:", error);
+      console.error("[Property Edit] Error loading contacts:", error);
     }
   }
 

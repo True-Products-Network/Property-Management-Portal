@@ -80,9 +80,11 @@ export default function EditUnitPage() {
       const unitRes = await fetch(`/api/units/${unitId}`);
       if (!unitRes.ok) throw new Error("Failed to fetch unit");
       const unitData = await unitRes.json();
+      console.log("[Unit Edit] Unit data loaded:", unitData);
       if (!unitData.success) throw new Error(unitData.error);
       setUnit(unitData.data);
       setFormData(unitData.data);
+      console.log("[Unit Edit] Unit type value:", unitData.data.type);
       
       // Load properties
       const propsRes = await fetch("/api/properties");
@@ -106,16 +108,19 @@ export default function EditUnitPage() {
 
   async function loadDropdownSettings() {
     try {
+      console.log("[Unit Edit] Loading dropdown settings");
       // Load unit types from dropdown settings
       const typeRes = await fetch("/api/dropdowns/Unit/unit_type");
+      console.log("[Unit Edit] Unit type response:", typeRes.status);
       if (typeRes.ok) {
         const typeData = await typeRes.json();
+        console.log("[Unit Edit] Unit type data:", typeData);
         if (typeData.success) {
           setUnitTypeOptions(typeData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
         }
       }
     } catch (error) {
-      console.error("Error loading dropdown settings:", error);
+      console.error("[Unit Edit] Error loading dropdown settings:", error);
     }
   }
 
