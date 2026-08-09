@@ -31,7 +31,12 @@ WHERE dropdown_id IN (
 DELETE FROM dropdowns 
 WHERE record_type = 'Vendor' AND field_name = 'Status';
 
--- 4. Verify remaining Vendor dropdowns
+-- 4. Rename 'type' to 'Vendor Type' if it exists
+UPDATE dropdowns 
+SET field_name = 'Vendor Type', label = 'Vendor Type'
+WHERE record_type = 'Vendor' AND field_name = 'type';
+
+-- 5. Verify remaining Vendor dropdowns
 SELECT record_type, field_name, label, is_active 
 FROM dropdowns 
 WHERE record_type = 'Vendor' 

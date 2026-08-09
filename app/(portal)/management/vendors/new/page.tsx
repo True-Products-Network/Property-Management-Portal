@@ -255,7 +255,7 @@ function NewVendorForm() {
                 </label>
                 <DropdownSelect
                   recordType="Vendor"
-                  fieldName="type"
+                  fieldName="Vendor Type"
                   value={formData.category}
                   onChange={(value) => handleChange("category", value)}
                   placeholder="Select Vendor Type"
