@@ -115,27 +115,29 @@ function NewPropertyForm() {
 
   async function loadPortalUsers(associationId: string) {
     try {
-      // Load portal users with PROPERTY_MANAGER or ASSOCIATION_MANAGER roles for this tenant
-      const response = await fetch(`/api/portal/users?associationId=${associationId}`);
+      // Load all contacts/people for this association
+      const response = await fetch(`/api/contacts?associationId=${associationId}`);
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
-          // Filter users with property management roles
-          const managers = result.data.filter((user: PortalUser) => 
-            user.roles?.some(role => 
-              ['PROPERTY_MANAGER', 'ASSOCIATION_MANAGER', 'ADMIN_USER'].includes(role)
-            )
-          );
-          setPortalUsers(managers);
-          
-          // If no managers found, show a message but don't block
-          if (managers.length === 0) {
-            console.warn("No property managers found for this association");
+        if (result.success && result.data?.data) {
+          // Map contacts to the same format as portal users
+          const contacts = result.data.data.map((contact: any) => ({
+            id: contact.id,
+            email: contact.email,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            roles: contact.roles || [],
+          }));
+          setPortalUsers(contacts);
+
+          // If no contacts found, show a message but don't block
+          if (contacts.length === 0) {
+            console.warn("No people found for this association");
           }
         }
       }
     } catch (error) {
-      console.error("Error loading portal users:", error);
+      console.error("Error loading contacts:", error);
     }
   }
 
@@ -419,7 +421,7 @@ function NewPropertyForm() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Assigned Property Manager <span className="text-red-500">*</span>
+                  Assigned Manager <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.assignedStaffId}
@@ -427,7 +429,7 @@ function NewPropertyForm() {
                   className={`input w-full ${errors.assignedStaffId ? "border-red-500" : ""}`}
                   required
                 >
-                  <option value="">Select Property Manager</option>
+                  <option value="">Select Manager</option>
                   {portalUsers.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.firstName} {user.lastName} ({user.email})
@@ -435,9 +437,12 @@ function NewPropertyForm() {
                   ))}
                 </select>
                 {portalUsers.length === 0 && formData.associationId && (
-                  <p className="text-sm text-amber-600 mt-1">
-                    No property managers found. Please assign a Property Manager to this association first.
-                  </p>
+                  <div className="text-sm text-amber-600 mt-1">
+                    <p>No people found for this association.</p>
+                    <Link href="/management/people/new" className="text-[var(--teal)] hover:underline">
+                      + Add a new person
+                    </Link>
+                  </div>
                 )}
                 {errors.assignedStaffId && <p className="text-sm text-red-500 mt-1">{errors.assignedStaffId}</p>}
               </div>
