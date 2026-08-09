@@ -265,28 +265,28 @@ export default function EditVendorPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Category <span className="text-red-500">*</span>
+                  Vendor Type <span className="text-red-500">*</span>
                 </label>
                 <DropdownSelect
                   recordType="Vendor"
-                  fieldName="Category"
+                  fieldName="type"
                   value={formData.category}
                   onChange={(value) => handleChange("category", value)}
-                  placeholder="Select Category"
+                  placeholder="Select Vendor Type"
                   className={errors.category ? "border-red-500" : ""}
                 />
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
+                  Vendor Status
                 </label>
                 <DropdownSelect
                   recordType="Vendor"
-                  fieldName="Status"
+                  fieldName="vendor_status"
                   value={formData.status}
                   onChange={(value) => handleChange("status", value)}
-                  placeholder="Select Status"
+                  placeholder="Select Vendor Status"
                 />
               </div>
             </div>

@@ -30,28 +30,7 @@ interface FormData {
   workersCompExpiry: string;
 }
 
-const VENDOR_CATEGORY_OPTIONS = [
-  { value: "HVAC", label: "HVAC" },
-  { value: "Plumbing", label: "Plumbing" },
-  { value: "Electrical", label: "Electrical" },
-  { value: "Landscaping", label: "Landscaping" },
-  { value: "Cleaning", label: "Cleaning" },
-  { value: "Security", label: "Security" },
-  { value: "Construction", label: "Construction" },
-  { value: "Roofing", label: "Roofing" },
-  { value: "Painting", label: "Painting" },
-  { value: "Pest Control", label: "Pest Control" },
-  { value: "Snow Removal", label: "Snow Removal" },
-  { value: "General Maintenance", label: "General Maintenance" },
-  { value: "Other", label: "Other" },
-];
 
-const VENDOR_STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "pending", label: "Pending Approval" },
-  { value: "suspended", label: "Suspended" },
-];
 
 function NewVendorForm() {
   const router = useRouter();
@@ -272,30 +251,28 @@ function NewVendorForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Category <span className="text-red-500">*</span>
+                  Vendor Type <span className="text-red-500">*</span>
                 </label>
                 <DropdownSelect
                   recordType="Vendor"
-                  fieldName="Category"
+                  fieldName="type"
                   value={formData.category}
                   onChange={(value) => handleChange("category", value)}
-                  placeholder="Select Category"
+                  placeholder="Select Vendor Type"
                   className={errors.category ? "border-red-500" : ""}
-                  defaultOptions={VENDOR_CATEGORY_OPTIONS}
                 />
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Status
+                  Vendor Status
                 </label>
                 <DropdownSelect
                   recordType="Vendor"
-                  fieldName="Status"
+                  fieldName="vendor_status"
                   value={formData.status}
                   onChange={(value) => handleChange("status", value)}
-                  placeholder="Select Status"
-                  defaultOptions={VENDOR_STATUS_OPTIONS}
+                  placeholder="Select Vendor Status"
                 />
               </div>
             </div>
