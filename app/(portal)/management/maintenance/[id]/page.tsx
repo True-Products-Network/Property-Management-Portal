@@ -704,6 +704,16 @@ export default function MaintenanceRequestDetailPage() {
 
   console.log("[Maintenance Detail] Rendering with request:", request);
   
+  // Debug: Check all required fields
+  try {
+    if (!request) throw new Error("Request is null");
+    if (!request.status) throw new Error("Request.status is missing");
+    if (!request.title) throw new Error("Request.title is missing");
+    console.log("[Maintenance Detail] All required fields present");
+  } catch (e) {
+    console.error("[Maintenance Detail] Render validation error:", e);
+  }
+  
   const status = statusConfig[request.status] || { label: request.status, color: "bg-gray-100 text-gray-700" };
   const priority = priorityConfig[request.urgency || "normal"] || { label: request.urgency || "Normal", color: "bg-gray-100 text-gray-700" };
 
