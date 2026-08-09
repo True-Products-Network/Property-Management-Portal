@@ -41,7 +41,7 @@ interface Contact {
   emailPermission: boolean;
   smsPermission: boolean;
   portalInvitationStatus: string;
-  role?: string;
+  roles?: string[];
   createdAt: string;
 }
 
@@ -166,6 +166,28 @@ export default function PeoplePage() {
         return <Badge className="bg-red-100 text-red-700">Suspended</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-700">No Access</Badge>;
+    }
+  };
+
+  const getRoleBadgeClass = (role: string): string => {
+    switch (role.toLowerCase()) {
+      case "property_manager":
+      case "association_manager":
+        return "bg-purple-100 text-purple-700";
+      case "board_member":
+        return "bg-blue-100 text-blue-700";
+      case "owner":
+        return "bg-green-100 text-green-700";
+      case "tenant":
+        return "bg-amber-100 text-amber-700";
+      case "vendor":
+        return "bg-orange-100 text-orange-700";
+      case "admin_user":
+        return "bg-red-100 text-red-700";
+      case "staff":
+        return "bg-teal-100 text-teal-700";
+      default:
+        return "bg-gray-100 text-gray-700";
     }
   };
 
@@ -363,11 +385,13 @@ export default function PeoplePage() {
                       </Link>
                     </td>
                     <td className="py-3 px-4">
-                      {contact.role && (
-                        <Badge className="bg-gray-100 text-gray-700">
-                          {contact.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                        </Badge>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {contact.roles?.map((role) => (
+                          <Badge key={role} className={getRoleBadgeClass(role)}>
+                            {role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </Badge>
+                        ))}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="text-sm">
