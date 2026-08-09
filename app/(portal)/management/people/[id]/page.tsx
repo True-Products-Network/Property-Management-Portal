@@ -73,7 +73,7 @@ interface MaintenanceRequest {
   propertyName?: string;
 }
 
-export default function ContactDetailPage() {
+export default function PersonDetailPage() {
   const params = useParams();
   const router = useRouter();
   const contactId = params.id as string;
@@ -234,7 +234,7 @@ export default function ContactDetailPage() {
   if (!contact) {
     return (
       <div className="text-center py-12">
-        <p className="text-[var(--secondary-text)]">Contact not found</p>
+        <p className="text-[var(--secondary-text)]">Person not found</p>
         <Link href="/management/people">
           <Button variant="outline" className="mt-4">
             Back to People

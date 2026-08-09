@@ -376,7 +376,7 @@ function ContactForm() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-[var(--main-text)]">
-              {isEditMode ? "Edit Contact" : "Add New Contact"}
+              {isEditMode ? "Edit Person" : "Add New Person"}
             </h1>
             {isEditMode && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
@@ -386,9 +386,9 @@ function ContactForm() {
             )}
           </div>
           <p className="text-[var(--secondary-text)] mt-1">
-            {isEditMode 
-              ? "Update contact information and preferences" 
-              : "Create a new owner, tenant, or staff contact"}
+            {isEditMode
+              ? "Update person information and preferences"
+              : "Create a new owner, tenant, or staff person"}
           </p>
         </div>
       </div>

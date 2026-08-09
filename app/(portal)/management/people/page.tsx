@@ -208,9 +208,9 @@ export default function PeoplePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Contacts</h1>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">People</h1>
           <p className="text-[var(--secondary-text)] mt-1">
-            Manage property owners, tenants, and other contacts
+            Manage property owners, tenants, and other people
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -218,7 +218,7 @@ export default function PeoplePage() {
           <Link href="/management/people/new">
             <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
               <Plus className="h-4 w-4 mr-2" />
-              Add Contact
+              Add Person
             </Button>
           </Link>
         </div>
@@ -233,7 +233,7 @@ export default function PeoplePage() {
                 <Users className="h-5 w-5 text-[var(--teal)]" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Total Contacts</p>
+                <p className="text-sm text-[var(--secondary-text)]">Total People</p>
                 <p className="text-2xl font-semibold">{contacts.length}</p>
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function PeoplePage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
               <Input
-                placeholder="Search contacts..."
+                placeholder="Search people..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -315,10 +315,10 @@ export default function PeoplePage() {
         </CardContent>
       </Card>
 
-      {/* Contacts Table */}
+      {/* People Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Contact List</CardTitle>
+          <CardTitle>People List</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -447,8 +447,8 @@ export default function PeoplePage() {
           {filteredContacts.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
               {searchQuery || statusFilter !== "all"
-                ? "No contacts found matching your criteria."
-                : "No contacts yet. Click 'Add Contact' to create one."}
+                ? "No people found matching your criteria."
+                : "No people yet. Click 'Add Person' to create one."}
             </div>
           )}
         </CardContent>
@@ -463,10 +463,10 @@ export default function PeoplePage() {
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                 </div>
-                <h2 className="text-lg font-semibold">Delete Contact</h2>
+                <h2 className="text-lg font-semibold">Delete Person</h2>
               </div>
               <p className="text-[var(--secondary-text)] mb-6">
-                Are you sure you want to delete <strong>{contactToDelete.firstName} {contactToDelete.lastName}</strong>? 
+                Are you sure you want to delete <strong>{contactToDelete.firstName} {contactToDelete.lastName}</strong>?
                 This action cannot be undone.
               </p>
               <div className="flex gap-3 justify-end">
@@ -490,7 +490,7 @@ export default function PeoplePage() {
                   ) : (
                     <Trash2 className="h-4 w-4 mr-2" />
                   )}
-                  Delete Contact
+                  Delete Person
                 </Button>
               </div>
             </div>
