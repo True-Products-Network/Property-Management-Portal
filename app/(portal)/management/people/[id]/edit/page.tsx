@@ -367,15 +367,18 @@ export default function EditContactPage() {
             <CardTitle>Roles</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
-                { value: "property_manager", label: "Property Manager" },
+                { value: "admin_user", label: "Admin User" },
                 { value: "association_manager", label: "Association Manager" },
                 { value: "board_member", label: "Board Member" },
+                { value: "finance_user", label: "Finance User" },
                 { value: "owner", label: "Owner" },
-                { value: "tenant", label: "Tenant" },
-                { value: "vendor", label: "Vendor" },
+                { value: "portfolio_manager", label: "Portfolio Manager" },
+                { value: "property_manager", label: "Property Manager" },
+                { value: "resident", label: "Resident" },
                 { value: "staff", label: "Staff" },
+                { value: "vendor_contractor", label: "Vendor/Contractor" },
               ].map((role) => (
                 <div key={role.value} className="flex items-center gap-2">
                   <input

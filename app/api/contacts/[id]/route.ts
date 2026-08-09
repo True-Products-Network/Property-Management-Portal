@@ -22,6 +22,7 @@ const updateSchema = z.object({
   emergencyContactName: z.string().optional(),
   emergencyContactPhone: z.string().optional(),
   emergencyContactRelationship: z.string().optional(),
+  roles: z.array(z.string()).optional(),
 });
 
 export async function GET(
