@@ -59,7 +59,7 @@ export async function getMaintenanceRequests(
     
     let query = supabase
       .from("maintenance_requests")
-      .select("*, properties!inner(association_id, name)", { count: "exact" });
+      .select("*, properties!inner(association_id, name), units(unit_number)", { count: "exact" });
     
     // Filter by association_id via property join
     if (params.associationId) {
@@ -125,7 +125,7 @@ export async function getMaintenanceRequest(id: string): Promise<ApiResponse<Mai
     
     const { data, error } = await supabase
       .from("maintenance_requests")
-      .select("*, properties(name, association_id)")
+      .select("*, properties(name, association_id), units(unit_number)")
       .eq("id", id)
       .single();
     
