@@ -25,6 +25,13 @@ interface Unit {
   propertyId: string;
 }
 
+interface DropdownValue {
+  id: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+}
+
 interface Contact {
   id: string;
   firstName: string;
@@ -94,6 +101,9 @@ export default function EditContactPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [roleOptions, setRoleOptions] = useState<DropdownValue[]>([]);
+  const [statusOptions, setStatusOptions] = useState<DropdownValue[]>([]);
+  const [boardPositionOptions, setBoardPositionOptions] = useState<DropdownValue[]>([]);
   
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -120,7 +130,41 @@ export default function EditContactPage() {
 
   useEffect(() => {
     loadContact();
+    loadDropdownSettings();
   }, [contactId]);
+
+  async function loadDropdownSettings() {
+    try {
+      // Load contact roles
+      const rolesRes = await fetch("/api/dropdowns/Contact/role");
+      if (rolesRes.ok) {
+        const rolesData = await rolesRes.json();
+        if (rolesData.success) {
+          setRoleOptions(rolesData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
+        }
+      }
+
+      // Load contact status
+      const statusRes = await fetch("/api/dropdowns/Contact/status");
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        if (statusData.success) {
+          setStatusOptions(statusData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
+        }
+      }
+
+      // Load board positions
+      const boardRes = await fetch("/api/dropdowns/Contact/board_position");
+      if (boardRes.ok) {
+        const boardData = await boardRes.json();
+        if (boardData.success) {
+          setBoardPositionOptions(boardData.data.sort((a: DropdownValue, b: DropdownValue) => a.sortOrder - b.sortOrder));
+        }
+      }
+    } catch (error) {
+      console.error("Error loading dropdown settings:", error);
+    }
+  }
 
   async function loadContact() {
     try {
@@ -387,10 +431,20 @@ export default function EditContactPage() {
                 onChange={(e) => handleChange("status", e.target.value)}
                 className="input w-full"
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
-                <option value="suspended">Suspended</option>
+                {statusOptions.length > 0 ? (
+                  statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                    <option value="suspended">Suspended</option>
+                  </>
+                )}
               </select>
             </div>
 
@@ -400,43 +454,36 @@ export default function EditContactPage() {
                 Roles
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: "admin_user", label: "Admin User" },
-                  { value: "association_manager", label: "Association Manager" },
-                  { value: "board_member", label: "Board Member" },
-                  { value: "finance_user", label: "Finance User" },
-                  { value: "owner", label: "Owner" },
-                  { value: "portfolio_manager", label: "Portfolio Manager" },
-                  { value: "property_manager", label: "Property Manager" },
-                  { value: "resident", label: "Resident" },
-                  { value: "staff", label: "Staff" },
-                  { value: "vendor_contractor", label: "Vendor/Contractor" },
-                ].map((role) => (
-                  <div key={role.value} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`role-${role.value}`}
-                      checked={formData.roles?.includes(role.value)}
-                      onChange={(e) => {
-                        const currentRoles = formData.roles || [];
-                        if (e.target.checked) {
-                          handleChange("roles", [...currentRoles, role.value]);
-                        } else {
-                          handleChange("roles", currentRoles.filter((r) => r !== role.value));
-                        }
-                      }}
-                      className="rounded border-[var(--border-color)]"
-                    />
-                    <label htmlFor={`role-${role.value}`} className="text-sm text-[var(--main-text)]">
-                      {role.label}
-                    </label>
-                  </div>
-                ))}
+                {roleOptions.length > 0 ? (
+                  roleOptions.map((role) => (
+                    <div key={role.value} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`role-${role.value}`}
+                        checked={formData.roles?.includes(role.value)}
+                        onChange={(e) => {
+                          const currentRoles = formData.roles || [];
+                          if (e.target.checked) {
+                            handleChange("roles", [...currentRoles, role.value]);
+                          } else {
+                            handleChange("roles", currentRoles.filter((r) => r !== role.value));
+                          }
+                        }}
+                        className="rounded border-[var(--border-color)]"
+                      />
+                      <label htmlFor={`role-${role.value}`} className="text-sm text-[var(--main-text)]">
+                        {role.label}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[var(--secondary-text)] col-span-2">Loading roles...</p>
+                )}
               </div>
             </div>
 
             {/* Board Position */}
-            {formData.roles?.includes("board_member") && (
+            {formData.roles?.some(r => r.toLowerCase().includes('board')) && (
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
                   Board Position
@@ -447,12 +494,22 @@ export default function EditContactPage() {
                   className="input w-full"
                 >
                   <option value="">Select Position</option>
-                  <option value="president">President</option>
-                  <option value="vice_president">Vice President</option>
-                  <option value="treasurer">Treasurer</option>
-                  <option value="secretary">Secretary</option>
-                  <option value="member_at_large">Member at Large</option>
-                  <option value="other">Other</option>
+                  {boardPositionOptions.length > 0 ? (
+                    boardPositionOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="president">President</option>
+                      <option value="vice_president">Vice President</option>
+                      <option value="treasurer">Treasurer</option>
+                      <option value="secretary">Secretary</option>
+                      <option value="member_at_large">Member at Large</option>
+                      <option value="other">Other</option>
+                    </>
+                  )}
                 </select>
               </div>
             )}

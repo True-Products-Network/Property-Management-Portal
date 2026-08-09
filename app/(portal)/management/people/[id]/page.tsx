@@ -49,6 +49,8 @@ interface Contact {
   portalInvitationStatus: string;
   portalInvitedAt?: string;
   roles?: string[];
+  boardPosition?: string;
+  status?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -292,6 +294,11 @@ export default function PersonDetailPage() {
             </h1>
             {getPortalBadge(contact.portalInvitationStatus)}
             {getPreferredContactBadge(contact.preferredContactMethod)}
+            {contact.status && (
+              <Badge className={contact.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
+                {contact.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap mt-2">
             {contact.roles?.map((role) => (
@@ -299,8 +306,12 @@ export default function PersonDetailPage() {
                 {role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </Badge>
             ))}
+            {contact.boardPosition && contact.roles?.some(r => r.toLowerCase().includes('board')) && (
+              <Badge className="bg-blue-100 text-blue-700">
+                {contact.boardPosition.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </Badge>
+            )}
           </div>
-          <p className="text-[var(--secondary-text)] mt-2">{contact.email}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -372,6 +383,72 @@ export default function PersonDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Relationships */}
+      {units.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-[var(--teal)]" />
+              Relationships
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {units.map((unit) => (
+                <div
+                  key={unit.id}
+                  className="flex items-center justify-between p-3 bg-[var(--page-background)] rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-[var(--teal)]/10 rounded-lg flex items-center justify-center">
+                      <Home className="h-5 w-5 text-[var(--teal)]" />
+                    </div>
+                    <div>
+                      <Link
+                        href={`/management/units/${unit.id}`}
+                        className="font-medium text-[var(--main-text)] hover:text-[var(--teal)]"
+                      >
+                        Unit {unit.unitNumber}
+                      </Link>
+                      <p className="text-sm text-[var(--secondary-text)]">
+                        <Link
+                          href={`/management/properties/${unit.propertyId}`}
+                          className="hover:text-[var(--teal)]"
+                        >
+                          {unit.propertyName}
+                        </Link>
+                        {unit.associationName && (
+                          <>
+                            {" "}
+                            •{" "}
+                            <Link
+                              href={`/management/associations/${unit.associationId}`}
+                              className="hover:text-[var(--teal)]"
+                            >
+                              {unit.associationName}
+                            </Link>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {unit.isPrimaryContact && (
+                      <Badge className="bg-green-100 text-green-700">Primary</Badge>
+                    )}
+                    {unit.role && (
+                      <Badge className="bg-blue-100 text-blue-700">
+                        {unit.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
