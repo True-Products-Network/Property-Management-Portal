@@ -299,24 +299,26 @@ export default function EditPropertyPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--main-text)] mb-1">
-                  Assigned Property Manager <span className="text-red-500">*</span>
+                  Assigned Property Manager
                 </label>
                 <select
                   value={formData.assignedStaffId || ""}
                   onChange={(e) => handleChange("assignedStaffId", e.target.value)}
                   className="input w-full"
-                  required
                 >
                   <option value="">Select Property Manager</option>
                   {contacts.map((contact) => (
                     <option key={contact.id} value={contact.id}>
-                      {contact.firstName} {contact.lastName} {contact.email ? `(${contact.email})` : ""}
+                      {contact.firstName} {contact.lastName}
+                      {contact.roles && contact.roles.length > 0
+                        ? ` (${contact.roles.map(r => r.replace(/_/g, ' ')).join(', ')})`
+                        : ''}
                     </option>
                   ))}
                 </select>
                 {contacts.length === 0 && formData.associationId && (
                   <p className="text-sm text-amber-600 mt-1">
-                    No property managers found. Please add a contact with Property Manager role to this association first.
+                    No contacts found. Please add a contact to this association first.
                   </p>
                 )}
               </div>
