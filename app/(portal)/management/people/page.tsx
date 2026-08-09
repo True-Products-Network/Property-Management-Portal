@@ -77,6 +77,7 @@ export default function PeoplePage() {
         throw new Error(result.error || "Failed to load contacts");
       }
       
+      console.log("[People Page] Contacts loaded:", result.data.data);
       setContacts(result.data.data || []);
     } catch (error) {
       console.error("Error loading contacts:", error);
