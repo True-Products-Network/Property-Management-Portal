@@ -93,13 +93,22 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
     const supabase = await createClient();
     
     // Look up portal user ID from auth user ID
-    const { data: portalUser } = await supabase
+    console.log("[createVendor] Looking up portal user for authUserId:", authUserId);
+    const { data: portalUser, error: portalError } = await supabase
       .from("portal_users")
       .select("id")
       .eq("id", authUserId)
       .maybeSingle();
     
+    console.log("[createVendor] Portal user lookup result:", { portalUser, portalError });
+    
+    if (portalError) {
+      console.error("[createVendor] Portal user lookup error:", portalError);
+      return { success: false, error: `Portal user lookup failed: ${portalError.message}` };
+    }
+    
     if (!portalUser) {
+      console.error("[createVendor] Portal user not found for id:", authUserId);
       return { success: false, error: "User not found in portal users" };
     }
     
