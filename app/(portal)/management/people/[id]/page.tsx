@@ -220,12 +220,11 @@ export default function PersonDetailPage() {
       case "resident":
       case "tenant":
         return "bg-amber-100 text-amber-700";
-      case "vendor_contractor":
       case "vendor":
         return "bg-orange-100 text-orange-700";
-      case "admin_user":
+      case "admin":
         return "bg-red-100 text-red-700";
-      case "finance_user":
+      case "finance":
         return "bg-emerald-100 text-emerald-700";
       case "staff":
         return "bg-teal-100 text-teal-700";
