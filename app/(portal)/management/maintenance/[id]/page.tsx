@@ -52,7 +52,10 @@ interface MaintenanceRequest {
     association_id?: string;
   };
   unitId?: string;
+  unitName?: string;
   reportedByContactId: string;
+  reportedByName?: string;
+  submittedByName?: string;
   assignedVendorId?: string;
   assignedStaffId?: string;
   estimatedCost?: number;
@@ -763,13 +766,13 @@ export default function MaintenanceRequestDetailPage() {
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
               <p className="text-sm font-medium">
-                {new Date(request.createdAt).toLocaleDateString()}
+                {new Date(request.createdAt).toLocaleString()}
               </p>
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Last Updated</p>
               <p className="text-sm font-medium">
-                {new Date(request.updatedAt).toLocaleDateString()}
+                {new Date(request.updatedAt).toLocaleString()}
               </p>
             </div>
             {request.requestedDate && (
@@ -833,18 +836,11 @@ export default function MaintenanceRequestDetailPage() {
           action={unit ? { label: "View", href: `/management/units/${unit.id}` } : undefined}
         >
           <div className="space-y-2">
-            {unit ? (
-              <>
-                <div>
-                  <p className="text-sm font-medium">Unit {unit.unitNumber}</p>
-                  {unit.unitType && (
-                    <p className="text-xs text-[var(--secondary-text)]">{unit.unitType}</p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-[var(--secondary-text)]">Common Area / No specific unit</p>
-            )}
+            <div>
+              <p className="text-sm font-medium">
+                {request.unitName || "Common Area"}
+              </p>
+            </div>
           </div>
         </InfoCard>
 
@@ -855,27 +851,34 @@ export default function MaintenanceRequestDetailPage() {
           action={reporter ? { label: "View", href: `/management/people/${reporter.id}` } : undefined}
         >
           <div className="space-y-2">
-            {reporter ? (
-              <>
-                <div>
-                  <p className="text-sm font-medium">{reporter.firstName} {reporter.lastName}</p>
-                </div>
-                {reporter.email && (
-                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
-                    <Mail className="w-3 h-3" />
-                    {reporter.email}
-                  </div>
-                )}
-                {reporter.primaryPhone && (
-                  <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
-                    <Phone className="w-3 h-3" />
-                    {reporter.primaryPhone}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-[var(--secondary-text)]">Loading...</p>
+            <div>
+              <p className="text-sm font-medium">
+                {request.reportedByName || "Unknown"}
+              </p>
+            </div>
+            {reporter?.email && (
+              <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                <Mail className="w-3 h-3" />
+                {reporter.email}
+              </div>
             )}
+            {reporter?.primaryPhone && (
+              <div className="flex items-center gap-1 text-xs text-[var(--secondary-text)]">
+                <Phone className="w-3 h-3" />
+                {reporter.primaryPhone}
+              </div>
+            )}
+          </div>
+        </InfoCard>
+
+        {/* Submitted By Info */}
+        <InfoCard title="Submitted By" icon={User}>
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium">
+                {request.submittedByName || "System"}
+              </p>
+            </div>
           </div>
         </InfoCard>
 
