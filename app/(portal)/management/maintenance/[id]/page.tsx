@@ -970,7 +970,7 @@ export default function MaintenanceRequestDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {request.estimatedCost !== undefined && (
+              {request.estimatedCost != null && (
                 <div>
                   <p className="text-xs text-[var(--secondary-text)]">Estimated Cost</p>
                   <p className="text-lg font-semibold">
@@ -978,7 +978,7 @@ export default function MaintenanceRequestDetailPage() {
                   </p>
                 </div>
               )}
-              {request.approvedAmount !== undefined && (
+              {request.approvedAmount != null && (
                 <div>
                   <p className="text-xs text-[var(--secondary-text)]">Approved Amount</p>
                   <p className="text-lg font-semibold text-emerald-600">
@@ -986,7 +986,7 @@ export default function MaintenanceRequestDetailPage() {
                   </p>
                 </div>
               )}
-              {request.actualCost !== undefined && (
+              {request.actualCost != null && (
                 <div>
                   <p className="text-xs text-[var(--secondary-text)]">Actual Cost</p>
                   <p className="text-lg font-semibold">
