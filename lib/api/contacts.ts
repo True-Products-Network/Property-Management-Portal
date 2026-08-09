@@ -72,45 +72,74 @@ export async function getContacts(
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     
-    let query = supabase
+    // First, fetch contacts
+    let contactsQuery = supabase
       .from("contacts")
-      .select("*, contact_roles!contact_id(role_type)", { count: "exact" });
+      .select("*", { count: "exact" });
     
     // Filter by tenant_id if provided
     if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
+      contactsQuery = contactsQuery.eq("tenant_id", tenantId);
     }
-    
+
     // Filter by association_id if provided (for association isolation)
     if (params.associationId) {
-      query = query.eq("association_id", params.associationId);
+      contactsQuery = contactsQuery.eq("association_id", params.associationId);
     }
-    
+
     // Filter by portal_user_id if provided
     if (params.portalUserId) {
-      query = query.eq("portal_user_id", params.portalUserId);
+      contactsQuery = contactsQuery.eq("portal_user_id", params.portalUserId);
     }
-    
+
     if (params.search) {
-      query = query.or(`first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`);
+      contactsQuery = contactsQuery.or(`first_name.ilike.%${params.search}%,last_name.ilike.%${params.search}%,email.ilike.%${params.search}%`);
     }
-    
+
     if (params.sortBy) {
-      query = query.order(params.sortBy, { ascending: params.sortOrder === "asc" });
+      contactsQuery = contactsQuery.order(params.sortBy, { ascending: params.sortOrder === "asc" });
     } else {
-      query = query.order("last_name", { ascending: true });
+      contactsQuery = contactsQuery.order("last_name", { ascending: true });
     }
-    
-    query = query.range(from, to);
-    
-    const { data, error, count } = await query;
-    
-    if (error) {
-      return { success: false, error: error.message };
+
+    contactsQuery = contactsQuery.range(from, to);
+
+    const { data: contactsData, error: contactsError, count } = await contactsQuery;
+
+    if (contactsError) {
+      return { success: false, error: contactsError.message };
     }
-    
+
+    // Fetch roles for all contacts
+    const contactIds = (contactsData || []).map((c: any) => c.id);
+    let rolesMap: Record<string, string[]> = {};
+
+    if (contactIds.length > 0) {
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("contact_roles")
+        .select("contact_id, role_type")
+        .in("contact_id", contactIds)
+        .eq("is_active", true);
+
+      if (!rolesError && rolesData) {
+        rolesMap = rolesData.reduce((acc: Record<string, string[]>, role: any) => {
+          if (!acc[role.contact_id]) {
+            acc[role.contact_id] = [];
+          }
+          acc[role.contact_id].push(role.role_type);
+          return acc;
+        }, {});
+      }
+    }
+
+    // Merge contacts with their roles
+    const contactsWithRoles = (contactsData || []).map((contact: any) => ({
+      ...contact,
+      contact_roles: rolesMap[contact.id]?.map((role_type: string) => ({ role_type })) || [],
+    }));
+
     // Map the database rows to Contact interface with camelCase properties
-    const mappedContacts = (data || []).map(mapContact);
+    const mappedContacts = contactsWithRoles.map(mapContact);
     
     return {
       success: true,
