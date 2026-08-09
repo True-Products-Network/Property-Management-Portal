@@ -282,7 +282,7 @@ export async function updateMaintenanceRequest(
       return { success: false, error: error.message };
     }
     
-    return { success: true, data, message: "Maintenance request updated successfully" };
+    return { success: true, data: mapMaintenanceRequest(data), message: "Maintenance request updated successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
