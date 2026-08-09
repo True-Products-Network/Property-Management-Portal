@@ -63,6 +63,7 @@ interface Unit {
   associationId: string;
   associationName: string;
   role: string;
+  isPrimaryContact?: boolean;
 }
 
 interface MaintenanceRequest {
