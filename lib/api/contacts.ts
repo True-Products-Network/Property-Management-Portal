@@ -257,8 +257,6 @@ export async function createContact(
         contact_id: data.id,
         role_type: role,
         is_active: true,
-        assigned_at: new Date().toISOString(),
-        assigned_by: creatorContact?.id || null,
       }));
 
       const { error: rolesError } = await supabase
@@ -334,10 +332,10 @@ export async function updateContact(
 
     // Update roles if provided
     if (input.roles !== undefined && data?.id) {
-      // First, deactivate existing roles
+      // First, delete existing roles (clean slate approach)
       await supabase
         .from("contact_roles")
-        .update({ is_active: false })
+        .delete()
         .eq("contact_id", data.id);
 
       // Insert new roles
@@ -346,8 +344,6 @@ export async function updateContact(
           contact_id: data.id,
           role_type: role,
           is_active: true,
-          assigned_at: new Date().toISOString(),
-          assigned_by: contactId,
         }));
 
         const { error: rolesError } = await supabase
