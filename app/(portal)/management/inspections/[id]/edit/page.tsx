@@ -101,7 +101,7 @@ export default function EditInspectionPage() {
       
       const [propsRes, vendorsRes, inspectionRes] = await Promise.all([
         fetch("/api/properties"),
-        fetch("/api/vendors"),
+        fetch("/api/vendors?category=Inspector"),
         fetch(`/api/inspections/${inspectionId}`),
       ]);
 

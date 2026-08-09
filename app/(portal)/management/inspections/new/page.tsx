@@ -99,7 +99,7 @@ function InspectionForm() {
     try {
       const [propsRes, vendorsRes] = await Promise.all([
         fetch("/api/properties"),
-        fetch("/api/vendors"),
+        fetch("/api/vendors?category=Inspector"),
       ]);
 
       if (propsRes.ok) {
