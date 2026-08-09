@@ -11,7 +11,10 @@ export interface MaintenanceRequest {
   propertyId: string;
   propertyName?: string;
   unitId?: string;
-  reportedByContactId: string;
+  unitName?: string;
+  reportedByContactId?: string;
+  reportedByName?: string;
+  submittedByName?: string;
   assignedVendorId?: string;
   assignedStaffId?: string;
   title: string;
@@ -146,33 +149,82 @@ export async function createMaintenanceRequest(
 ): Promise<ApiResponse<MaintenanceRequest>> {
   try {
     const supabase = await createClient();
-    
+
     const requestNumber = `MNT-${Date.now()}`;
     
-    const { data, error } = await supabase
-      .from("maintenance_requests")
-      .insert({
-        request_number: requestNumber,
-        property_id: input.propertyId,
-        unit_id: input.unitId,
-        reported_by_contact_id: input.reportedByContactId,
-        title: input.title,
-        description: input.description,
-        category: input.category,
-        urgency: input.urgency,
-        requested_date: input.requestedDate,
-        status: "new",
-        created_by: userId,
-        updated_by: userId,
-      })
-      .select()
-      .single();
+    // Get the reporter's name if reportedByContactId is provided
+let reportedByName = null;
+if (input.reportedByContactId) {
+  const { data: reporter } = await supabase
+    .from("contacts")
+    .select("first_name, last_name")
+    .eq("id", input.reportedByContactId)
+    .single();
+  if (reporter) {
+    reportedByName = `${reporter.first_name} ${reporter.last_name}`;
+  }
+}
+
+// Get the unit name if unitId is provided
+let unitName = "Common Area";
+if (input.unitId) {
+  const { data: unit } = await supabase
+    .from("units")
+    .select("unit_number")
+    .eq("id", input.unitId)
+    .single();
+  if (unit) {
+    unitName = `Unit ${unit.unit_number}`;
+  }
+} else {
+  unitName = "Common Area";
+}
+
+// Get the submitter's name (current user)
+const { data: submitter } = await supabase
+  .from("contacts")
+  .select("first_name, last_name")
+  .eq("portal_user_id", userId)
+  .maybeSingle();
+
+const submittedByName = submitter 
+  ? `${submitter.first_name} ${submitter.last_name}`
+  : "System";
+
+const { data, error } = await supabase
+  .from("maintenance_requests")
+  .insert({
+    request_number: requestNumber,
+    property_id: input.propertyId,
+    unit_id: input.unitId || null,
+    reported_by_contact_id: input.reportedByContactId,
+    reported_by_name: reportedByName,
+    unit_name: unitName,
+    submitted_by_name: submittedByName,
+    title: input.title,
+    description: input.description,
+    category: input.category,
+    urgency: input.urgency || "normal",
+    status: "new",
+    requested_date: input.requestedDate,
+    created_by: userId,
+    updated_by: userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  })
+  .select()
+  .single();
+
+if (error) {
+  return { success: false, error: error.message };
+}
+
+return {
+  success: true,
+  data: mapMaintenanceRequest(data),
+  message: "Maintenance request created successfully",
+};
     
-    if (error) {
-      return { success: false, error: error.message };
-    }
-    
-    return { success: true, data, message: "Maintenance request created successfully" };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
