@@ -2,8 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { SessionUser } from './session';
+import { SessionUser, TenantInfo } from './session';
 import { User, Session } from '@supabase/supabase-js';
+
+async function fetchTenants(supabase: ReturnType<typeof createClient>, userId: string): Promise<TenantInfo[]> {
+  const { data: tenantUsers, error } = await supabase
+    .from("tenant_users")
+    .select("tenant_id, role, tenants(name)")
+    .eq("user_id", userId);
+  
+  if (error) {
+    console.error("[useSession] Error fetching tenants:", error);
+    return [];
+  }
+  
+  return (tenantUsers || []).map((tu: any) => ({
+    id: tu.tenant_id,
+    name: tu.tenants?.name || "Unknown",
+    role: tu.role,
+  }));
+}
 
 export function useSession() {
   const [user, setUser] = useState<SessionUser | null>(null);
@@ -23,6 +41,9 @@ export function useSession() {
 
       const metadata = user.user_metadata;
       
+      // Fetch tenants for multi-tenant support
+      const tenants = await fetchTenants(supabase, user.id);
+      
       setUser({
         id: user.id,
         email: user.email!,
@@ -30,6 +51,7 @@ export function useSession() {
         roles: metadata?.roles || [],
         mfaEnabled: metadata?.mfa_enabled || false,
         status: metadata?.status || "ACTIVE",
+        tenants: tenants,
       });
       setLoading(false);
     }
@@ -37,9 +59,13 @@ export function useSession() {
     getUser();
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, session: Session | null) => {
       if (session?.user) {
         const metadata = session.user.user_metadata;
+        
+        // Fetch tenants for multi-tenant support
+        const tenants = await fetchTenants(supabase, session.user.id);
+        
         setUser({
           id: session.user.id,
           email: session.user.email!,
@@ -47,6 +73,7 @@ export function useSession() {
           roles: metadata?.roles || [],
           mfaEnabled: metadata?.mfa_enabled || false,
           status: metadata?.status || "ACTIVE",
+          tenants: tenants,
         });
       } else {
         setUser(null);
