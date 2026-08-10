@@ -3,6 +3,7 @@
 
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -21,7 +22,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Eye, Settings, AlertTriangle, Users } from "lucide-react";
+import { MoreHorizontal, Eye, Settings, AlertTriangle, Users, Database } from "lucide-react";
+import { TenantSeedModal } from "./TenantSeedModal";
 
 interface Tenant {
   id: string;
@@ -45,6 +47,11 @@ interface TenantsTableProps {
   tenants: Tenant[];
 }
 
+interface SelectedTenant {
+  id: string;
+  name: string;
+}
+
 const getStatusBadge = (status: string) => {
   const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
     active: "default",
@@ -58,6 +65,8 @@ const getStatusBadge = (status: string) => {
 
 export function TenantsTable({ tenants }: TenantsTableProps) {
   const router = useRouter();
+  const [selectedTenant, setSelectedTenant] = useState<SelectedTenant | null>(null);
+  const [isSeedModalOpen, setIsSeedModalOpen] = useState(false);
   
   if (tenants.length === 0) {
     return (
@@ -135,6 +144,15 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
                         <Users className="mr-2 h-4 w-4" />
                         Manage Users
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedTenant({ id: tenant.id, name: tenant.name });
+                          setIsSeedModalOpen(true);
+                        }}
+                      >
+                        <Database className="mr-2 h-4 w-4" />
+                        Setup Tenant Data
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -143,6 +161,21 @@ export function TenantsTable({ tenants }: TenantsTableProps) {
           })}
         </TableBody>
       </Table>
+
+      {selectedTenant && (
+        <TenantSeedModal
+          tenantId={selectedTenant.id}
+          tenantName={selectedTenant.name}
+          isOpen={isSeedModalOpen}
+          onClose={() => {
+            setIsSeedModalOpen(false);
+            setSelectedTenant(null);
+          }}
+          onSuccess={() => {
+            // Optionally refresh the page or show a toast
+          }}
+        />
+      )}
     </div>
   );
 }

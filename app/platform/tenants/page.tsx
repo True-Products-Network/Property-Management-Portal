@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TenantsTable } from "@/components/platform/TenantsTable";
 import { TenantsFilter } from "@/components/platform/TenantsFilter";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default async function TenantsPage({
@@ -69,12 +69,14 @@ export default async function TenantsPage({
           <h1 className="text-3xl font-bold text-gray-900">Business Accounts</h1>
           <p className="text-gray-500">Manage all tenant accounts on the platform</p>
         </div>
-        <Button asChild>
-          <Link href="/platform/tenants/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Provision New Tenant
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/platform/tenants/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Provision New Tenant
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <TenantsFilter
