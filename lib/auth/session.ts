@@ -23,6 +23,27 @@ export async function getSession(): Promise<SessionUser | null> {
   // Get user metadata which includes GHL contact ID and roles
   const metadata = user.user_metadata;
   
+  // Get the tenant_id from tenant_users table for proper multi-tenancy isolation
+  // This is critical - user_metadata.business_id may not be set for platform-created users
+  let businessId = metadata?.business_id;
+  
+  if (!businessId && user.id) {
+    const { data: tenantUser, error: tenantError } = await supabase
+      .from("tenant_users")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    
+    if (tenantError) {
+      console.error("[getSession] Error fetching tenant:", tenantError);
+    }
+    
+    if (tenantUser?.tenant_id) {
+      businessId = tenantUser.tenant_id;
+    }
+  }
+  
   return {
     id: user.id,
     email: user.email!,
@@ -30,7 +51,7 @@ export async function getSession(): Promise<SessionUser | null> {
     roles: metadata?.roles || [],
     mfaEnabled: metadata?.mfa_enabled || false,
     status: metadata?.status || "ACTIVE",
-    businessId: metadata?.business_id,
+    businessId: businessId,
   };
 }
 
