@@ -3,13 +3,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getApprovals, createApproval } from "@/lib/api/approvals";
 import { checkRouteEntitlement, incrementEntitlementUsage } from "@/lib/entitlements/api-middleware";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
-const createSchema = z.object({
+// Dynamic validation - will fetch from dropdown_settings
+async function getApprovalTypeValues(tenantId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("dropdown_settings")
+    .select("value")
+    .eq("tenant_id", tenantId)
+    .eq("record_type", "Approval")
+    .eq("field_name", "Approval Type")
+    .eq("is_active", true);
+  
+  // Return dynamic values or fallback to defaults
+  return data?.map((d) => d.value) || [
+    "maintenance", "capital_improvement", "vendor_contract", "budget_item", 
+    "policy_change", "special_assessment", "vendor_selection", 
+    "contract_approval", "capital_expense", "other"
+  ];
+}
+
+const createSchema = (approvalTypes: string[]) => z.object({
   associationId: z.string().uuid(),
   title: z.string().min(1),
   description: z.string().optional(),
-  approvalType: z.enum(["maintenance", "capital_improvement", "vendor_contract", "budget_item", "policy_change", "assessment", "other"]).optional(),
+  approvalType: z.enum(approvalTypes as [string, ...string[]]).optional(),
   requestedAmount: z.number().optional(),
   maintenanceRequestId: z.string().uuid().optional(),
   vendorId: z.string().uuid().optional(),
@@ -59,7 +79,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("[Approvals API] Received body:", JSON.stringify(body, null, 2));
     
-    const validation = createSchema.safeParse(body);
+    // Get dynamic approval types for this tenant
+    const approvalTypes = await getApprovalTypeValues(entitlementCheck.tenantId || '');
+    console.log("[Approvals API] Available approval types:", approvalTypes);
+    
+    const validation = createSchema(approvalTypes).safeParse(body);
     if (!validation.success) {
       console.error("[Approvals API] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });

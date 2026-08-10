@@ -89,6 +89,18 @@ const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; so
     { value: "annual", label: "Annual", sortOrder: 4 },
     { value: "emergency", label: "Emergency", sortOrder: 5 },
   ],
+  "Approval": [
+    { value: "maintenance", label: "Maintenance Approval", sortOrder: 1 },
+    { value: "capital_improvement", label: "Capital Improvement", sortOrder: 2 },
+    { value: "vendor_contract", label: "Vendor Contract", sortOrder: 3 },
+    { value: "budget_item", label: "Budget Item", sortOrder: 4 },
+    { value: "policy_change", label: "Policy Change", sortOrder: 5 },
+    { value: "special_assessment", label: "Special Assessment", sortOrder: 6 },
+    { value: "vendor_selection", label: "Vendor Selection", sortOrder: 7 },
+    { value: "contract_approval", label: "Contract Approval", sortOrder: 8 },
+    { value: "capital_expense", label: "Capital Expense", sortOrder: 9 },
+    { value: "other", label: "Other", sortOrder: 10 },
+  ],
 };
 
 // Default roles and permissions

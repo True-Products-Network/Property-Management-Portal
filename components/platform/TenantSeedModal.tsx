@@ -48,16 +48,16 @@ export function TenantSeedModal({
     details?: Record<string, { created: number; skipped: number; errors: string[] }>;
   } | null>(null);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
       setSelectedCategories(SEED_CATEGORIES.map((c) => c.id));
     } else {
       setSelectedCategories([]);
     }
   };
 
-  const handleCategoryChange = (categoryId: string, checked: boolean) => {
-    if (checked) {
+  const handleCategoryChange = (categoryId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
       setSelectedCategories((prev) => [...prev, categoryId]);
     } else {
       setSelectedCategories((prev) => prev.filter((id) => id !== categoryId));
@@ -160,7 +160,7 @@ export function TenantSeedModal({
                 <Checkbox
                   id="select-all"
                   checked={allSelected}
-                  onCheckedChange={handleSelectAll}
+                  onChange={handleSelectAll}
                 />
                 <Label htmlFor="select-all" className="font-medium">
                   Select All Categories
@@ -173,8 +173,8 @@ export function TenantSeedModal({
                     <Checkbox
                       id={category.id}
                       checked={selectedCategories.includes(category.id)}
-                      onCheckedChange={(checked) =>
-                        handleCategoryChange(category.id, checked as boolean)
+                      onChange={(e) =>
+                        handleCategoryChange(category.id, e)
                       }
                     />
                     <div className="space-y-1">
