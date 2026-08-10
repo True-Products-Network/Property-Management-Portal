@@ -18,7 +18,7 @@ async function getApprovalTypeValues(tenantId: string): Promise<string[]> {
     .eq("is_active", true);
   
   // Return dynamic values or fallback to defaults
-  return data?.map((d) => d.value) || [
+  return data?.map((d: { value: string }) => d.value) || [
     "maintenance", "capital_improvement", "vendor_contract", "budget_item", 
     "policy_change", "special_assessment", "vendor_selection", 
     "contract_approval", "capital_expense", "other"
