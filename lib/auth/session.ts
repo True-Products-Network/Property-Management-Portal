@@ -16,7 +16,7 @@ export interface SessionUser {
   mfaEnabled: boolean;
   status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING_INVITE";
   businessId?: string;
-  tenants: TenantInfo[];
+  tenants?: TenantInfo[];
 }
 
 export async function getSession(): Promise<SessionUser | null> {
