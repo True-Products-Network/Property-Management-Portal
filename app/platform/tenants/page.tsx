@@ -70,7 +70,7 @@ export default async function TenantsPage({
           <p className="text-gray-500">Manage all tenant accounts on the platform</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
+          <Button asChild className="bg-[var(--teal)] hover:bg-[var(--teal-hover)] text-white">
             <Link href="/platform/tenants/new">
               <Plus className="mr-2 h-4 w-4" />
               Provision New Tenant

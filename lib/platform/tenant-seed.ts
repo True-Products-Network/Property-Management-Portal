@@ -19,23 +19,23 @@ interface SeedResult {
 }
 
 // Default dropdown values for each record type
-const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; sortOrder: number }>> = {
+const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; sortOrder: number; fieldName?: string }>> = {
   "Vendor Company": [
-    { value: "hvac", label: "HVAC", sortOrder: 1 },
-    { value: "plumbing", label: "Plumbing", sortOrder: 2 },
-    { value: "electrical", label: "Electrical", sortOrder: 3 },
-    { value: "landscaping", label: "Landscaping", sortOrder: 4 },
-    { value: "cleaning", label: "Cleaning", sortOrder: 5 },
-    { value: "security", label: "Security", sortOrder: 6 },
-    { value: "pest_control", label: "Pest Control", sortOrder: 7 },
-    { value: "roofing", label: "Roofing", sortOrder: 8 },
-    { value: "painting", label: "Painting", sortOrder: 9 },
-    { value: "general_contracting", label: "General Contracting", sortOrder: 10 },
-    { value: "elevator", label: "Elevator", sortOrder: 11 },
-    { value: "fire_safety", label: "Fire Safety", sortOrder: 12 },
-    { value: "pool_service", label: "Pool Service", sortOrder: 13 },
-    { value: "snow_removal", label: "Snow Removal", sortOrder: 14 },
-    { value: "other", label: "Other", sortOrder: 15 },
+    { value: "hvac", label: "HVAC", sortOrder: 1, fieldName: "Vendor Type" },
+    { value: "plumbing", label: "Plumbing", sortOrder: 2, fieldName: "Vendor Type" },
+    { value: "electrical", label: "Electrical", sortOrder: 3, fieldName: "Vendor Type" },
+    { value: "landscaping", label: "Landscaping", sortOrder: 4, fieldName: "Vendor Type" },
+    { value: "cleaning", label: "Cleaning", sortOrder: 5, fieldName: "Vendor Type" },
+    { value: "security", label: "Security", sortOrder: 6, fieldName: "Vendor Type" },
+    { value: "pest_control", label: "Pest Control", sortOrder: 7, fieldName: "Vendor Type" },
+    { value: "roofing", label: "Roofing", sortOrder: 8, fieldName: "Vendor Type" },
+    { value: "painting", label: "Painting", sortOrder: 9, fieldName: "Vendor Type" },
+    { value: "general_contracting", label: "General Contracting", sortOrder: 10, fieldName: "Vendor Type" },
+    { value: "elevator", label: "Elevator", sortOrder: 11, fieldName: "Vendor Type" },
+    { value: "fire_safety", label: "Fire Safety", sortOrder: 12, fieldName: "Vendor Type" },
+    { value: "pool_service", label: "Pool Service", sortOrder: 13, fieldName: "Vendor Type" },
+    { value: "snow_removal", label: "Snow Removal", sortOrder: 14, fieldName: "Vendor Type" },
+    { value: "other", label: "Other", sortOrder: 15, fieldName: "Vendor Type" },
   ],
   "Unit": [
     { value: "studio", label: "Studio", sortOrder: 1 },
@@ -83,23 +83,44 @@ const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; so
     { value: "emergency", label: "Emergency", sortOrder: 6 },
   ],
   "Inspection": [
-    { value: "routine", label: "Routine", sortOrder: 1 },
-    { value: "move_in", label: "Move In", sortOrder: 2 },
-    { value: "move_out", label: "Move Out", sortOrder: 3 },
-    { value: "annual", label: "Annual", sortOrder: 4 },
-    { value: "emergency", label: "Emergency", sortOrder: 5 },
+    // Inspection Types
+    { value: "routine", label: "Routine", sortOrder: 1, fieldName: "Inspection Type" },
+    { value: "move_in", label: "Move In", sortOrder: 2, fieldName: "Inspection Type" },
+    { value: "move_out", label: "Move Out", sortOrder: 3, fieldName: "Inspection Type" },
+    { value: "annual", label: "Annual", sortOrder: 4, fieldName: "Inspection Type" },
+    { value: "fire_safety", label: "Fire Safety", sortOrder: 5, fieldName: "Inspection Type" },
+    { value: "elevator", label: "Elevator", sortOrder: 6, fieldName: "Inspection Type" },
+    { value: "hvac", label: "HVAC", sortOrder: 7, fieldName: "Inspection Type" },
+    { value: "roof", label: "Roof", sortOrder: 8, fieldName: "Inspection Type" },
+    { value: "pool", label: "Pool", sortOrder: 9, fieldName: "Inspection Type" },
+    { value: "emergency_systems", label: "Emergency Systems", sortOrder: 10, fieldName: "Inspection Type" },
+    { value: "insurance", label: "Insurance", sortOrder: 11, fieldName: "Inspection Type" },
+    { value: "other", label: "Other", sortOrder: 12, fieldName: "Inspection Type" },
+    // Inspection Status
+    { value: "scheduled", label: "Scheduled", sortOrder: 1, fieldName: "Inspection Status" },
+    { value: "in_progress", label: "In Progress", sortOrder: 2, fieldName: "Inspection Status" },
+    { value: "completed", label: "Completed", sortOrder: 3, fieldName: "Inspection Status" },
+    { value: "overdue", label: "Overdue", sortOrder: 4, fieldName: "Inspection Status" },
+    { value: "cancelled", label: "Cancelled", sortOrder: 5, fieldName: "Inspection Status" },
+    { value: "rescheduled", label: "Rescheduled", sortOrder: 6, fieldName: "Inspection Status" },
+    // Overall Result
+    { value: "excellent", label: "Excellent", sortOrder: 1, fieldName: "Overall Result" },
+    { value: "good", label: "Good", sortOrder: 2, fieldName: "Overall Result" },
+    { value: "fair", label: "Fair", sortOrder: 3, fieldName: "Overall Result" },
+    { value: "poor", label: "Poor", sortOrder: 4, fieldName: "Overall Result" },
+    { value: "critical", label: "Critical", sortOrder: 5, fieldName: "Overall Result" },
   ],
   "Approval": [
-    { value: "maintenance", label: "Maintenance Approval", sortOrder: 1 },
-    { value: "capital_improvement", label: "Capital Improvement", sortOrder: 2 },
-    { value: "vendor_contract", label: "Vendor Contract", sortOrder: 3 },
-    { value: "budget_item", label: "Budget Item", sortOrder: 4 },
-    { value: "policy_change", label: "Policy Change", sortOrder: 5 },
-    { value: "special_assessment", label: "Special Assessment", sortOrder: 6 },
-    { value: "vendor_selection", label: "Vendor Selection", sortOrder: 7 },
-    { value: "contract_approval", label: "Contract Approval", sortOrder: 8 },
-    { value: "capital_expense", label: "Capital Expense", sortOrder: 9 },
-    { value: "other", label: "Other", sortOrder: 10 },
+    { value: "maintenance", label: "Maintenance Approval", sortOrder: 1, fieldName: "Approval Type" },
+    { value: "capital_improvement", label: "Capital Improvement", sortOrder: 2, fieldName: "Approval Type" },
+    { value: "vendor_contract", label: "Vendor Contract", sortOrder: 3, fieldName: "Approval Type" },
+    { value: "budget_item", label: "Budget Item", sortOrder: 4, fieldName: "Approval Type" },
+    { value: "policy_change", label: "Policy Change", sortOrder: 5, fieldName: "Approval Type" },
+    { value: "special_assessment", label: "Special Assessment", sortOrder: 6, fieldName: "Approval Type" },
+    { value: "vendor_selection", label: "Vendor Selection", sortOrder: 7, fieldName: "Approval Type" },
+    { value: "contract_approval", label: "Contract Approval", sortOrder: 8, fieldName: "Approval Type" },
+    { value: "capital_expense", label: "Capital Expense", sortOrder: 9, fieldName: "Approval Type" },
+    { value: "other", label: "Other", sortOrder: 10, fieldName: "Approval Type" },
   ],
 };
 
@@ -216,10 +237,13 @@ export async function seedTenantData(
             continue;
           }
 
+          // Determine field name - use item's fieldName or default to "type"
+          const fieldName = item.fieldName || "type";
+          
           const { error } = await supabase.from("dropdown_settings").insert({
             tenant_id: tenantId,
             record_type: recordType,
-            field_name: recordType === "Vendor Company" ? "Vendor Type" : "type",
+            field_name: fieldName,
             value: item.value,
             label: item.label,
             sort_order: item.sortOrder,
