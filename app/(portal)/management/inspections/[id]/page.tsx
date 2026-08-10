@@ -329,6 +329,7 @@ export default function InspectionDetailPage() {
     ? {
         label: ratingOption?.label || inspection.overallRating,
         color: ratingConfig[inspection.overallRating]?.color || "bg-gray-100 text-gray-700",
+        icon: ratingConfig[inspection.overallRating]?.icon || null,
       }
     : null;
 
@@ -651,7 +652,7 @@ export default function InspectionDetailPage() {
                     rating.color.split(" ")[0]
                   )}
                 >
-                  {RatingIcon && <RatingIcon className={cn("w-5 h-5", rating.color.split(" ")[1])} />}
+                  {rating.icon && <rating.icon className={cn("w-5 h-5", rating.color.split(" ")[1])} />}
                 </div>
                 <div>
                   <p className={cn("text-sm font-medium", rating.color.split(" ")[1])}>
