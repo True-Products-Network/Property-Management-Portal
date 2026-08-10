@@ -171,6 +171,11 @@ export default function InspectionDetailPage() {
   const [overallResultOptions, setOverallResultOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showInspectorModal, setShowInspectorModal] = useState(false);
+  const [newStatus, setNewStatus] = useState("");
+  const [availableInspectors, setAvailableInspectors] = useState<Array<{ id: string; name: string; role: string }>>([]);
 
   useEffect(() => {
     async function fetchInspectionData() {
@@ -336,6 +341,104 @@ export default function InspectionDetailPage() {
       return date.toLocaleDateString();
     } catch {
       return "-";
+    }
+  };
+
+  // Handler: Mark inspection as complete
+  const handleMarkComplete = async () => {
+    if (!inspection) return;
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/inspections/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed", completedDate: new Date().toISOString() }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setInspection({ ...inspection, status: "completed", completedDate: new Date().toISOString() });
+      } else {
+        alert("Failed to mark complete: " + result.error);
+      }
+    } catch (error) {
+      alert("Error marking complete");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handler: Update status
+  const handleUpdateStatus = async () => {
+    if (!inspection || !newStatus) return;
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/inspections/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setInspection({ ...inspection, status: newStatus });
+        setShowStatusModal(false);
+        setNewStatus("");
+      } else {
+        alert("Failed to update status: " + result.error);
+      }
+    } catch (error) {
+      alert("Error updating status");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handler: Load available inspectors
+  const loadInspectors = async () => {
+    try {
+      // Load contacts with inspector or vendor roles
+      const response = await fetch("/api/contacts?roles=inspector,vendor");
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const inspectors = result.data.data.map((c: { id: string; firstName: string; lastName: string; roles?: string[] }) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName}`,
+            role: c.roles?.join(", ") || "Inspector",
+          }));
+          setAvailableInspectors(inspectors);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading inspectors:", error);
+    }
+  };
+
+  // Handler: Reassign inspector
+  const handleReassignInspector = async (inspectorId: string) => {
+    if (!inspection) return;
+    setIsUpdating(true);
+    try {
+      const response = await fetch(`/api/inspections/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inspectorId }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Reload inspection data
+        const inspectionRes = await fetch(`/api/inspections/${id}`);
+        const inspectionData = await inspectionRes.json();
+        if (inspectionData.success) {
+          setInspection(inspectionData.data);
+        }
+        setShowInspectorModal(false);
+      } else {
+        alert("Failed to reassign inspector: " + result.error);
+      }
+    } catch (error) {
+      alert("Error reassigning inspector");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -639,26 +742,105 @@ export default function InspectionDetailPage() {
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 pt-4">
         {inspection.status !== "completed" && (
-          <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
-            <CheckCircle2 className="w-4 h-4 mr-2" />
+          <Button 
+            className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+            onClick={handleMarkComplete}
+            disabled={isUpdating}
+          >n            {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
             Mark Complete
           </Button>
         )}
-        <Button variant="outline">
+        <Button 
+          variant="outline"
+          onClick={() => setShowStatusModal(true)}
+          disabled={isUpdating}
+        >
           <Clock className="w-4 h-4 mr-2" />
           Update Status
         </Button>
-        <Button variant="outline">
+        <Button 
+          variant="outline"
+          onClick={() => { loadInspectors(); setShowInspectorModal(true); }}
+          disabled={isUpdating}
+        >
           <Truck className="w-4 h-4 mr-2" />
           Reassign Inspector
         </Button>
         {!inspection.followUpRequired && inspection.status === "completed" && (
-          <Button variant="outline">
+          <Button variant="outline" disabled={isUpdating}>
             <AlertTriangle className="w-4 h-4 mr-2" />
             Flag for Follow-up
           </Button>
         )}
       </div>
+
+      {/* Status Update Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Update Inspection Status</h3>
+            <div className="space-y-2 mb-4">
+              {inspectionStatusOptions.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value={option.value}
+                    checked={newStatus === option.value}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="rounded-full"
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowStatusModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateStatus}
+                disabled={!newStatus || isUpdating}
+                className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Update Status
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign Inspector Modal */}
+      {showInspectorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Reassign Inspector</h3>
+            <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+              {availableInspectors.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading inspectors...</p>
+              ) : (
+                availableInspectors.map((inspector) => (
+                  <button
+                    key={inspector.id}
+                    onClick={() => handleReassignInspector(inspector.id)}
+                    className="w-full text-left p-3 hover:bg-gray-50 rounded border border-transparent hover:border-gray-200 transition-colors"
+                    disabled={isUpdating}
+                  >
+                    <p className="font-medium">{inspector.name}</p>
+                    <p className="text-sm text-gray-500">({inspector.role})</p>
+                  </button>
+                ))
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowInspectorModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
