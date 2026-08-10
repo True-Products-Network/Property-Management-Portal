@@ -27,7 +27,8 @@ export interface CreateDropdownInput {
   isDefault?: boolean;
 }
 
-// Get dropdown values for a specific record type and field
+// Get dropdown values for a specific record type and field (legacy - no tenant filter)
+// DEPRECATED: Use getDropdownValuesForTenant instead
 export async function getDropdownValues(
   recordType: string,
   fieldName: string
@@ -38,6 +39,37 @@ export async function getDropdownValues(
     const { data, error } = await supabase
       .from("dropdown_settings")
       .select("*")
+      .eq("record_type", recordType)
+      .eq("field_name", fieldName)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, data: data || [] };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+// Get dropdown values for a specific tenant
+export async function getDropdownValuesForTenant(
+  recordType: string,
+  fieldName: string,
+  tenantId: string
+): Promise<ApiResponse<DropdownSetting[]>> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("dropdown_settings")
+      .select("*")
+      .eq("tenant_id", tenantId)
       .eq("record_type", recordType)
       .eq("field_name", fieldName)
       .eq("is_active", true)

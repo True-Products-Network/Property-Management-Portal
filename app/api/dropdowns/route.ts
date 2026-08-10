@@ -1,13 +1,15 @@
 // Public Dropdown Values API
 // Returns dropdown values for specific record types and fields
-// No admin authentication required - read-only access to active values
+// Requires authentication to get tenant-specific values
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDropdownValues } from "@/lib/api/dropdowns";
+import { createClient } from "@/lib/supabase/server";
+import { getDropdownValuesForTenant } from "@/lib/api/dropdowns";
 
 // GET /api/dropdowns?recordType=contact&fieldName=role
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const recordType = searchParams.get("recordType");
     const fieldName = searchParams.get("fieldName");
@@ -19,7 +21,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const result = await getDropdownValues(recordType, fieldName);
+    // Get current user and tenant
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get tenant_id from user metadata or tenant_users table
+    let tenantId = user.user_metadata?.tenant_id;
+    if (!tenantId) {
+      const { data: tenantUser } = await supabase
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      tenantId = tenantUser?.tenant_id;
+    }
+
+    if (!tenantId) {
+      return NextResponse.json({ success: false, error: "No tenant found" }, { status: 400 });
+    }
+
+    const result = await getDropdownValuesForTenant(recordType, fieldName, tenantId);
 
     if (!result.success) {
       return NextResponse.json(result, { status: 500 });
