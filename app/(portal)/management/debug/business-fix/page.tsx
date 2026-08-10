@@ -54,10 +54,33 @@ export default function BusinessFixPage() {
         .eq("slug", contact?.tenant_id || "no-tenant")
         .maybeSingle();
 
-      // Count orphaned entities
-      const [{ count: orphanedAssoc }, { count: orphanedProp }] = await Promise.all([
+      // Count orphaned entities (no business_id)
+      const [
+        { count: orphanedAssoc },
+        { count: orphanedProp },
+        { count: orphanedUnits },
+        { count: orphanedContacts },
+        { count: orphanedVendors },
+        { count: orphanedMaint },
+        { count: orphanedInspect },
+        { count: orphanedDocs },
+        { count: orphanedApprovals },
+        { count: orphanedCompliance },
+        { count: orphanedPayments },
+        { count: orphanedComm },
+      ] = await Promise.all([
         supabase.from("associations").select("id", { count: "exact" }).is("business_id", null),
         supabase.from("properties").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("units").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("contacts").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("vendors").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("maintenance_requests").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("inspections").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("documents").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("approvals").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("compliance_matters").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("payment_records").select("id", { count: "exact" }).is("business_id", null),
+        supabase.from("communications").select("id", { count: "exact" }).is("business_id", null),
       ]);
 
       setData({
@@ -69,6 +92,16 @@ export default function BusinessFixPage() {
         orphaned: {
           associations: orphanedAssoc || 0,
           properties: orphanedProp || 0,
+          units: orphanedUnits || 0,
+          contacts: orphanedContacts || 0,
+          vendors: orphanedVendors || 0,
+          maintenance: orphanedMaint || 0,
+          inspections: orphanedInspect || 0,
+          documents: orphanedDocs || 0,
+          approvals: orphanedApprovals || 0,
+          compliance: orphanedCompliance || 0,
+          payments: orphanedPayments || 0,
+          communications: orphanedComm || 0,
         },
       });
     } catch (err) {
@@ -198,6 +231,54 @@ export default function BusinessFixPage() {
       .select("id");
     results.inspections = { count: inspectData?.length || 0, error: inspectError?.message };
 
+    // Update contacts
+    const { data: contactData, error: contactError } = await supabase
+      .from("contacts")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.contacts = { count: contactData?.length || 0, error: contactError?.message };
+
+    // Update documents
+    const { data: docData, error: docError } = await supabase
+      .from("documents")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.documents = { count: docData?.length || 0, error: docError?.message };
+
+    // Update approvals
+    const { data: approvalData, error: approvalError } = await supabase
+      .from("approvals")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.approvals = { count: approvalData?.length || 0, error: approvalError?.message };
+
+    // Update compliance
+    const { data: complianceData, error: complianceError } = await supabase
+      .from("compliance_matters")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.compliance = { count: complianceData?.length || 0, error: complianceError?.message };
+
+    // Update payments
+    const { data: paymentData, error: paymentError } = await supabase
+      .from("payment_records")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.payments = { count: paymentData?.length || 0, error: paymentError?.message };
+
+    // Update communications
+    const { data: commData, error: commError } = await supabase
+      .from("communications")
+      .update({ business_id: businessId })
+      .is("business_id", null)
+      .select("id");
+    results.communications = { count: commData?.length || 0, error: commError?.message };
+
     setResult(results);
     await loadData();
   }
@@ -232,8 +313,23 @@ export default function BusinessFixPage() {
         <CardContent className="space-y-2">
           <p><strong>Tenant:</strong> {data?.tenantName} ({data?.tenantId})</p>
           <p><strong>Business Record:</strong> {data?.existingBusiness ? `Exists (${data.existingBusiness.id})` : "Not found"}</p>
-          <p><strong>Orphaned Associations:</strong> {data?.orphaned?.associations}</p>
-          <p><strong>Orphaned Properties:</strong> {data?.orphaned?.properties}</p>
+          <div className="mt-4">
+            <p className="font-semibold">Orphaned Data (No Business ID):</p>
+            <div className="grid grid-cols-2 gap-2 text-sm mt-2">
+              <p>Associations: {data?.orphaned?.associations}</p>
+              <p>Properties: {data?.orphaned?.properties}</p>
+              <p>Units: {data?.orphaned?.units}</p>
+              <p>Contacts: {data?.orphaned?.contacts}</p>
+              <p>Vendors: {data?.orphaned?.vendors}</p>
+              <p>Maintenance: {data?.orphaned?.maintenance}</p>
+              <p>Inspections: {data?.orphaned?.inspections}</p>
+              <p>Documents: {data?.orphaned?.documents}</p>
+              <p>Approvals: {data?.orphaned?.approvals}</p>
+              <p>Compliance: {data?.orphaned?.compliance}</p>
+              <p>Payments: {data?.orphaned?.payments}</p>
+              <p>Communications: {data?.orphaned?.communications}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -276,10 +372,16 @@ export default function BusinessFixPage() {
             <div className="grid grid-cols-2 gap-2 text-sm text-green-800">
               <p>Associations: {result.associations?.count}</p>
               <p>Properties: {result.properties?.count}</p>
-              <p>Vendors: {result.vendors?.count}</p>
               <p>Units: {result.units?.count}</p>
+              <p>Contacts: {result.contacts?.count}</p>
+              <p>Vendors: {result.vendors?.count}</p>
               <p>Maintenance: {result.maintenance?.count}</p>
               <p>Inspections: {result.inspections?.count}</p>
+              <p>Documents: {result.documents?.count}</p>
+              <p>Approvals: {result.approvals?.count}</p>
+              <p>Compliance: {result.compliance?.count}</p>
+              <p>Payments: {result.payments?.count}</p>
+              <p>Communications: {result.communications?.count}</p>
             </div>
           </CardContent>
         </Card>

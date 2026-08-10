@@ -47,16 +47,34 @@ export default function DebugPage() {
         tenantName = tenant?.name;
       }
 
-      // Count entities in user's tenant
-      const { count: assocCount } = await supabase
-        .from("associations")
-        .select("id", { count: "exact" })
-        .eq("business_id", contact?.tenant_id || "no-tenant");
-
-      const { count: propCount } = await supabase
-        .from("properties")
-        .select("id", { count: "exact" })
-        .eq("business_id", contact?.tenant_id || "no-tenant");
+      // Count entities in user's tenant (using tenant_id as proxy for business_id check)
+      const [
+        { count: assocCount },
+        { count: propCount },
+        { count: unitCount },
+        { count: contactCount },
+        { count: vendorCount },
+        { count: maintCount },
+        { count: inspectCount },
+        { count: docCount },
+        { count: approvalCount },
+        { count: complianceCount },
+        { count: paymentCount },
+        { count: commCount },
+      ] = await Promise.all([
+        supabase.from("associations").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("properties").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("units").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("contacts").select("id", { count: "exact" }).eq("tenant_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("vendors").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("maintenance_requests").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("inspections").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("documents").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("approvals").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("compliance_matters").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("payment_records").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+        supabase.from("communications").select("id", { count: "exact" }).eq("business_id", contact?.tenant_id || "no-tenant"),
+      ]);
 
       // Count entities with NULL business_id (orphaned)
       const { count: orphanedAssoc } = await supabase
@@ -128,6 +146,16 @@ export default function DebugPage() {
         inTenant: {
           associations: assocCount || 0,
           properties: propCount || 0,
+          units: unitCount || 0,
+          contacts: contactCount || 0,
+          vendors: vendorCount || 0,
+          maintenance: maintCount || 0,
+          inspections: inspectCount || 0,
+          documents: docCount || 0,
+          approvals: approvalCount || 0,
+          compliance: complianceCount || 0,
+          payments: paymentCount || 0,
+          communications: commCount || 0,
         },
         orphaned: {
           associations: orphanedAssoc || 0,
@@ -217,8 +245,20 @@ export default function DebugPage() {
           <CardTitle>Data in Your Tenant</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <p>Associations: {userData?.inTenant?.associations}</p>
-          <p>Properties: {userData?.inTenant?.properties}</p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <p>Associations: {userData?.inTenant?.associations}</p>
+            <p>Properties: {userData?.inTenant?.properties}</p>
+            <p>Units: {userData?.inTenant?.units}</p>
+            <p>Contacts: {userData?.inTenant?.contacts}</p>
+            <p>Vendors: {userData?.inTenant?.vendors}</p>
+            <p>Maintenance: {userData?.inTenant?.maintenance}</p>
+            <p>Inspections: {userData?.inTenant?.inspections}</p>
+            <p>Documents: {userData?.inTenant?.documents}</p>
+            <p>Approvals: {userData?.inTenant?.approvals}</p>
+            <p>Compliance: {userData?.inTenant?.compliance}</p>
+            <p>Payments: {userData?.inTenant?.payments}</p>
+            <p>Communications: {userData?.inTenant?.communications}</p>
+          </div>
         </CardContent>
       </Card>
 
