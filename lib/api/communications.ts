@@ -31,7 +31,7 @@ export interface CreateCommunicationInput {
 }
 
 export async function getCommunications(
-  params: QueryParams & { associationId?: string } = {}
+  params: QueryParams & { associationId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Communication>>> {
   try {
     const supabase = await createClient();
@@ -41,6 +41,11 @@ export async function getCommunications(
     const to = from + pageSize - 1;
     
     let query = supabase.from("communications").select("*", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) query = query.eq("association_id", params.associationId);
     if (params.filters?.status) query = query.eq("status", params.filters.status);

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/auth/session";
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get current user with businessId
+    const user = await getSession();
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -14,7 +15,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch counts for all entities
+    // CRITICAL: Get tenant ID for filtering
+    const businessId = user.businessId;
+    if (!businessId) {
+      return NextResponse.json(
+        { success: false, error: "No tenant assigned" },
+        { status: 403 }
+      );
+    }
+
+    // Fetch counts for all entities - FILTERED by business_id
     const [
       associationsResult,
       propertiesResult,
@@ -30,19 +40,19 @@ export async function GET(request: NextRequest) {
       appointmentsResult,
       communicationsResult,
     ] = await Promise.all([
-      supabase.from("associations").select("id, status, type, created_at", { count: "exact" }),
-      supabase.from("properties").select("id, status, type, total_units, created_at", { count: "exact" }),
-      supabase.from("units").select("id, status, occupancy_status, created_at", { count: "exact" }),
-      supabase.from("contacts").select("id, portal_invitation_status, created_at", { count: "exact" }),
-      supabase.from("vendors").select("id, status, category, rating, created_at", { count: "exact" }),
-      supabase.from("maintenance_requests").select("id, status, urgency, category, actual_cost, created_at", { count: "exact" }),
-      supabase.from("inspections").select("id, status, inspection_type, rating, created_at", { count: "exact" }),
-      supabase.from("documents").select("id, status, document_type, file_size, expiry_date, created_at", { count: "exact" }),
-      supabase.from("compliance_matters").select("id, status, priority, category, fine_amount, created_at", { count: "exact" }),
-      supabase.from("approval_requests").select("id, status, approval_type, requested_amount, approved_amount, created_at", { count: "exact" }),
-      supabase.from("payment_records").select("id, status, payment_type, amount, created_at", { count: "exact" }),
-      supabase.from("appointments").select("id, status, appointment_type, created_at", { count: "exact" }),
-      supabase.from("communications").select("id, status, type, created_at", { count: "exact" }),
+      supabase.from("associations").select("id, status, type, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("properties").select("id, status, type, total_units, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("units").select("id, status, occupancy_status, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("contacts").select("id, portal_invitation_status, created_at", { count: "exact" }).eq("tenant_id", businessId),
+      supabase.from("vendors").select("id, status, category, rating, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("maintenance_requests").select("id, status, urgency, category, actual_cost, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("inspections").select("id, status, inspection_type, rating, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("documents").select("id, status, document_type, file_size, expiry_date, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("compliance_matters").select("id, status, priority, category, fine_amount, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("approval_requests").select("id, status, approval_type, requested_amount, approved_amount, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("payment_records").select("id, status, payment_type, amount, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("appointments").select("id, status, appointment_type, created_at", { count: "exact" }).eq("business_id", businessId),
+      supabase.from("communications").select("id, status, type, created_at", { count: "exact" }).eq("business_id", businessId),
     ]);
 
     // Calculate statistics
@@ -155,6 +165,7 @@ export async function GET(request: NextRequest) {
         },
       },
       generatedAt: now.toISOString(),
+      tenantId: businessId, // Include tenant ID for verification
     };
 
     return NextResponse.json({
