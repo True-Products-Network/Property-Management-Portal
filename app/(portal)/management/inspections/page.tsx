@@ -345,13 +345,17 @@ export default function InspectionsPage() {
                         <div className="text-sm">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-[var(--secondary-text)]" />
-                            <Link
-                              href={`/management/properties/${inspection.propertyId}`}
-                              className="text-[var(--teal)] hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {property?.name || "Unknown Property"}
-                            </Link>
+                            {property ? (
+                              <Link
+                                href={`/management/properties/${inspection.propertyId}`}
+                                className="text-[var(--teal)] hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {property.name}
+                              </Link>
+                            ) : (
+                              <span className="text-[var(--secondary-text)]">Unknown Property</span>
+                            )}
                           </div>
                           {unit && (
                             <div className="flex items-center gap-2 mt-1">
