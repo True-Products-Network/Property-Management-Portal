@@ -230,6 +230,24 @@ function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[
     settings: "Settings",
   };
 
+  const moduleLabels: Record<string, string> = {
+    dashboard: "Dashboard",
+    associations: "Businesses",
+    properties: "Properties",
+    units: "Units",
+    people: "People",
+    vendors: "Vendors",
+    maintenance: "Maintenance",
+    inspections: "Inspections",
+    documents: "Documents",
+    approvals: "Approvals",
+    compliance: "Compliance",
+    payments: "Payments",
+    communications: "Communications",
+    reports: "Reports",
+    settings: "Settings",
+  };
+
   const moduleRoutes: Record<string, string> = {
     dashboard: "/management/overview",
     associations: "/management/associations",
@@ -272,7 +290,7 @@ function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[
       const groupKey = moduleGroups[perm.module];
       if (groupKey && menuGroups[groupKey]) {
         menuGroups[groupKey].items.push({
-          label: perm.module.charAt(0).toUpperCase() + perm.module.slice(1),
+          label: moduleLabels[perm.module] || perm.module.charAt(0).toUpperCase() + perm.module.slice(1),
           href: moduleRoutes[perm.module] || `/management/${perm.module}`,
           icon: moduleIcons[perm.module] || "Circle",
           permissions: {

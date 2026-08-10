@@ -43,7 +43,7 @@ export function AssociationSelector() {
       >
         <Building2 className="h-4 w-4 text-[var(--teal)]" />
         <span className="max-w-[200px] truncate">
-          {activeAssociation?.name || "Select Association"}
+          {activeAssociation?.name || "Select Business"}
         </span>
         <ChevronDown className={`h-4 w-4 text-[var(--secondary-text)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
@@ -52,7 +52,7 @@ export function AssociationSelector() {
         <div className="absolute left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[var(--border-color)] py-2 z-50 max-h-[400px] overflow-y-auto">
           <div className="px-3 py-2 border-b border-[var(--border-color)]">
             <p className="text-xs font-medium text-[var(--secondary-text)] uppercase">
-              {associations.length === 1 ? "Your Association" : "Select Association"}
+              {associations.length === 1 ? "Your Business" : "Select Business"}
             </p>
           </div>
           

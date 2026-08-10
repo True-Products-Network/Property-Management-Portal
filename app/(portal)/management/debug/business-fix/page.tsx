@@ -135,43 +135,48 @@ export default function BusinessFixPage() {
         return;
       }
 
+      const tenantId = contact.tenant_id;
+
       // Get tenant details
       const { data: tenant } = await supabase
         .from("tenants")
         .select("name, slug")
-        .eq("id", contact.tenant_id)
+        .eq("id", tenantId)
         .single();
 
-      // Create business record for this tenant
-      const { data: business, error: businessError } = await supabase
+      // Check if business already exists for this tenant
+      const { data: existingBusiness } = await supabase
         .from("businesses")
-        .insert({
-          name: tenant?.name || "Default Business",
-          slug: contact.tenant_id, // Use tenant ID as slug for easy lookup
-          status: "active",
-        })
-        .select()
-        .single();
+        .select("id, name")
+        .eq("slug", tenantId)
+        .maybeSingle();
 
-      if (businessError) {
-        // Maybe business already exists
-        const { data: existingBusiness } = await supabase
+      let businessId: string;
+
+      if (existingBusiness) {
+        businessId = existingBusiness.id;
+      } else {
+        // Create business record for this tenant
+        const { data: business, error: businessError } = await supabase
           .from("businesses")
-          .select("id, name")
-          .eq("slug", contact.tenant_id)
+          .insert({
+            name: tenant?.name || "Default Business",
+            slug: tenantId, // Use tenant ID as slug for easy lookup
+            status: "active",
+          })
+          .select()
           .single();
-        
-        if (!existingBusiness) {
+
+        if (businessError) {
           setError("Failed to create business: " + businessError.message);
           return;
         }
         
-        // Use existing business
-        await migrateToBusiness(existingBusiness.id);
-      } else {
-        // Use new business
-        await migrateToBusiness(business.id);
+        businessId = business.id;
       }
+
+      // Migrate data with both business_id and tenant_id
+      await migrateToBusiness(businessId, tenantId);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fix failed");
@@ -180,101 +185,102 @@ export default function BusinessFixPage() {
     }
   }
 
-  async function migrateToBusiness(businessId: string) {
+  async function migrateToBusiness(businessId: string, tenantId: string) {
     const results: any = {};
 
-    // Update associations
+    // Update associations with both business_id and tenant_id
     const { data: assocData, error: assocError } = await supabase
       .from("associations")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.associations = { count: assocData?.length || 0, error: assocError?.message };
 
-    // Update properties
+    // Update properties with both business_id and tenant_id
     const { data: propData, error: propError } = await supabase
       .from("properties")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.properties = { count: propData?.length || 0, error: propError?.message };
 
-    // Update vendors
+    // Update vendors with both business_id and tenant_id
     const { data: vendorData, error: vendorError } = await supabase
       .from("vendors")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.vendors = { count: vendorData?.length || 0, error: vendorError?.message };
 
-    // Update units
+    // Update units with both business_id and tenant_id
     const { data: unitData, error: unitError } = await supabase
       .from("units")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.units = { count: unitData?.length || 0, error: unitError?.message };
 
-    // Update maintenance
+    // Update maintenance with both business_id and tenant_id
     const { data: maintData, error: maintError } = await supabase
       .from("maintenance_requests")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.maintenance = { count: maintData?.length || 0, error: maintError?.message };
 
-    // Update inspections
+    // Update inspections with both business_id and tenant_id
     const { data: inspectData, error: inspectError } = await supabase
       .from("inspections")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.inspections = { count: inspectData?.length || 0, error: inspectError?.message };
 
-    // Update contacts
+    // Update contacts with business_id (they already have tenant_id)
     const { data: contactData, error: contactError } = await supabase
       .from("contacts")
       .update({ business_id: businessId })
       .is("business_id", null)
+      .eq("tenant_id", tenantId)
       .select("id");
     results.contacts = { count: contactData?.length || 0, error: contactError?.message };
 
-    // Update documents
+    // Update documents with both business_id and tenant_id
     const { data: docData, error: docError } = await supabase
       .from("documents")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.documents = { count: docData?.length || 0, error: docError?.message };
 
-    // Update approvals
+    // Update approvals with both business_id and tenant_id
     const { data: approvalData, error: approvalError } = await supabase
       .from("approvals")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.approvals = { count: approvalData?.length || 0, error: approvalError?.message };
 
-    // Update compliance
+    // Update compliance with both business_id and tenant_id
     const { data: complianceData, error: complianceError } = await supabase
       .from("compliance_matters")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.compliance = { count: complianceData?.length || 0, error: complianceError?.message };
 
-    // Update payments
+    // Update payments with both business_id and tenant_id
     const { data: paymentData, error: paymentError } = await supabase
       .from("payment_records")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.payments = { count: paymentData?.length || 0, error: paymentError?.message };
 
-    // Update communications
+    // Update communications with both business_id and tenant_id
     const { data: commData, error: commError } = await supabase
       .from("communications")
-      .update({ business_id: businessId })
+      .update({ business_id: businessId, tenant_id: tenantId })
       .is("business_id", null)
       .select("id");
     results.communications = { count: commData?.length || 0, error: commError?.message };
