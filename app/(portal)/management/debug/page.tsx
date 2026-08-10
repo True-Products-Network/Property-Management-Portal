@@ -95,69 +95,22 @@ export default function DebugPage() {
     try {
       setMigrating(true);
       setMigrationResult(null);
+      setError(null);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError("Not logged in");
+      // Call the server API that uses service role to bypass RLS
+      const response = await fetch("/api/admin/migrate-orphaned-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Migration failed");
         return;
       }
 
-      // Get user's tenant
-      const { data: contact } = await supabase
-        .from("contacts")
-        .select("tenant_id")
-        .eq("portal_user_id", user.id)
-        .maybeSingle();
-
-      if (!contact?.tenant_id) {
-        setError("No tenant found for user");
-        return;
-      }
-
-      const targetTenantId = contact.tenant_id;
-      const results: any = {};
-
-      // Update associations
-      const { data: assocData, error: assocError } = await supabase
-        .from("associations")
-        .update({ business_id: targetTenantId, tenant_id: targetTenantId })
-        .is("business_id", null)
-        .select("id, name");
-      results.associations = { count: assocData?.length || 0, error: assocError?.message };
-
-      // Update properties
-      const { data: propData, error: propError } = await supabase
-        .from("properties")
-        .update({ business_id: targetTenantId })
-        .is("business_id", null)
-        .select("id, name");
-      results.properties = { count: propData?.length || 0, error: propError?.message };
-
-      // Update vendors
-      const { data: vendorData, error: vendorError } = await supabase
-        .from("vendors")
-        .update({ business_id: targetTenantId })
-        .is("business_id", null)
-        .select("id, company_name");
-      results.vendors = { count: vendorData?.length || 0, error: vendorError?.message };
-
-      // Update units
-      const { data: unitData, error: unitError } = await supabase
-        .from("units")
-        .update({ business_id: targetTenantId })
-        .is("business_id", null)
-        .select("id, unit_number");
-      results.units = { count: unitData?.length || 0, error: unitError?.message };
-
-      // Update maintenance requests
-      const { data: maintData, error: maintError } = await supabase
-        .from("maintenance_requests")
-        .update({ business_id: targetTenantId })
-        .is("business_id", null)
-        .select("id, title");
-      results.maintenance = { count: maintData?.length || 0, error: maintError?.message };
-
-      setMigrationResult(results);
+      setMigrationResult(data.results);
       
       // Reload data
       await loadUserData();
