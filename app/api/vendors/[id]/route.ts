@@ -50,14 +50,23 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+    console.log("[Vendor PUT] Request body:", JSON.stringify(body, null, 2));
+    
     const validation = updateSchema.safeParse(body);
 
     if (!validation.success) {
+      console.error("[Vendor PUT] Validation failed:", validation.error.flatten().fieldErrors);
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
+    console.log("[Vendor PUT] Validation passed, calling updateVendor");
     const result = await updateVendor(id, validation.data, user.id);
-    if (!result.success) return NextResponse.json(result, { status: 400 });
+    console.log("[Vendor PUT] updateVendor result:", result);
+    
+    if (!result.success) {
+      console.error("[Vendor PUT] updateVendor failed:", result.error);
+      return NextResponse.json(result, { status: 400 });
+    }
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
