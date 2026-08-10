@@ -49,6 +49,11 @@ interface Inspection {
   updatedAt: string;
 }
 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+
 interface Property {
   id: string;
   propertyId: string;
@@ -161,6 +166,9 @@ export default function InspectionDetailPage() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [inspector, setInspector] = useState<Contact | null>(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [inspectionTypeOptions, setInspectionTypeOptions] = useState<DropdownOption[]>([]);
+  const [inspectionStatusOptions, setInspectionStatusOptions] = useState<DropdownOption[]>([]);
+  const [overallResultOptions, setOverallResultOptions] = useState<DropdownOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,6 +177,9 @@ export default function InspectionDetailPage() {
       try {
         setLoading(true);
         setError(null);
+
+        // Load dropdown options first
+        await loadDropdownOptions();
 
         // Fetch inspection
         const inspectionRes = await fetch(`/api/inspections/${id}`);
@@ -241,6 +252,33 @@ export default function InspectionDetailPage() {
       }
     }
 
+    async function loadDropdownOptions() {
+      try {
+        // Load inspection types
+        const typeRes = await fetch("/api/dropdowns?recordType=Inspection&fieldName=Inspection%20Type");
+        if (typeRes.ok) {
+          const typeData = await typeRes.json();
+          if (typeData.success) setInspectionTypeOptions(typeData.data);
+        }
+
+        // Load inspection statuses
+        const statusRes = await fetch("/api/dropdowns?recordType=Inspection&fieldName=Inspection%20Status");
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.success) setInspectionStatusOptions(statusData.data);
+        }
+
+        // Load overall results (ratings)
+        const resultRes = await fetch("/api/dropdowns?recordType=Inspection&fieldName=Overall%20Result");
+        if (resultRes.ok) {
+          const resultData = await resultRes.json();
+          if (resultData.success) setOverallResultOptions(resultData.data);
+        }
+      } catch (error) {
+        console.error("Error loading dropdown options:", error);
+      }
+    }
+
     if (id) {
       fetchInspectionData();
     }
@@ -271,19 +309,35 @@ export default function InspectionDetailPage() {
     );
   }
 
-  const status = statusConfig[inspection.status] || {
-    label: inspection.status,
-    color: "bg-gray-100 text-gray-700",
+  // Get display labels from dropdown options
+  const statusOption = inspectionStatusOptions.find(o => o.value === inspection.status);
+  const status = {
+    label: statusOption?.label || inspection.status,
+    color: statusConfig[inspection.status]?.color || "bg-gray-100 text-gray-700",
   };
 
-  const inspectionTypeLabel =
-    inspectionTypeLabels[inspection.inspectionType] || inspection.inspectionType;
+  const typeOption = inspectionTypeOptions.find(o => o.value === inspection.inspectionType);
+  const inspectionTypeLabel = typeOption?.label || inspection.inspectionType;
 
+  const ratingOption = overallResultOptions.find(o => o.value === inspection.overallRating);
   const rating = inspection.overallRating
-    ? ratingConfig[inspection.overallRating]
+    ? {
+        label: ratingOption?.label || inspection.overallRating,
+        color: ratingConfig[inspection.overallRating]?.color || "bg-gray-100 text-gray-700",
+      }
     : null;
 
-  const RatingIcon = rating?.icon;
+  // Helper function to safely format dates
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "-";
+      return date.toLocaleDateString();
+    } catch {
+      return "-";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -348,15 +402,11 @@ export default function InspectionDetailPage() {
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Created</p>
-              <p className="text-sm font-medium">
-                {new Date(inspection.createdAt).toLocaleDateString()}
-              </p>
+              <p className="text-sm font-medium">{formatDate(inspection.createdAt)}</p>
             </div>
             <div>
               <p className="text-xs text-[var(--secondary-text)]">Last Updated</p>
-              <p className="text-sm font-medium">
-                {new Date(inspection.updatedAt).toLocaleDateString()}
-              </p>
+              <p className="text-sm font-medium">{formatDate(inspection.updatedAt)}</p>
             </div>
           </div>
         </InfoCard>
