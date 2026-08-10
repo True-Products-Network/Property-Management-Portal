@@ -50,7 +50,7 @@ export interface CreateUnitInput {
 }
 
 export async function getUnits(
-  params: QueryParams & { propertyId?: string } = {}
+  params: QueryParams & { propertyId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Unit>>> {
   try {
     const supabase = await createClient();
@@ -63,6 +63,11 @@ export async function getUnits(
     let query = supabase
       .from("units")
       .select("*", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.propertyId) {
       query = query.eq("property_id", params.propertyId);

@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       search: searchParams.get("search") || undefined,
       propertyId: searchParams.get("propertyId") || undefined,
       filters: status ? { status } : undefined,
+      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });

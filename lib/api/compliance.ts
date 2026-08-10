@@ -38,7 +38,7 @@ export interface CreateComplianceInput {
 }
 
 export async function getComplianceMatters(
-  params: QueryParams & { associationId?: string } = {}
+  params: QueryParams & { associationId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<ComplianceMatter>>> {
   try {
     const supabase = await createClient();
@@ -48,6 +48,11 @@ export async function getComplianceMatters(
     const to = from + pageSize - 1;
     
     let query = supabase.from("compliance_matters").select("*", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) query = query.eq("association_id", params.associationId);
     if (params.filters?.status) query = query.eq("status", params.filters.status);
