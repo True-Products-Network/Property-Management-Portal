@@ -20,9 +20,9 @@ const helpTopics = [
     title: "Getting Started",
     description: "Learn the basics of using the Property Management Portal",
     links: [
-      { label: "Quick Start Guide", href: "/docs/user-guides/quick-start.md" },
-      { label: "Dashboard Overview", href: "/docs/user-guides/dashboard-overview.md" },
-      { label: "Setting Up Your First Property", href: "/docs/user-guides/setting-up-first-property.md" },
+      { label: "Quick Start Guide", href: "/management/help/docs" },
+      { label: "Dashboard Overview", href: "/management/help/docs" },
+      { label: "Setting Up Your First Property", href: "/management/help/docs" },
     ],
   },
   {
@@ -30,18 +30,18 @@ const helpTopics = [
     title: "Documentation",
     description: "Detailed guides for all features and functions",
     links: [
-      { label: "User Manual", href: "/docs/user-guides/user-manual.md" },
-      { label: "Integration Guides", href: "/docs/user-guides/integration-guides.md" },
+      { label: "User Manual", href: "/management/help/docs" },
+      { label: "Integration Guides", href: "/management/help/docs" },
     ],
   },
   {
     icon: Video,
     title: "Video Tutorials",
-    description: "Step-by-step video walkthroughs (coming soon)",
+    description: "Step-by-step video walkthroughs",
     links: [
-      { label: "Introduction Video", href: "#", disabled: true },
-      { label: "Maintenance Requests", href: "#", disabled: true },
-      { label: "Reports & Analytics", href: "#", disabled: true },
+      { label: "Introduction Video (Coming Soon)", href: "#" },
+      { label: "Maintenance Requests (Coming Soon)", href: "#" },
+      { label: "Reports & Analytics (Coming Soon)", href: "#" },
     ],
   },
 ];
@@ -199,6 +199,8 @@ export default function HelpPage() {
                   <li key={link.label}>
                     <a
                       href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-sm text-[var(--teal)] hover:text-[var(--teal-hover)] flex items-center gap-1"
                     >
                       {link.label}
