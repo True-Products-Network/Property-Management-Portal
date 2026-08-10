@@ -28,10 +28,16 @@ export async function POST(request: NextRequest) {
     const results: any = {
       associations: { updated: 0, error: null },
       properties: { updated: 0, error: null },
-      vendors: { updated: 0, error: null },
       units: { updated: 0, error: null },
+      contacts: { updated: 0, error: null },
+      vendors: { updated: 0, error: null },
       maintenance: { updated: 0, error: null },
       inspections: { updated: 0, error: null },
+      documents: { updated: 0, error: null },
+      approvals: { updated: 0, error: null },
+      compliance: { updated: 0, error: null },
+      payments: { updated: 0, error: null },
+      communications: { updated: 0, error: null },
     };
 
     // Use service client to bypass RLS
@@ -138,6 +144,108 @@ export async function POST(request: NextRequest) {
       if (error) console.error("Inspections update error:", error);
     } catch (e: any) {
       results.inspections.error = e.message;
+    }
+
+    // Update documents
+    try {
+      const { data, error } = await serviceClient
+        .from("documents")
+        .update({ 
+          business_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("business_id", null)
+        .select("id, name");
+      results.documents.updated = data?.length || 0;
+      results.documents.error = error?.message;
+      if (error) console.error("Documents update error:", error);
+    } catch (e: any) {
+      results.documents.error = e.message;
+    }
+
+    // Update approvals
+    try {
+      const { data, error } = await serviceClient
+        .from("approvals")
+        .update({ 
+          business_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("business_id", null)
+        .select("id, title");
+      results.approvals.updated = data?.length || 0;
+      results.approvals.error = error?.message;
+      if (error) console.error("Approvals update error:", error);
+    } catch (e: any) {
+      results.approvals.error = e.message;
+    }
+
+    // Update compliance
+    try {
+      const { data, error } = await serviceClient
+        .from("compliance_matters")
+        .update({ 
+          business_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("business_id", null)
+        .select("id, title");
+      results.compliance.updated = data?.length || 0;
+      results.compliance.error = error?.message;
+      if (error) console.error("Compliance update error:", error);
+    } catch (e: any) {
+      results.compliance.error = e.message;
+    }
+
+    // Update payments
+    try {
+      const { data, error } = await serviceClient
+        .from("payments")
+        .update({ 
+          business_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("business_id", null)
+        .select("id, description");
+      results.payments.updated = data?.length || 0;
+      results.payments.error = error?.message;
+      if (error) console.error("Payments update error:", error);
+    } catch (e: any) {
+      results.payments.error = e.message;
+    }
+
+    // Update communications
+    try {
+      const { data, error } = await serviceClient
+        .from("communications")
+        .update({ 
+          business_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("business_id", null)
+        .select("id, subject");
+      results.communications.updated = data?.length || 0;
+      results.communications.error = error?.message;
+      if (error) console.error("Communications update error:", error);
+    } catch (e: any) {
+      results.communications.error = e.message;
+    }
+
+    // Update contacts (People) - use tenant_id column
+    try {
+      const { data, error } = await serviceClient
+        .from("contacts")
+        .update({ 
+          tenant_id: targetTenantId,
+          updated_at: new Date().toISOString(),
+        })
+        .is("tenant_id", null)
+        .select("id, first_name, last_name");
+      results.contacts.updated = data?.length || 0;
+      results.contacts.error = error?.message;
+      if (error) console.error("Contacts update error:", error);
+    } catch (e: any) {
+      results.contacts.error = e.message;
     }
 
     return NextResponse.json({

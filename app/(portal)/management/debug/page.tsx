@@ -69,6 +69,56 @@ export default function DebugPage() {
         .select("id", { count: "exact" })
         .is("business_id", null);
 
+      const { count: orphanedUnits } = await supabase
+        .from("units")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedContacts } = await supabase
+        .from("contacts")
+        .select("id", { count: "exact" })
+        .is("tenant_id", null);
+
+      const { count: orphanedVendors } = await supabase
+        .from("vendors")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedMaint } = await supabase
+        .from("maintenance_requests")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedInspect } = await supabase
+        .from("inspections")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedDocs } = await supabase
+        .from("documents")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedApprovals } = await supabase
+        .from("approvals")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedCompliance } = await supabase
+        .from("compliance_matters")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedPayments } = await supabase
+        .from("payments")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
+      const { count: orphanedComm } = await supabase
+        .from("communications")
+        .select("id", { count: "exact" })
+        .is("business_id", null);
+
       setUserData({
         userId: user.id,
         email: user.email,
@@ -82,6 +132,16 @@ export default function DebugPage() {
         orphaned: {
           associations: orphanedAssoc || 0,
           properties: orphanedProp || 0,
+          units: orphanedUnits || 0,
+          contacts: orphanedContacts || 0,
+          vendors: orphanedVendors || 0,
+          maintenance: orphanedMaint || 0,
+          inspections: orphanedInspect || 0,
+          documents: orphanedDocs || 0,
+          approvals: orphanedApprovals || 0,
+          compliance: orphanedCompliance || 0,
+          payments: orphanedPayments || 0,
+          communications: orphanedComm || 0,
         },
       });
     } catch (err) {
@@ -166,15 +226,27 @@ export default function DebugPage() {
         <CardHeader>
           <CardTitle>Orphaned Data (No Tenant)</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p>Associations: {userData?.orphaned?.associations}</p>
-          <p>Properties: {userData?.orphaned?.properties}</p>
+        <CardContent className="space-y-2">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <p>Associations: {userData?.orphaned?.associations}</p>
+            <p>Properties: {userData?.orphaned?.properties}</p>
+            <p>Units: {userData?.orphaned?.units}</p>
+            <p>Contacts: {userData?.orphaned?.contacts}</p>
+            <p>Vendors: {userData?.orphaned?.vendors}</p>
+            <p>Maintenance: {userData?.orphaned?.maintenance}</p>
+            <p>Inspections: {userData?.orphaned?.inspections}</p>
+            <p>Documents: {userData?.orphaned?.documents}</p>
+            <p>Approvals: {userData?.orphaned?.approvals}</p>
+            <p>Compliance: {userData?.orphaned?.compliance}</p>
+            <p>Payments: {userData?.orphaned?.payments}</p>
+            <p>Communications: {userData?.orphaned?.communications}</p>
+          </div>
           
-          {(userData?.orphaned?.associations > 0 || userData?.orphaned?.properties > 0) && (
+          {(userData?.orphaned?.associations > 0 || userData?.orphaned?.properties > 0 || userData?.orphaned?.units > 0 || userData?.orphaned?.contacts > 0 || userData?.orphaned?.vendors > 0 || userData?.orphaned?.maintenance > 0 || userData?.orphaned?.inspections > 0 || userData?.orphaned?.documents > 0 || userData?.orphaned?.approvals > 0 || userData?.orphaned?.compliance > 0 || userData?.orphaned?.payments > 0 || userData?.orphaned?.communications > 0) && (
             <Button 
               onClick={migrateData} 
               disabled={migrating}
-              className="w-full"
+              className="w-full mt-4"
             >
               {migrating ? (
                 <>
@@ -182,7 +254,7 @@ export default function DebugPage() {
                   Migrating...
                 </>
               ) : (
-                "Migrate Orphaned Data to Your Tenant"
+                "Migrate All Orphaned Data to Your Tenant"
               )}
             </Button>
           )}
@@ -198,13 +270,28 @@ export default function DebugPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1 text-green-800">
-              <li>Associations updated: {migrationResult.associations?.count}</li>
-              <li>Properties updated: {migrationResult.properties?.count}</li>
-              <li>Vendors updated: {migrationResult.vendors?.count}</li>
-              <li>Units updated: {migrationResult.units?.count}</li>
-              <li>Maintenance requests updated: {migrationResult.maintenance?.count}</li>
-            </ul>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <p>Associations: {migrationResult.associations?.updated}</p>
+              <p>Properties: {migrationResult.properties?.updated}</p>
+              <p>Units: {migrationResult.units?.updated}</p>
+              <p>Contacts: {migrationResult.contacts?.updated}</p>
+              <p>Vendors: {migrationResult.vendors?.updated}</p>
+              <p>Maintenance: {migrationResult.maintenance?.updated}</p>
+              <p>Inspections: {migrationResult.inspections?.updated}</p>
+              <p>Documents: {migrationResult.documents?.updated}</p>
+              <p>Approvals: {migrationResult.approvals?.updated}</p>
+              <p>Compliance: {migrationResult.compliance?.updated}</p>
+              <p>Payments: {migrationResult.payments?.updated}</p>
+              <p>Communications: {migrationResult.communications?.updated}</p>
+            </div>
+            {Object.values(migrationResult).some((r: any) => r.error) && (
+              <div className="mt-4 p-3 bg-red-100 rounded text-red-800 text-sm">
+                <p className="font-semibold">Errors:</p>
+                {Object.entries(migrationResult).filter(([_, r]: [string, any]) => r.error).map(([key, r]: [string, any]) => (
+                  <p key={key}>{key}: {r.error}</p>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
