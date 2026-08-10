@@ -132,10 +132,16 @@ export default function EditVendorPage() {
       console.log("[Vendor Edit] Loaded vendor:", vendor);
       console.log("[Vendor Edit] Vendor category:", vendor.category);
       console.log("[Vendor Edit] Vendor status:", vendor.status);
+      
+      // Normalize category to lowercase to match dropdown values
+      const normalizedCategory = vendor.category 
+        ? vendor.category.toLowerCase()
+        : "";
+      
       setFormData({
         companyName: vendor.companyName || "",
         doingBusinessAs: vendor.doingBusinessAs || "",
-        category: vendor.category || "",
+        category: normalizedCategory,
         status: vendor.status || "active",
         primaryContactName: vendor.primaryContactName || "",
         email: vendor.email || "",
@@ -320,7 +326,7 @@ export default function EditVendorPage() {
                     </option>
                   ))}
                 </select>
-                {formData.category && vendorTypeOptions.length > 0 && !vendorTypeOptions.find(o => o.value === formData.category) && (
+                {formData.category && vendorTypeOptions.length > 0 && !vendorTypeOptions.find(o => o.value.toLowerCase() === formData.category.toLowerCase()) && (
                   <p className="text-xs text-amber-600 mt-1">
                     Saved value "{formData.category}" not in dropdown options
                   </p>
