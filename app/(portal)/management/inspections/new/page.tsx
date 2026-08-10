@@ -26,6 +26,14 @@ interface Vendor {
   companyName: string;
 }
 
+interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  roles?: string[];
+}
+
 interface FormData {
   propertyId: string;
   unitId: string;
@@ -56,7 +64,7 @@ function InspectionForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [inspectors, setInspectors] = useState<Contact[]>([]);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [calendarSettings, setCalendarSettings] = useState<CalendarSettings | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
@@ -97,18 +105,27 @@ function InspectionForm() {
 
   async function loadInitialData() {
     try {
-      const [propsRes, vendorsRes] = await Promise.all([
+      // Load properties and inspectors (contacts with inspector/vendor roles)
+      const [propsRes, inspectorsRes] = await Promise.all([
         fetch("/api/properties"),
-        fetch("/api/vendors?category=Inspector"),
+        fetch("/api/contacts"),
       ]);
 
       if (propsRes.ok) {
         const propsData = await propsRes.json();
         if (propsData.success) setProperties(propsData.data.data || []);
       }
-      if (vendorsRes.ok) {
-        const vendorsData = await vendorsRes.json();
-        if (vendorsData.success) setVendors(vendorsData.data.data || []);
+      if (inspectorsRes.ok) {
+        const inspectorsData = await inspectorsRes.json();
+        if (inspectorsData.success) {
+          // Filter contacts with inspector or vendor roles
+          const filteredInspectors = inspectorsData.data.data.filter((c: Contact) =>
+            c.roles?.some((r: string) =>
+              ['inspector', 'vendor', 'contractor'].includes(r.toLowerCase())
+            )
+          );
+          setInspectors(filteredInspectors);
+        }
       }
     } catch (error) {
       console.error("Error loading initial data:", error);
@@ -355,17 +372,6 @@ function InspectionForm() {
                   label="Inspection Type"
                   required
                   className={errors.inspectionType ? "[&_select]:border-red-500" : ""}
-                  defaultOptions={[
-                    { value: "move_in", label: "Move In" },
-                    { value: "move_out", label: "Move Out" },
-                    { value: "annual", label: "Annual" },
-                    { value: "quarterly", label: "Quarterly" },
-                    { value: "safety", label: "Safety" },
-                    { value: "maintenance", label: "Maintenance" },
-                    { value: "insurance", label: "Insurance" },
-                    { value: "pre_lease", label: "Pre-Lease" },
-                    { value: "other", label: "Other" }
-                  ]}
                 />
                 {errors.inspectionType && <p className="text-sm text-red-500 mt-1">{errors.inspectionType}</p>}
               </div>
@@ -441,9 +447,12 @@ function InspectionForm() {
                 className="input w-full"
               >
                 <option value="">Select Inspector</option>
-                {vendors.map((vendor) => (
-                  <option key={vendor.id} value={vendor.id}>
-                    {vendor.companyName}
+                {inspectors.map((inspector) => (
+                  <option key={inspector.id} value={inspector.id}>
+                    {inspector.firstName} {inspector.lastName}
+                    {inspector.roles && inspector.roles.length > 0
+                      ? ` (${inspector.roles.map(r => r.replace(/_/g, ' ')).join(', ')})`
+                      : ''}
                   </option>
                 ))}
               </select>
