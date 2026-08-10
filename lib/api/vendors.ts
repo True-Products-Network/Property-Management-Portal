@@ -114,12 +114,31 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
     
     // Get the contact ID from portal user's ghl_contact_id
     // vendors.created_by references contacts(id), not portal_users(id)
-    const contactId = portalUser.ghl_contact_id;
-    if (!contactId) {
+    const ghlContactId = portalUser.ghl_contact_id;
+    if (!ghlContactId) {
       console.error("[createVendor] Portal user has no ghl_contact_id:", portalUser);
       return { success: false, error: "User contact not found" };
     }
     
+    // Look up the actual contact UUID from contacts table using ghl_contact_id
+    console.log("[createVendor] Looking up contact UUID for ghl_contact_id:", ghlContactId);
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("ghl_contact_id", ghlContactId)
+      .maybeSingle();
+    
+    if (contactError) {
+      console.error("[createVendor] Contact lookup error:", contactError);
+      return { success: false, error: `Contact lookup failed: ${contactError.message}` };
+    }
+    
+    if (!contact) {
+      console.error("[createVendor] Contact not found for ghl_contact_id:", ghlContactId);
+      return { success: false, error: "Contact not found" };
+    }
+    
+    const contactId = contact.id;
     console.log("[createVendor] Using contact ID for created_by:", contactId);
     
     const userId = contactId;
