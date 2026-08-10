@@ -12,27 +12,70 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     const userRoles = user.user_metadata?.roles || [];
-    if (!userRoles.includes("ADMIN_USER")) {
+    const isAdmin = userRoles.includes("ADMIN_USER") || isPlatformAdmin;
+    
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Fetch mappings from database
-    const { data: mappings, error } = await supabase
+    // Get user's tenant for business isolation
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    const tenantId = tenantUser?.tenant_id;
+
+    if (!isPlatformAdmin && !isTenantAdmin) {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
+    }
+
+    // Fetch mappings from database - FILTERED BY TENANT
+    let mappingsQuery = supabase
       .from("ghl_role_mappings")
       .select("*")
       .order("ghl_contact_role");
+    
+    // Filter by tenant_id if not platform admin
+    if (!isPlatformAdmin && tenantId) {
+      mappingsQuery = mappingsQuery.eq("tenant_id", tenantId);
+    }
+
+    const { data: mappings, error } = await mappingsQuery;
 
     if (error) {
       console.error("Error fetching mappings:", error);
       return NextResponse.json({ error: "Failed to fetch mappings" }, { status: 500 });
     }
 
-    // Get user counts for each mapping
-    const { data: userCounts, error: countError } = await supabase
+    // Get user counts for each mapping - FILTERED BY TENANT
+    let userCountsQuery = supabase
       .from("contacts")
-      .select("contact_role")
+      .select("contact_role, tenant_id")
       .not("contact_role", "is", null);
+    
+    if (tenantId) {
+      userCountsQuery = userCountsQuery.eq("tenant_id", tenantId);
+    }
+    
+    const { data: userCounts, error: countError } = await userCountsQuery;
 
     if (!countError && userCounts) {
       const counts: Record<string, number> = {};
@@ -64,9 +107,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     const userRoles = user.user_metadata?.roles || [];
-    if (!userRoles.includes("ADMIN_USER")) {
+    const isAdmin = userRoles.includes("ADMIN_USER") || isPlatformAdmin;
+    
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Get user's tenant for business isolation
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    const tenantId = tenantUser?.tenant_id;
+
+    if (!isPlatformAdmin && !isTenantAdmin) {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -79,12 +152,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for duplicate
-    const { data: existing } = await supabase
+    // Check for duplicate - scoped to tenant
+    let existingQuery = supabase
       .from("ghl_role_mappings")
       .select("id")
-      .eq("ghl_contact_role", ghlContactRole.trim())
-      .single();
+      .eq("ghl_contact_role", ghlContactRole.trim());
+    
+    if (tenantId) {
+      existingQuery = existingQuery.eq("tenant_id", tenantId);
+    }
+    
+    const { data: existing } = await existingQuery.single();
 
     if (existing) {
       return NextResponse.json(
@@ -93,7 +171,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert mapping
+    // Insert mapping with tenant_id
     const { data: mapping, error: mappingError } = await supabase
       .from("ghl_role_mappings")
       .insert({
@@ -104,6 +182,7 @@ export async function POST(request: NextRequest) {
         requires_mfa: requiresMFA || false,
         status: status || "active",
         description: description?.trim() || "",
+        tenant_id: tenantId,
         created_by: user.id,
       })
       .select()
@@ -114,8 +193,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create mapping" }, { status: 500 });
     }
 
-    // Create audit log entry
+    // Create audit log entry with tenant_id
     await supabase.from("audit_logs").insert({
+      tenant_id: tenantId,
       user_id: user.id,
       action: "GHL_MAPPING_CREATED",
       entity_type: "ghl_role_mapping",

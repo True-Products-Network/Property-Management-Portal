@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
     const supabaseClient = await createClient();
     const { data: { user: authUser } } = await supabaseClient.auth.getUser();
     let tenantId = authUser?.user_metadata?.tenant_id;
+    
+    // First try tenant_users table
     if (!tenantId) {
       const { data: tenantUser } = await supabaseClient
         .from("tenant_users")
@@ -79,6 +81,18 @@ export async function GET(request: NextRequest) {
         .eq("user_id", user.id)
         .maybeSingle();
       tenantId = tenantUser?.tenant_id;
+    }
+    
+    // If still no tenant, look up from contacts table where this user is the portal_user
+    // This is the authoritative source for data ownership
+    if (!tenantId) {
+      const { data: contact } = await supabaseClient
+        .from("contacts")
+        .select("tenant_id")
+        .eq("portal_user_id", user.id)
+        .not("tenant_id", "is", null)
+        .maybeSingle();
+      tenantId = contact?.tenant_id;
     }
     
     console.log("Contacts API: Fetching with params:", queryParams, "tenant:", tenantId);
@@ -153,6 +167,8 @@ export async function POST(request: NextRequest) {
     // Get tenant_id for the new contact
     const supabaseForTenant = await createClient();
     let tenantId = user.businessId;
+    
+    // First try tenant_users table
     if (!tenantId) {
       const { data: tenantUser } = await supabaseForTenant
         .from("tenant_users")
@@ -160,6 +176,18 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .maybeSingle();
       tenantId = tenantUser?.tenant_id;
+    }
+    
+    // If still no tenant, look up from contacts table where this user is the portal_user
+    // This is the authoritative source for data ownership
+    if (!tenantId) {
+      const { data: contact } = await supabaseForTenant
+        .from("contacts")
+        .select("tenant_id")
+        .eq("portal_user_id", user.id)
+        .not("tenant_id", "is", null)
+        .maybeSingle();
+      tenantId = contact?.tenant_id;
     }
 
     console.log("[Contacts API] Creating contact with data:", validation.data, "userId:", user.id, "tenantId:", tenantId);

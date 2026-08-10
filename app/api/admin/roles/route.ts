@@ -48,15 +48,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
-    // Use tenant_id from tenantUser or a default for platform admins
-    const tenantId = tenantUser?.tenant_id || '00000000-0000-0000-0000-000000000000';
+    // Use tenant_id from tenantUser
+    const tenantId = tenantUser?.tenant_id;
 
-    // Fetch all roles (system-wide and tenant-specific)
-    const { data: roles, error: rolesError } = await supabase
+    // Fetch roles filtered by tenant - system roles OR tenant-specific roles
+    let rolesQuery = supabase
       .from("roles")
       .select("*")
       .order("is_system_role", { ascending: false })
       .order("name");
+    
+    // Filter by tenant: show system roles OR roles for this specific tenant
+    if (tenantId) {
+      rolesQuery = rolesQuery.or(`is_system_role.eq.true,tenant_id.eq.${tenantId}`);
+    } else if (!isPlatformAdmin) {
+      // Non-platform admins without a tenant can only see system roles
+      rolesQuery = rolesQuery.eq("is_system_role", true);
+    }
+    // Platform admins without tenant context see all roles
+
+    const { data: roles, error: rolesError } = await rolesQuery;
 
     if (rolesError) {
       console.error("Error fetching roles:", rolesError);
@@ -75,6 +86,7 @@ export async function GET(request: NextRequest) {
       user_count: number;
       created_at: string;
       updated_at: string;
+      tenant_id?: string;
     }
     
     const rolesWithPermissions = (roles || []).map((role: Role) => {
@@ -89,6 +101,7 @@ export async function GET(request: NextRequest) {
         user_count: role.user_count || 0,
         created_at: role.created_at,
         updated_at: role.updated_at,
+        tenantId: role.tenant_id,
       };
     });
 
@@ -141,23 +154,37 @@ export async function POST(request: NextRequest) {
     }
 
     const tenantId = tenantUser?.tenant_id;
+    
+    // Cannot create roles without a tenant context (unless platform admin creating system roles)
+    if (!tenantId && !isPlatformAdmin) {
+      return NextResponse.json({ error: "No tenant context available" }, { status: 400 });
+    }
 
     // Parse request body
     const body = await request.json();
-    const { name, description, permissions, is_active, requires_mfa } = body;
+    const { name, description, permissions, is_active, requires_mfa, is_system_role } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "Role name is required" }, { status: 400 });
     }
 
-    // Check if role name already exists for this tenant
-    const { data: existingRole } = await supabase
+    // Only platform admins can create system roles
+    const createAsSystemRole = is_system_role === true && isPlatformAdmin;
+
+    // Check if role name already exists for this tenant (or as system role)
+    let existingQuery = supabase
       .from("roles")
       .select("id")
       .eq("name", name.trim())
-      .eq("tenant_id", tenantId || 'system')
-      .limit(1)
-      .single();
+      .limit(1);
+    
+    if (createAsSystemRole) {
+      existingQuery = existingQuery.eq("is_system_role", true);
+    } else if (tenantId) {
+      existingQuery = existingQuery.eq("tenant_id", tenantId);
+    }
+    
+    const { data: existingRole } = await existingQuery.single();
 
     if (existingRole) {
       return NextResponse.json({ error: "Role with this name already exists" }, { status: 400 });
@@ -170,10 +197,10 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || "",
         permissions: permissions || [],
-        is_system_role: false,
+        is_system_role: createAsSystemRole,
         requires_mfa: requires_mfa || false,
         is_active: is_active !== false,
-        tenant_id: tenantId,
+        tenant_id: createAsSystemRole ? null : tenantId,
         created_by: user.id,
       })
       .select()
@@ -184,17 +211,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create role" }, { status: 500 });
     }
 
-    // Create audit log entry
-    await supabase.from("platform_audit_events").insert({
-      tenant_id: tenantId || '00000000-0000-0000-0000-000000000000',
-      event_type: "ROLE_CREATED",
+    // Create audit log entry - use tenant-specific audit table
+    await supabase.from("audit_logs").insert({
+      tenant_id: tenantId,
+      user_id: user.id,
+      action: "ROLE_CREATED",
       entity_type: "role",
       entity_id: role.id,
       details: {
         role_name: name,
         permissions: permissions || [],
+        is_system_role: createAsSystemRole,
       },
-      created_by: user.id,
     });
 
     return NextResponse.json({
@@ -210,6 +238,7 @@ export async function POST(request: NextRequest) {
         user_count: 0,
         created_at: role.created_at,
         updated_at: role.updated_at,
+        tenant_id: role.tenant_id,
       }
     });
   } catch (error) {

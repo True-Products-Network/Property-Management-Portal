@@ -12,9 +12,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Check if user is platform admin
+    let isPlatformAdmin = user.user_metadata?.is_platform_admin === true;
+    if (!isPlatformAdmin) {
+      const { data: platformRole } = await supabase
+        .from("platform_user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .is("revoked_at", null)
+        .maybeSingle();
+      if (platformRole?.role === "PLATFORM_ADMIN") {
+        isPlatformAdmin = true;
+      }
+    }
+
     const userRoles = user.user_metadata?.roles || [];
-    if (!userRoles.includes("ADMIN_USER")) {
+    const isAdmin = userRoles.includes("ADMIN_USER") || isPlatformAdmin;
+    
+    if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Get user's tenant for business isolation
+    const { data: tenantUser } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    const isTenantAdmin = tenantUser?.role === 'admin';
+    const tenantId = tenantUser?.tenant_id;
+
+    if (!isPlatformAdmin && !isTenantAdmin) {
+      return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
     // Get query parameters
@@ -28,13 +58,18 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    // Build query
+    // Build query - FILTERED BY TENANT
     let query = supabase
       .from("audit_logs")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(limit)
       .range(offset, offset + limit - 1);
+
+    // Filter by tenant_id if not platform admin
+    if (!isPlatformAdmin && tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    }
 
     if (action) {
       query = query.eq("action", action);
@@ -67,16 +102,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch audit events" }, { status: 500 });
     }
 
-    // Enrich events with user names
+    // Enrich events with user names - FILTERED BY TENANT
     const userIds = [...new Set((events || []).map((e: { user_id: string }) => e.user_id).filter(Boolean))];
     
     let userMap: Record<string, { name: string; email: string }> = {};
     
     if (userIds.length > 0) {
-      const { data: users } = await supabase
+      let usersQuery = supabase
         .from("contacts")
         .select("id, first_name, last_name, email")
         .in("id", userIds);
+      
+      // Filter contacts by tenant if not platform admin
+      if (!isPlatformAdmin && tenantId) {
+        usersQuery = usersQuery.eq("tenant_id", tenantId);
+      }
+      
+      const { data: users } = await usersQuery;
 
       userMap = (users || []).reduce((acc: Record<string, { name: string; email: string }>, u: { id: string; first_name: string; last_name: string; email: string }) => {
         acc[u.id] = {

@@ -32,7 +32,7 @@ export async function getSession(): Promise<SessionUser | null> {
   // Get user metadata which includes GHL contact ID and roles
   const metadata = user.user_metadata;
   
-  // Get ALL tenants for this user
+  // Get ALL tenants for this user from tenant_users table
   const { data: tenantUsers, error: tenantsError } = await supabase
     .from("tenant_users")
     .select("tenant_id, role, tenants(name)")
@@ -42,22 +42,57 @@ export async function getSession(): Promise<SessionUser | null> {
     console.error("[getSession] Error fetching tenants:", tenantsError);
   }
   
-  const tenants: TenantInfo[] = (tenantUsers || []).map((tu: any) => ({
-    id: tu.tenant_id,
-    name: tu.tenants?.name || "Unknown",
-    role: tu.role,
-  }));
+  // Also get tenant from contacts table where this user is the portal_user
+  // This is the authoritative source for which tenant the user's data belongs to
+  const { data: contactTenants, error: contactTenantsError } = await supabase
+    .from("contacts")
+    .select("tenant_id, tenants(name)")
+    .eq("portal_user_id", user.id)
+    .not("tenant_id", "is", null);
+  
+  if (contactTenantsError) {
+    console.error("[getSession] Error fetching contact tenants:", contactTenantsError);
+  }
+  
+  // Merge tenants from both sources (tenant_users and contacts)
+  const tenantMap = new Map<string, TenantInfo>();
+  
+  // Add tenants from tenant_users
+  (tenantUsers || []).forEach((tu: any) => {
+    tenantMap.set(tu.tenant_id, {
+      id: tu.tenant_id,
+      name: tu.tenants?.name || "Unknown",
+      role: tu.role,
+    });
+  });
+  
+  // Add tenants from contacts (these are the authoritative source for data ownership)
+  (contactTenants || []).forEach((ct: any) => {
+    if (!tenantMap.has(ct.tenant_id)) {
+      tenantMap.set(ct.tenant_id, {
+        id: ct.tenant_id,
+        name: ct.tenants?.name || "Unknown",
+        role: "user", // Default role if only found via contacts
+      });
+    }
+  });
+  
+  const tenants: TenantInfo[] = Array.from(tenantMap.values());
   
   // Check for active tenant cookie
   const activeTenantId = cookieStore.get("active_tenant_id")?.value;
   
   // Determine which tenant to use:
   // 1. Active tenant cookie (if user still belongs to it)
-  // 2. First tenant in list
+  // 2. First tenant from contacts (authoritative for data)
+  // 3. First tenant from tenant_users
   let businessId = metadata?.business_id;
   
   if (activeTenantId && tenants.some(t => t.id === activeTenantId)) {
     businessId = activeTenantId;
+  } else if (contactTenants && contactTenants.length > 0) {
+    // Prioritize the tenant from contacts table as that's where the data is
+    businessId = contactTenants[0].tenant_id;
   } else if (tenants.length > 0) {
     businessId = tenants[0].id;
   }

@@ -6,6 +6,7 @@ import { SessionUser, TenantInfo } from './session';
 import { User, Session } from '@supabase/supabase-js';
 
 async function fetchTenants(supabase: ReturnType<typeof createClient>, userId: string): Promise<TenantInfo[]> {
+  // Get tenants from tenant_users table
   const { data: tenantUsers, error } = await supabase
     .from("tenant_users")
     .select("tenant_id, role, tenants(name)")
@@ -13,14 +14,44 @@ async function fetchTenants(supabase: ReturnType<typeof createClient>, userId: s
   
   if (error) {
     console.error("[useSession] Error fetching tenants:", error);
-    return [];
   }
   
-  return (tenantUsers || []).map((tu: any) => ({
-    id: tu.tenant_id,
-    name: tu.tenants?.name || "Unknown",
-    role: tu.role,
-  }));
+  // Also get tenant from contacts table where this user is the portal_user
+  // This is the authoritative source for which tenant the user's data belongs to
+  const { data: contactTenants, error: contactTenantsError } = await supabase
+    .from("contacts")
+    .select("tenant_id, tenants(name)")
+    .eq("portal_user_id", userId)
+    .not("tenant_id", "is", null);
+  
+  if (contactTenantsError) {
+    console.error("[useSession] Error fetching contact tenants:", contactTenantsError);
+  }
+  
+  // Merge tenants from both sources
+  const tenantMap = new Map<string, TenantInfo>();
+  
+  // Add tenants from tenant_users
+  (tenantUsers || []).forEach((tu: any) => {
+    tenantMap.set(tu.tenant_id, {
+      id: tu.tenant_id,
+      name: tu.tenants?.name || "Unknown",
+      role: tu.role,
+    });
+  });
+  
+  // Add tenants from contacts (authoritative for data ownership)
+  (contactTenants || []).forEach((ct: any) => {
+    if (!tenantMap.has(ct.tenant_id)) {
+      tenantMap.set(ct.tenant_id, {
+        id: ct.tenant_id,
+        name: ct.tenants?.name || "Unknown",
+        role: "user", // Default role if only found via contacts
+      });
+    }
+  });
+  
+  return Array.from(tenantMap.values());
 }
 
 export function useSession() {
