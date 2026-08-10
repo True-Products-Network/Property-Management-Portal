@@ -7,7 +7,8 @@ import { z } from "zod";
 const updateSchema = z.object({
   companyName: z.string().min(1).optional(),
   doingBusinessAs: z.string().optional(),
-  category: z.enum(["HVAC", "Plumbing", "Electrical", "Landscaping", "Cleaning", "Security", "Pest Control", "Roofing", "Painting", "General Contracting", "Elevator", "Fire Safety", "Pool Service", "Snow Removal", "Other"]).optional(),
+  category: z.string().optional(),
+  status: z.string().optional(),
   primaryContactName: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
