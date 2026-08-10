@@ -96,7 +96,7 @@ export interface CreateGhlPaymentLinkInput {
 }
 
 export async function getPayments(
-  params: QueryParams & { associationId?: string; contactId?: string } = {}
+  params: QueryParams & { associationId?: string; contactId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<PaymentRecord>>> {
   try {
     const supabase = await createClient();
@@ -106,6 +106,11 @@ export async function getPayments(
     const to = from + pageSize - 1;
     
     let query = supabase.from("payment_records").select("*", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) query = query.eq("association_id", params.associationId);
     if (params.contactId) query = query.eq("contact_id", params.contactId);
@@ -139,12 +144,12 @@ export async function getPayment(id: string): Promise<ApiResponse<PaymentRecord>
   }
 }
 
-export async function createPayment(input: CreatePaymentInput, userId: string): Promise<ApiResponse<PaymentRecord>> {
+export async function createPayment(input: CreatePaymentInput, userId: string, businessId?: string): Promise<ApiResponse<PaymentRecord>> {
   try {
     const supabase = await createClient();
     const paymentId = `PAY-${Date.now()}`;
     
-    const { data, error } = await supabase.from("payment_records").insert({
+    const insertData: any = {
       payment_id: paymentId,
       association_id: input.associationId,
       contact_id: input.contactId,
@@ -158,7 +163,14 @@ export async function createPayment(input: CreatePaymentInput, userId: string): 
       approval_id: input.approvalId,
       status: "pending",
       created_by: userId,
-    }).select().single();
+    };
+    
+    // Add business_id for tenant isolation if provided
+    if (businessId) {
+      insertData.business_id = businessId;
+    }
+    
+    const { data, error } = await supabase.from("payment_records").insert(insertData).select().single();
     
     if (error) return { success: false, error: error.message };
     return { success: true, data, message: "Payment record created successfully" };

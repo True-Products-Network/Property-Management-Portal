@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       associationId: searchParams.get("associationId") || undefined,
       contactId: searchParams.get("contactId") || undefined,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
+      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
     });
 
     const duration = Date.now() - startTime;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Validation failed", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const result = await createPayment(validation.data, user.id);
+    const result = await createPayment(validation.data, user.id, user.businessId);
     const duration = Date.now() - startTime;
 
     if (!result.success) {
