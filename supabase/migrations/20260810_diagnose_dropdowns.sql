@@ -13,6 +13,6 @@ WHERE conrelid = 'dropdown_settings'::regclass
 AND contype = 'u';
 
 -- Check if tenant_id is correct
-SELECT id, name, subdomain
+SELECT id, name, slug
 FROM tenants
 WHERE id = '93f8cdcf-7dcd-4d83-8117-67d869eab88b';
