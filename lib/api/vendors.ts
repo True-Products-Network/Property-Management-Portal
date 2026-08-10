@@ -169,9 +169,31 @@ export async function createVendor(input: CreateVendorInput, authUserId: string)
   }
 }
 
-export async function updateVendor(id: string, input: Partial<CreateVendorInput>, userId: string): Promise<ApiResponse<Vendor>> {
+export async function updateVendor(id: string, input: Partial<CreateVendorInput>, authUserId: string): Promise<ApiResponse<Vendor>> {
   try {
     const supabase = await createClient();
+    
+    // Look up contact ID from portal user - vendors.updated_by references contacts(id)
+    console.log("[updateVendor] Looking up contact for authUserId:", authUserId);
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("portal_user_id", authUserId)
+      .maybeSingle();
+    
+    if (contactError) {
+      console.error("[updateVendor] Contact lookup error:", contactError);
+      return { success: false, error: `Contact lookup failed: ${contactError.message}` };
+    }
+    
+    if (!contact) {
+      console.error("[updateVendor] Contact not found for portal_user_id:", authUserId);
+      return { success: false, error: "Contact not found" };
+    }
+    
+    const contactId = contact.id;
+    console.log("[updateVendor] Using contact ID for updated_by:", contactId);
+    
     const { data, error } = await supabase.from("vendors").update({
       company_name: input.companyName,
       doing_business_as: input.doingBusinessAs,
@@ -188,7 +210,7 @@ export async function updateVendor(id: string, input: Partial<CreateVendorInput>
       license_number: input.licenseNumber,
       insurance_expiry: input.insuranceExpiry,
       workers_comp_expiry: input.workersCompExpiry,
-      updated_by: userId,
+      updated_by: contactId,
       updated_at: new Date().toISOString(),
     }).eq("id", id).select().single();
     
