@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
       search: searchParams.get("search") || undefined,
       associationId: searchParams.get("associationId") || undefined,
       filters: status ? { status } : undefined,
+      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
     });
 
     const duration = Date.now() - startTime;

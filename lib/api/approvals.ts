@@ -40,7 +40,7 @@ export interface CreateApprovalInput {
 }
 
 export async function getApprovals(
-  params: QueryParams & { associationId?: string } = {}
+  params: QueryParams & { associationId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Approval>>> {
   try {
     const supabase = await createClient();
@@ -50,6 +50,11 @@ export async function getApprovals(
     const to = from + pageSize - 1;
     
     let query = supabase.from("approvals").select("*", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) query = query.eq("association_id", params.associationId);
     if (params.filters?.status) query = query.eq("status", params.filters.status);

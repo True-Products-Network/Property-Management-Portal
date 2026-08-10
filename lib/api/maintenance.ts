@@ -54,7 +54,7 @@ export interface CreateMaintenanceInput {
 }
 
 export async function getMaintenanceRequests(
-  params: QueryParams & { propertyId?: string; unitId?: string; status?: string; vendorId?: string; reportedBy?: string } = {}
+  params: QueryParams & { propertyId?: string; unitId?: string; status?: string; vendorId?: string; reportedBy?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<MaintenanceRequest>>> {
   try {
     const supabase = await createClient();
@@ -67,6 +67,11 @@ export async function getMaintenanceRequests(
     let query = supabase
       .from("maintenance_requests")
       .select("*, properties!inner(association_id, name), units(unit_number)", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     // Filter by association_id via property join
     if (params.associationId) {

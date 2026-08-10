@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       associationId: searchParams.get("associationId") || undefined,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
+      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });

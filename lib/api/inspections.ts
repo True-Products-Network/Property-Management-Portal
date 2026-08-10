@@ -35,7 +35,7 @@ export interface CreateInspectionInput {
 }
 
 export async function getInspections(
-  params: QueryParams & { propertyId?: string } = {}
+  params: QueryParams & { propertyId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Inspection>>> {
   try {
     const supabase = await createClient();
@@ -45,6 +45,11 @@ export async function getInspections(
     const to = from + pageSize - 1;
     
     let query = supabase.from("inspections").select("*, properties!inner(association_id)", { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) query = query.eq("properties.association_id", params.associationId);
     if (params.propertyId) query = query.eq("property_id", params.propertyId);

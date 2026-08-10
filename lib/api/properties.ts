@@ -47,7 +47,7 @@ export interface CreatePropertyInput {
 }
 
 export async function getProperties(
-  params: QueryParams & { associationId?: string } = {}
+  params: QueryParams & { associationId?: string; businessId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Property>>> {
   try {
     const supabase = await createClient();
@@ -60,6 +60,11 @@ export async function getProperties(
     let query = supabase
       .from("properties")
       .select(`*, associations!inner(name)`, { count: "exact" });
+    
+    // CRITICAL: Filter by business_id for tenant isolation
+    if (params.businessId) {
+      query = query.eq("business_id", params.businessId);
+    }
     
     if (params.associationId) {
       query = query.eq("association_id", params.associationId);
