@@ -21,12 +21,21 @@ import {
   Palette,
 } from "lucide-react";
 import { AssociationSelector } from "./AssociationSelector";
+import { TenantSwitcher } from "@/components/TenantSwitcher";
+
+interface Tenant {
+  id: string;
+  name: string;
+  role: string;
+}
 
 interface HeaderProps {
   userName: string;
   userEmail?: string;
   notificationCount?: number;
   isAdmin?: boolean;
+  tenants?: Tenant[];
+  currentTenantId?: string;
 }
 
 export function Header({
@@ -34,6 +43,8 @@ export function Header({
   userEmail,
   notificationCount = 0,
   isAdmin = false,
+  tenants = [],
+  currentTenantId,
 }: HeaderProps) {
   const router = useRouter();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -69,6 +80,10 @@ export function Header({
 
       {/* Actions - Right Side */}
       <div className="flex items-center gap-3">
+        {/* Tenant Switcher - only show if user has multiple tenants */}
+        {tenants.length > 1 && (
+          <TenantSwitcher tenants={tenants} currentTenantId={currentTenantId} />
+        )}
         {/* Quick Action Buttons */}
         <div className="hidden lg:flex items-center gap-2 pr-4 border-r border-[var(--border-color)]">
           <Link

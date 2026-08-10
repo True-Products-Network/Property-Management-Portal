@@ -4,6 +4,12 @@ import { isAdmin } from "@/lib/permissions/roles";
 import { AssociationProvider } from "@/lib/contexts/AssociationContext";
 import { BrandingProvider } from "@/lib/contexts/BrandingContext";
 
+interface Tenant {
+  id: string;
+  name: string;
+  role: string;
+}
+
 interface PortalShellProps {
   children: React.ReactNode;
   role: string;
@@ -11,6 +17,7 @@ interface PortalShellProps {
   userEmail: string;
   notificationCount?: number;
   tenantId?: string;
+  tenants?: Tenant[];
 }
 
 export function PortalShell({
@@ -20,6 +27,7 @@ export function PortalShell({
   userEmail,
   notificationCount = 0,
   tenantId,
+  tenants = [],
 }: PortalShellProps) {
   const userIsAdmin = isAdmin([role]);
 
@@ -37,6 +45,8 @@ export function PortalShell({
               userEmail={userEmail}
               notificationCount={notificationCount}
               isAdmin={userIsAdmin}
+              tenants={tenants}
+              currentTenantId={tenantId}
             />
             <main className="flex-1 p-6">{children}</main>
           </div>

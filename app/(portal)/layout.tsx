@@ -61,6 +61,7 @@ export default async function PortalLayout({
         userEmail={user.email}
         notificationCount={0}
         tenantId={tenantId}
+        tenants={user.tenants}
       >
         {children}
       </PortalShell>

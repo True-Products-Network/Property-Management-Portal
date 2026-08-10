@@ -1,5 +1,12 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { PortalRole } from "@/schemas/portal/auth";
+
+export interface TenantInfo {
+  id: string;
+  name: string;
+  role: string;
+}
 
 export interface SessionUser {
   id: string;
@@ -9,10 +16,12 @@ export interface SessionUser {
   mfaEnabled: boolean;
   status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING_INVITE";
   businessId?: string;
+  tenants: TenantInfo[];
 }
 
 export async function getSession(): Promise<SessionUser | null> {
   const supabase = await createServerClient();
+  const cookieStore = await cookies();
   
   const { data: { user }, error } = await supabase.auth.getUser();
   
@@ -23,25 +32,34 @@ export async function getSession(): Promise<SessionUser | null> {
   // Get user metadata which includes GHL contact ID and roles
   const metadata = user.user_metadata;
   
-  // Get the tenant_id from tenant_users table for proper multi-tenancy isolation
-  // This is critical - user_metadata.business_id may not be set for platform-created users
+  // Get ALL tenants for this user
+  const { data: tenantUsers, error: tenantsError } = await supabase
+    .from("tenant_users")
+    .select("tenant_id, role, tenants(name)")
+    .eq("user_id", user.id);
+  
+  if (tenantsError) {
+    console.error("[getSession] Error fetching tenants:", tenantsError);
+  }
+  
+  const tenants: TenantInfo[] = (tenantUsers || []).map((tu: any) => ({
+    id: tu.tenant_id,
+    name: tu.tenants?.name || "Unknown",
+    role: tu.role,
+  }));
+  
+  // Check for active tenant cookie
+  const activeTenantId = cookieStore.get("active_tenant_id")?.value;
+  
+  // Determine which tenant to use:
+  // 1. Active tenant cookie (if user still belongs to it)
+  // 2. First tenant in list
   let businessId = metadata?.business_id;
   
-  if (!businessId && user.id) {
-    const { data: tenantUser, error: tenantError } = await supabase
-      .from("tenant_users")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
-    
-    if (tenantError) {
-      console.error("[getSession] Error fetching tenant:", tenantError);
-    }
-    
-    if (tenantUser?.tenant_id) {
-      businessId = tenantUser.tenant_id;
-    }
+  if (activeTenantId && tenants.some(t => t.id === activeTenantId)) {
+    businessId = activeTenantId;
+  } else if (tenants.length > 0) {
+    businessId = tenants[0].id;
   }
   
   return {
@@ -52,6 +70,7 @@ export async function getSession(): Promise<SessionUser | null> {
     mfaEnabled: metadata?.mfa_enabled || false,
     status: metadata?.status || "ACTIVE",
     businessId: businessId,
+    tenants: tenants,
   };
 }
 
