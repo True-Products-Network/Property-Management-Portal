@@ -20,9 +20,9 @@ const helpTopics = [
     title: "Getting Started",
     description: "Learn the basics of using the Property Management Portal",
     links: [
-      { label: "Quick Start Guide", href: "#" },
-      { label: "Dashboard Overview", href: "#" },
-      { label: "Setting Up Your First Property", href: "#" },
+      { label: "Quick Start Guide", href: "/docs/user-guides/quick-start.md" },
+      { label: "Dashboard Overview", href: "/docs/user-guides/dashboard-overview.md" },
+      { label: "Setting Up Your First Property", href: "/docs/user-guides/setting-up-first-property.md" },
     ],
   },
   {
@@ -30,19 +30,18 @@ const helpTopics = [
     title: "Documentation",
     description: "Detailed guides for all features and functions",
     links: [
-      { label: "User Manual", href: "#" },
-      { label: "API Documentation", href: "#" },
-      { label: "Integration Guides", href: "#" },
+      { label: "User Manual", href: "/docs/user-guides/user-manual.md" },
+      { label: "Integration Guides", href: "/docs/user-guides/integration-guides.md" },
     ],
   },
   {
     icon: Video,
     title: "Video Tutorials",
-    description: "Step-by-step video walkthroughs",
+    description: "Step-by-step video walkthroughs (coming soon)",
     links: [
-      { label: "Introduction Video", href: "#" },
-      { label: "Maintenance Requests", href: "#" },
-      { label: "Reports & Analytics", href: "#" },
+      { label: "Introduction Video", href: "#", disabled: true },
+      { label: "Maintenance Requests", href: "#", disabled: true },
+      { label: "Reports & Analytics", href: "#", disabled: true },
     ],
   },
 ];
@@ -71,6 +70,30 @@ const faqs = [
   {
     question: "How do I add users to the portal?",
     answer: "Admin users can add contacts through the People section. Each contact can be assigned roles such as Owner, Tenant, or Board Member. Portal access can be configured with specific permissions for each user.",
+  },
+  {
+    question: "What are dropdown settings and how do I customize them?",
+    answer: "Dropdown settings control the options available in various fields throughout the portal (like inspection types, vendor types, contact roles). Admin users can customize these in Admin → Dropdown Settings. Each tenant's dropdowns are isolated, so changes won't affect other organizations.",
+  },
+  {
+    question: "How do I set up GHL (GoHighLevel) integration?",
+    answer: "Go to Admin → Integrations → GHL. Enter your GHL API key, test the connection, and configure sync settings. You can sync contacts, calendar events, and communications. Each association can also have its own GHL location for separate data streams.",
+  },
+  {
+    question: "What's the difference between Contacts and Users?",
+    answer: "Contacts are people associated with properties (owners, tenants, vendors, board members). Users are people who can log into the portal. A contact becomes a user when you grant them portal access with a specific role (Admin, Property Manager, etc.).",
+  },
+  {
+    question: "How do I assign a vendor to a maintenance request?",
+    answer: "Open the maintenance request, click 'Assign Vendor', and select from your vendor list. The vendor will be linked to the request and can be notified. You can also track estimated and actual costs, and escalate urgent issues.",
+  },
+  {
+    question: "What inspection types are available?",
+    answer: "The portal supports: Routine, Move-in, Move-out, Annual, Fire Safety, Elevator, HVAC, Roof, Pool, Emergency Systems, and Insurance inspections. Admin users can customize available types in Dropdown Settings.",
+  },
+  {
+    question: "How do approval workflows work?",
+    answer: "Approval workflows allow board members to review and approve expenses, contracts, and policy changes. Submit an approval request with details and attachments, and assigned approvers will be notified. They can approve, reject, or request more information.",
   },
 ];
 
@@ -113,10 +136,10 @@ export default function HelpPage() {
               Get help via email
             </p>
             <a 
-              href="mailto:support@example.com" 
+              href="mailto:support@trueproductsnetwork.com" 
               className="text-white underline mt-3 inline-block text-sm"
             >
-              support@example.com
+              support@trueproductsnetwork.com
             </a>
           </CardContent>
         </Card>
@@ -129,10 +152,10 @@ export default function HelpPage() {
               Call us directly
             </p>
             <a 
-              href="tel:+15551234567" 
+              href="tel:+13149153356" 
               className="text-white underline mt-3 inline-block text-sm"
             >
-              (555) 123-4567
+              (314) 915-3356
             </a>
           </CardContent>
         </Card>
