@@ -346,20 +346,20 @@ function buildMenuFromPermissions(permissions: any[], roleNames: string[]): any[
       r === "Admin User" || r === "ADMIN_USER"
     );
     
-    // Portfolio Manager sees "Portfolio"
+    // Portfolio Manager sees "Portfolio" - strategic multi-business view
     if (hasPortfolioManager) {
       dashboardItems.push({ 
         label: "Portfolio", 
-        href: "/management/overview", 
-        icon: "LayoutDashboard" 
+        href: "/management/portfolio", 
+        icon: "BarChart3" 
       });
     }
     
-    // Association roles see "Dashboard" (or both if they have both roles)
+    // Association roles see "Dashboard" - operational single-business view
     if (hasAssociationRole) {
       dashboardItems.push({ 
         label: "Dashboard", 
-        href: "/management/overview", 
+        href: "/management/dashboard", 
         icon: "LayoutDashboard" 
       });
     }
