@@ -1,4 +1,5 @@
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { cookies } from "next/headers";
 import { PortalRole } from "@/schemas/portal/auth";
 
@@ -102,11 +103,13 @@ export async function getSession(): Promise<SessionUser | null> {
   const activeBusinessId = cookieStore.get("active_business_id")?.value;
   
   // Look up the business record for this tenant
+  // Use service client to bypass RLS since we've already authenticated the user
+  const serviceClient = createServiceClient();
   let businessId: string | undefined;
   
   if (activeBusinessId) {
     // Verify the active business belongs to this user
-    const { data: activeBusiness } = await supabase
+    const { data: activeBusiness } = await serviceClient
       .from("businesses")
       .select("id, slug")
       .eq("id", activeBusinessId)
@@ -119,7 +122,7 @@ export async function getSession(): Promise<SessionUser | null> {
   
   // If no active business or invalid, look up by tenant
   if (!businessId && selectedTenantId) {
-    const { data: business } = await supabase
+    const { data: business } = await serviceClient
       .from("businesses")
       .select("id")
       .eq("slug", selectedTenantId)
