@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "created_at";
     const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
-    // Get associations (filtered by business_id)
+    // Get associations (filtered by business_id or tenant_id)
     console.log("[GET /api/associations] user.businessId:", user.businessId, "user.tenantId:", user.tenantId);
     const result = await getAssociations({
       page,
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       sortBy,
       sortOrder,
       filters: status ? { status } : undefined,
-    }, user.businessId);
+    }, user.businessId, user.tenantId);
 
     const duration = Date.now() - startTime;
 

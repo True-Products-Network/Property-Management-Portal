@@ -75,7 +75,8 @@ export interface UpdateAssociationInput extends Partial<CreateAssociationInput> 
 // Get all associations with pagination
 export async function getAssociations(
   params: QueryParams = {},
-  businessId?: string
+  businessId?: string,
+  tenantId?: string
 ): Promise<ApiResponse<PaginatedResponse<Association>>> {
   try {
     const supabase = await createClient();
@@ -89,12 +90,24 @@ export async function getAssociations(
       .from("associations")
       .select("*", { count: "exact" });
     
-    // Filter by business_id if provided
-    console.log("[getAssociations] Filtering by businessId:", businessId);
+    // Filter by business_id or tenant_id
+    console.log("[getAssociations] Filtering by businessId:", businessId, "tenantId:", tenantId);
     if (businessId) {
       query = query.eq("business_id", businessId);
+    } else if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
     } else {
-      console.log("[getAssociations] WARNING: No businessId provided - returning ALL associations!");
+      console.log("[getAssociations] WARNING: No businessId or tenantId provided - returning empty!");
+      return {
+        success: true,
+        data: {
+          data: [],
+          total: 0,
+          page: 1,
+          pageSize: params.pageSize || 20,
+          totalPages: 0,
+        },
+      };
     }
     
     // Apply search
