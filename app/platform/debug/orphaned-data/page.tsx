@@ -149,10 +149,10 @@ export default function OrphanedDataPage() {
       setFixResult(null);
       setError(null);
 
-      const response = await fetch("/api/platform/debug/business-fix", {
+      const response = await fetch("/api/platform/debug/orphan-cleanup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenantId, dryRun: false }),
+        body: JSON.stringify({ portalDomain: tenantInfo.code, dryRun: false }),
       });
 
       const data = await response.json();
