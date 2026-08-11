@@ -67,7 +67,8 @@ export interface CreateContactInput {
 
 export async function getContacts(
   params: QueryParams = {},
-  tenantId?: string
+  tenantId?: string,
+  businessId?: string
 ): Promise<ApiResponse<PaginatedResponse<Contact>>> {
   try {
     const supabase = await createClient();
@@ -82,9 +83,19 @@ export async function getContacts(
       .from("contacts")
       .select("*", { count: "exact" });
     
-    // Filter by tenant_id if provided
-    if (tenantId) {
+    // Filter by tenant_id and/or business_id
+    // Contacts should be visible if:
+    // 1. They have matching tenant_id (shared across businesses in tenant)
+    // 2. OR they have matching business_id (business-specific)
+    if (tenantId && businessId) {
+      // Show contacts with this tenant_id OR this business_id
+      contactsQuery = contactsQuery.or(`tenant_id.eq.${tenantId},business_id.eq.${businessId}`);
+    } else if (tenantId) {
+      // Only tenant_id available - show all contacts in tenant
       contactsQuery = contactsQuery.eq("tenant_id", tenantId);
+    } else if (businessId) {
+      // Only business_id available - show business-specific contacts
+      contactsQuery = contactsQuery.eq("business_id", businessId);
     }
 
     // Filter by association_id if provided (for association isolation)

@@ -95,8 +95,11 @@ export async function GET(request: NextRequest) {
       tenantId = contact?.tenant_id;
     }
     
-    console.log("Contacts API: Fetching with params:", queryParams, "tenant:", tenantId);
-    const result = await getContacts(queryParams, tenantId);
+    // Get business_id from session for business-level filtering
+    const businessId = user.businessId;
+    
+    console.log("Contacts API: Fetching with params:", queryParams, "tenant:", tenantId, "business:", businessId);
+    const result = await getContacts(queryParams, tenantId, businessId);
 
     const duration = Date.now() - startTime;
 
