@@ -142,8 +142,9 @@ export async function getSession(): Promise<SessionUser | null> {
     if (business) {
       businessId = business.id;
     } else {
+      console.log("[getSession] No business found, looking for association...");
       // No business found - look for association to use as business
-      const { data: association } = await serviceClient
+      const { data: association, error: assocError } = await serviceClient
         .from("associations")
         .select("id")
         .eq("tenant_id", selectedTenantId)
@@ -151,10 +152,12 @@ export async function getSession(): Promise<SessionUser | null> {
         .limit(1)
         .maybeSingle();
       
-      console.log("[getSession] association lookup by tenant:", association);
+      console.log("[getSession] association lookup by tenant:", association, "error:", assocError);
       if (association) {
         businessId = association.id;
         console.log("[getSession] Using association as businessId:", businessId);
+      } else {
+        console.log("[getSession] No association found for tenant:", selectedTenantId);
       }
     }
   }
