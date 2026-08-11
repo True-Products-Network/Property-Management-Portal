@@ -6,10 +6,11 @@ DROP POLICY IF EXISTS "compliance_tenant_isolation" ON public.compliance_matters
 DROP POLICY IF EXISTS "payments_tenant_isolation" ON public.payment_records;
 DROP POLICY IF EXISTS "communications_tenant_isolation" ON public.communications;
 
--- Drop the helper functions if they exist
+-- Drop ALL versions of the helper functions that might exist
 DROP FUNCTION IF EXISTS get_user_business_ids();
 DROP FUNCTION IF EXISTS get_user_tenant_ids_text();
 DROP FUNCTION IF EXISTS get_user_accessible_business_ids();
+DROP FUNCTION IF EXISTS get_user_accessible_business_ids CASCADE;
 
 -- Create a single helper function that does the join internally
 -- slug is text, tenant_id is uuid - so cast slug to uuid
