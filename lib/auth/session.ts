@@ -110,7 +110,7 @@ export async function getSession(): Promise<SessionUser | null> {
   let businessId: string | undefined;
   
   if (activeBusinessId) {
-    // Verify the active business belongs to this user
+    // Verify the active business belongs to this user's tenant
     const { data: activeBusiness } = await serviceClient
       .from("businesses")
       .select("id, slug")
@@ -118,14 +118,14 @@ export async function getSession(): Promise<SessionUser | null> {
       .maybeSingle();
     
     console.log("[getSession] activeBusiness lookup:", activeBusiness, "userTenantIds:", userTenantIds);
-    // If we found the business, use it (the slug check is for verification but not required)
-    if (activeBusiness) {
+    
+    // Only use the business if it belongs to one of the user's tenants
+    if (activeBusiness && userTenantIds.includes(activeBusiness.slug)) {
       businessId = activeBusiness.id;
-      // Also update selectedTenantId to match this business
-      if (!userTenantIds.includes(activeBusiness.slug)) {
-        // Add this tenant to the list if not present
-        console.log("[getSession] Adding business slug to tenantIds:", activeBusiness.slug);
-      }
+    } else if (activeBusiness) {
+      // Business exists but doesn't belong to this user - clear the cookie
+      console.log("[getSession] Business doesn't belong to user - clearing cookie");
+      cookieStore.delete("active_business_id");
     }
   }
   
