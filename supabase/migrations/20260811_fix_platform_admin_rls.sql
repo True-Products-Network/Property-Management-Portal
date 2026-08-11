@@ -62,7 +62,8 @@ CREATE POLICY "tenants_platform_support"
   FOR ALL
   USING (is_platform_support());
 
--- Tenant admins can see their own tenant
+-- Tenant admins can see their own tenant (only if policy doesn't exist)
+DROP POLICY IF EXISTS "tenants_tenant_admin" ON public.tenants;
 CREATE POLICY "tenants_tenant_admin"
   ON public.tenants
   FOR SELECT

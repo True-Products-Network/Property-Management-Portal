@@ -7,93 +7,104 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { searchEmail, searchEntityId } = await request.json();
+    const body = await request.json();
+    const { searchEmail, searchEntityId, portalDomain } = body;
+    
+    // Support portalDomain as search term
+    const searchTerm = searchEmail || searchEntityId || portalDomain;
     
     const serviceClient = createServiceClient();
     
     const results: any = {
-      searchCriteria: { searchEmail, searchEntityId },
-      tenants: [],
-      contacts: [],
-      entities: {},
+      searchTerm,
+      results: [],
+      totalCount: 0,
     };
 
-    // Search by email
-    if (searchEmail) {
+    // Search by email/term in contacts
+    if (searchTerm) {
+      // Search contacts by email
       const { data: contacts } = await serviceClient
         .from("contacts")
-        .select("id, first_name, last_name, email, tenant_id, portal_user_id, portal_invitation_status")
-        .ilike("email", `%${searchEmail}%`)
+        .select("id, first_name, last_name, email, tenant_id, portal_user_id")
+        .or(`email.ilike.%${searchTerm}%,first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`)
         .limit(20);
       
-      results.contacts = contacts || [];
-      
-      // Get tenant info for found contacts
-      const tenantIds = [...new Set((contacts || []).map((c: any) => c.tenant_id))];
-      if (tenantIds.length > 0) {
+      if (contacts && contacts.length > 0) {
+        // Get tenant info for found contacts
+        const tenantIds = [...new Set(contacts.map((c: any) => c.tenant_id))];
         const { data: tenants } = await serviceClient
           .from("tenants")
           .select("id, name, code")
           .in("id", tenantIds);
-        results.tenants = tenants || [];
-      }
-    }
-
-    // Search by entity ID
-    if (searchEntityId) {
-      const entityTypes = [
-        { table: "associations", name: "associations" },
-        { table: "properties", name: "properties" },
-        { table: "units", name: "units" },
-        { table: "vendors", name: "vendors" },
-        { table: "maintenance_requests", name: "maintenance" },
-        { table: "inspections", name: "inspections" },
-      ];
-
-      for (const entity of entityTypes) {
-        const { data, error } = await serviceClient
-          .from(entity.table)
-          .select("id, tenant_id, business_id, created_at")
-          .or(`id.eq.${searchEntityId},${entity.name === 'associations' ? 'association_id' : entity.name === 'properties' ? 'property_id' : 'id'}.eq.${searchEntityId}`)
-          .limit(5);
         
-        if (data && data.length > 0) {
-          results.entities[entity.name] = data;
+        const tenantMap = new Map(tenants?.map((t: any) => [t.id, t]) || []);
+        
+        for (const contact of contacts) {
+          results.results.push({
+            tenant_id: contact.tenant_id,
+            tenant_name: tenantMap.get(contact.tenant_id)?.name || "Unknown",
+            entity_type: "contact",
+            entity_id: contact.id,
+            entity_name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email,
+            match_field: contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ? "email" : "name",
+            match_value: contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ? contact.email : `${contact.first_name} ${contact.last_name}`,
+          });
+        }
+      }
+
+      // Search associations
+      const { data: associations } = await serviceClient
+        .from("associations")
+        .select("id, name, tenant_id, association_id")
+        .or(`name.ilike.%${searchTerm}%,association_id.ilike.%${searchTerm}%`)
+        .limit(10);
+      
+      if (associations && associations.length > 0) {
+        const tenantIds = [...new Set(associations.map((a: any) => a.tenant_id))];
+        const { data: tenants } = await serviceClient
+          .from("tenants")
+          .select("id, name")
+          .in("id", tenantIds);
+        
+        const tenantMap = new Map(tenants?.map((t: any) => [t.id, t]) || []);
+        
+        for (const assoc of associations) {
+          results.results.push({
+            tenant_id: assoc.tenant_id,
+            tenant_name: tenantMap.get(assoc.tenant_id)?.name || "Unknown",
+            entity_type: "association",
+            entity_id: assoc.id,
+            entity_name: assoc.name,
+            match_field: assoc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ? "name" : "association_id",
+            match_value: assoc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ? assoc.name : assoc.association_id,
+          });
+        }
+      }
+
+      // Search tenants
+      const { data: tenantMatches } = await serviceClient
+        .from("tenants")
+        .select("id, name, code")
+        .or(`name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%`)
+        .limit(10);
+      
+      if (tenantMatches && tenantMatches.length > 0) {
+        for (const tenant of tenantMatches) {
+          results.results.push({
+            tenant_id: tenant.id,
+            tenant_name: tenant.name,
+            entity_type: "tenant",
+            entity_id: tenant.id,
+            entity_name: tenant.name,
+            match_field: tenant.name?.toLowerCase().includes(searchTerm.toLowerCase()) ? "name" : "code",
+            match_value: tenant.name?.toLowerCase().includes(searchTerm.toLowerCase()) ? tenant.name : tenant.code,
+          });
         }
       }
     }
 
-    // Get all tenants summary if no specific search
-    if (!searchEmail && !searchEntityId) {
-      const { data: allTenants } = await serviceClient
-        .from("tenants")
-        .select("id, name, code, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      
-      results.allTenants = allTenants || [];
-      
-      // Get entity counts per tenant
-      const tenantsWithCounts = [];
-      for (const tenant of (allTenants || []).slice(0, 5)) {
-        const [
-          { count: assocCount },
-          { count: contactCount },
-        ] = await Promise.all([
-          serviceClient.from("associations").select("id", { count: "exact" }).eq("tenant_id", tenant.id),
-          serviceClient.from("contacts").select("id", { count: "exact" }).eq("tenant_id", tenant.id),
-        ]);
-        
-        tenantsWithCounts.push({
-          ...tenant,
-          entityCounts: {
-            associations: assocCount || 0,
-            contacts: contactCount || 0,
-          }
-        });
-      }
-      results.allTenants = tenantsWithCounts;
-    }
+    results.totalCount = results.results.length;
 
     return NextResponse.json(results);
 

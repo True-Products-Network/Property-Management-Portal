@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
-import { getGhlCredentials } from "@/lib/ghl/credentials";
 import { createClient } from "@/lib/supabase/server";
+import { decrypt } from "@/lib/ghl/crypto";
 
 // POST /api/admin/ghl/test - Test GHL connection
 export async function POST(request: NextRequest) {
@@ -20,24 +20,54 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const associationId = body.associationId;
 
-    // Get stored credentials
-    const credentials = await getGhlCredentials();
-
-    if (!credentials) {
+    if (!associationId) {
       return NextResponse.json(
-        { error: "No credentials configured. Please connect to GHL first." },
+        { error: "Association ID is required" },
         { status: 400 }
       );
     }
 
+    // Get stored credentials for this association
+    const supabase = await createClient();
+    const { data: credentials, error } = await supabase
+      .from("association_ghl_credentials")
+      .select("*")
+      .eq("association_id", associationId)
+      .single();
+
+    if (error || !credentials) {
+      return NextResponse.json(
+        { error: "No credentials configured for this association. Please connect to GHL first." },
+        { status: 400 }
+      );
+    }
+
+    // Decrypt credentials
+    let accessToken: string | null = null;
+    let apiKey: string | null = null;
+    
+    try {
+      if (credentials.type === "oauth" && credentials.access_token) {
+        accessToken = decrypt(credentials.access_token);
+      } else if (credentials.type === "api_key" && credentials.api_key) {
+        apiKey = decrypt(credentials.api_key);
+      }
+    } catch (decryptError) {
+      console.error("Error decrypting credentials:", decryptError);
+      return NextResponse.json(
+        { error: "Failed to decrypt credentials. They may be corrupted." },
+        { status: 500 }
+      );
+    }
+
     // Test OAuth connection
-    if (credentials.type === "oauth" && credentials.accessToken) {
+    if (credentials.type === "oauth" && accessToken) {
       try {
         // Try the newer v2 API first
         let testResponse = await fetch("https://services.leadconnectorhq.com/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${credentials.accessToken}`,
+            "Authorization": `Bearer ${accessToken}`,
             "Version": "2021-07-28",
             "Accept": "application/json",
           },
@@ -75,7 +105,7 @@ export async function POST(request: NextRequest) {
               status: testResponse.status,
               details: errorText,
               suggestion,
-              tokenPrefix: credentials.accessToken.substring(0, 10) + "...",
+              tokenPrefix: accessToken?.substring(0, 10) + "...",
             },
             { status: 400 }
           );
@@ -114,12 +144,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Test API Key connection
-    if (credentials.type === "api_key" && credentials.apiKey) {
+    if (credentials.type === "api_key" && apiKey) {
       try {
         const testResponse = await fetch("https://rest.gohighlevel.com/v1/locations/me", {
           method: "GET",
           headers: {
-            "Authorization": `Bearer ${credentials.apiKey}`,
+            "Authorization": `Bearer ${apiKey}`,
             "Accept": "application/json",
           },
         });
