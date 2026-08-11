@@ -1,7 +1,7 @@
 // PL-02: Business Accounts List
 // Searchable tenant list with status, plan, usage, and support alerts
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { TenantsTable } from "@/components/platform/TenantsTable";
 import { TenantsFilter } from "@/components/platform/TenantsFilter";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,8 @@ export default async function TenantsPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const supabase = await createClient();
+  // Use service client to bypass RLS for platform admin operations
+  const supabase = createServiceClient();
 
   const status = searchParams.status as string | undefined;
   const search = searchParams.search as string | undefined;
