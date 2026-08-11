@@ -20,6 +20,7 @@ import {
   Flag,
   Globe,
   Bug,
+  AlertCircle,
 } from "lucide-react";
 
 const navigation = [
@@ -34,6 +35,7 @@ const navigation = [
   { name: "Health & Status", href: "/platform/health", icon: Activity },
   { name: "Site Settings", href: "/platform/site-settings", icon: Globe },
   { name: "Debug Tools", href: "/platform/debug", icon: Bug },
+  { name: "Orphaned Data", href: "/platform/debug/orphaned-data", icon: AlertCircle },
 ];
 
 export function PlatformSidebar() {
