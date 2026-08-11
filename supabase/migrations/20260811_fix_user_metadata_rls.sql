@@ -17,7 +17,7 @@ STABLE
 SECURITY DEFINER
 AS $$
   SELECT b.id::text FROM businesses b
-  WHERE b.slug::uuid IN (SELECT get_user_tenant_ids());
+  WHERE b.slug::text IN (SELECT get_user_tenant_ids()::text);
 $$;
 
 -- Compliance Matters - secure policy
