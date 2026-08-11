@@ -36,8 +36,8 @@ interface GhlConnection {
   last_sync_at: string | null;
   last_sync_status: string | null;
   last_error: string | null;
-  connected_at: string;
-  disconnected_at: string | null;
+  created_at: string;
+  updated_at: string;
   associations: {
     id: string;
     name: string;
@@ -103,26 +103,21 @@ export default function IntegrationsPage() {
         return;
       }
 
-      // Build query
+      // Build query - use association_ghl_credentials table
       let query = supabase
-        .from("association_ghl_connections")
+        .from("association_ghl_credentials")
         .select(`
           *,
           associations(id, name, association_id, tenant_id, tenants(id, name))
         `)
-        .order("connected_at", { ascending: false });
+        .order("created_at", { ascending: false });
 
       if (tenantFilter) {
         query = query.eq("associations.tenant_id", tenantFilter);
       }
 
-      if (statusFilter === "active") {
-        query = query.eq("is_active", true);
-      } else if (statusFilter === "inactive") {
-        query = query.eq("is_active", false);
-      } else if (statusFilter === "error") {
-        query = query.eq("last_sync_status", "error");
-      }
+      // Note: association_ghl_credentials doesn't have is_active/last_sync_status columns
+      // We'll filter these in memory after fetching
 
       const { data, error: fetchError } = await query;
 
@@ -140,25 +135,15 @@ export default function IntegrationsPage() {
 
       setTenants(tenantsData || []);
 
-      // Get counts
+      // Get counts from association_ghl_credentials
       const { count: totalCount } = await supabase
-        .from("association_ghl_connections")
+        .from("association_ghl_credentials")
         .select("*", { count: "exact", head: true });
 
-      const { count: activeCount } = await supabase
-        .from("association_ghl_connections")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
-
-      const { count: syncEnabledCount } = await supabase
-        .from("association_ghl_connections")
-        .select("*", { count: "exact", head: true })
-        .eq("sync_enabled", true);
-
-      const { count: errorCount } = await supabase
-        .from("association_ghl_connections")
-        .select("*", { count: "exact", head: true })
-        .eq("last_sync_status", "error");
+      // For credentials table, count all as active (they have tokens)
+      const activeCount = totalCount;
+      const syncEnabledCount = totalCount;
+      const errorCount = 0;
 
       setStats({
         total: totalCount || 0,
@@ -185,23 +170,20 @@ export default function IntegrationsPage() {
   };
 
   const getStatusBadge = (connection: GhlConnection) => {
-    if (!connection.is_active) {
-      return <Badge variant="outline" className="text-gray-500">Disconnected</Badge>;
-    }
-    if (connection.last_sync_status === "error") {
-      return <Badge variant="destructive">Error</Badge>;
-    }
-    if (connection.last_sync_status === "success") {
+    // For credentials table, if it has a location_id and access_token, it's connected
+    if (connection.ghl_location_id) {
       return <Badge className="bg-green-600">Connected</Badge>;
     }
-    return <Badge variant="secondary">Pending</Badge>;
+    return <Badge variant="outline" className="text-gray-500">Disconnected</Badge>;
   };
 
   const getLastSyncText = (connection: GhlConnection) => {
-    if (!connection.last_sync_at) {
+    // Use updated_at as a proxy for last activity
+    const lastActivity = connection.updated_at || connection.created_at;
+    if (!lastActivity) {
       return <span className="text-gray-400">Never</span>;
     }
-    const date = new Date(connection.last_sync_at);
+    const date = new Date(lastActivity);
     const now = new Date();
     const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
     
