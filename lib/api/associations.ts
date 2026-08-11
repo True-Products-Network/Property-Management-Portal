@@ -187,7 +187,9 @@ export async function createAssociation(
   businessId?: string
 ): Promise<ApiResponse<Association>> {
   try {
-    const supabase = await createClient();
+    // Use service client to bypass RLS for creation
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
 
     // Look up the creator's contact record for created_by
     // The created_by field references contacts(id), not auth.users
