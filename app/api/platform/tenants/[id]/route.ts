@@ -291,7 +291,58 @@ export async function DELETE(
       );
     }
 
-    // Delete tenant (cascade will handle related records)
+    // Delete related records first to avoid FK violations
+    // Delete audit logs
+    const { error: auditError } = await supabase
+      .from("audit_logs")
+      .delete()
+      .eq("tenant_id", id);
+    
+    if (auditError) {
+      console.error("Error deleting audit logs:", auditError);
+    }
+
+    // Delete platform audit events
+    const { error: platformAuditError } = await supabase
+      .from("platform_audit_events")
+      .delete()
+      .eq("tenant_id", id);
+    
+    if (platformAuditError) {
+      console.error("Error deleting platform audit events:", platformAuditError);
+    }
+
+    // Delete tenant subscriptions
+    const { error: subError } = await supabase
+      .from("tenant_subscriptions")
+      .delete()
+      .eq("tenant_id", id);
+    
+    if (subError) {
+      console.error("Error deleting subscriptions:", subError);
+    }
+
+    // Delete tenant users
+    const { error: tenantUsersError } = await supabase
+      .from("tenant_users")
+      .delete()
+      .eq("tenant_id", id);
+    
+    if (tenantUsersError) {
+      console.error("Error deleting tenant users:", tenantUsersError);
+    }
+
+    // Delete dropdown settings
+    const { error: dropdownError } = await supabase
+      .from("dropdown_settings")
+      .delete()
+      .eq("tenant_id", id);
+    
+    if (dropdownError) {
+      console.error("Error deleting dropdown settings:", dropdownError);
+    }
+
+    // Delete tenant
     const { error } = await supabase
       .from("tenants")
       .delete()
