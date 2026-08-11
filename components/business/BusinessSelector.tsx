@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -27,19 +27,37 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedId, setSelectedId] = useState<string>(selectedBusinessId || "");
   const [isLoading, setIsLoading] = useState(true);
-  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+  const hasLoaded = useRef(false);
+  const hasAutoSelected = useRef(false);
 
+  // Update selectedId when prop changes
   useEffect(() => {
-    loadBusinesses();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBusinessId) {
+    if (selectedBusinessId && selectedBusinessId !== selectedId) {
       setSelectedId(selectedBusinessId);
     }
   }, [selectedBusinessId]);
 
-  async function loadBusinesses() {
+  // Load businesses only once on mount
+  useEffect(() => {
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
+    
+    loadBusinesses();
+  }, []);
+
+  const setActiveBusiness = useCallback(async (businessId: string) => {
+    try {
+      await fetch("/api/auth/set-business", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId }),
+      });
+    } catch (error) {
+      console.error("Error setting active business:", error);
+    }
+  }, []);
+
+  const loadBusinesses = useCallback(async () => {
     try {
       const response = await fetch("/api/businesses");
       const result = await response.json();
@@ -48,8 +66,8 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
         setBusinesses(result.data);
         
         // If only one business and none selected, auto-select it (only once)
-        if (result.data.length === 1 && !selectedId && !hasAutoSelected && !selectedBusinessId) {
-          setHasAutoSelected(true);
+        if (result.data.length === 1 && !hasAutoSelected.current && !selectedBusinessId) {
+          hasAutoSelected.current = true;
           const businessId = result.data[0].id;
           setSelectedId(businessId);
           await setActiveBusiness(businessId);
@@ -63,32 +81,18 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [onBusinessSelect, selectedBusinessId, setActiveBusiness]);
 
-  async function setActiveBusiness(businessId: string) {
-    try {
-      // Set the active business in the session/cookie
-      await fetch("/api/auth/set-business", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId }),
-      });
-    } catch (error) {
-      console.error("Error setting active business:", error);
-    }
-  }
-
-  async function handleBusinessChange(businessId: string) {
+  const handleBusinessChange = useCallback(async (businessId: string) => {
     setSelectedId(businessId);
     await setActiveBusiness(businessId);
     
     if (onBusinessSelect) {
       onBusinessSelect(businessId);
     } else {
-      // Reload the page to refresh data with new business
       router.refresh();
     }
-  }
+  }, [onBusinessSelect, router, setActiveBusiness]);
 
   if (isLoading) {
     return (
