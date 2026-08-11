@@ -28,13 +28,13 @@ import {
 
 interface ReportData {
   summary: {
-    totalAssociations: number;
+    totalBusinesses: number;
     totalProperties: number;
     totalUnits: number;
     totalContacts: number;
     totalVendors: number;
     totalCommunications: number;
-    activeAssociations: number;
+    activeBusinesses: number;
     activeProperties: number;
     occupiedUnits: number;
     vacantUnits: number;
@@ -92,14 +92,14 @@ interface ReportData {
   };
   activity: {
     newThisWeek: {
-      associations: number;
+      businesses: number;
       properties: number;
       units: number;
       contacts: number;
       maintenance: number;
     };
     newThisMonth: {
-      associations: number;
+      businesses: number;
       properties: number;
       units: number;
       contacts: number;
@@ -217,12 +217,12 @@ export default function SummaryPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Associations</p>
+                <p className="text-sm text-[var(--secondary-text)]">Businesses</p>
                 <p className="text-3xl font-semibold text-[var(--main-text)] mt-1">
-                  {summary.totalAssociations}
+                  {summary.totalBusinesses}
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  {summary.activeAssociations} active
+                  {summary.activeBusinesses} active
                 </p>
               </div>
               <div className="w-12 h-12 bg-[var(--page-background)] rounded-lg flex items-center justify-center">
@@ -308,8 +308,8 @@ export default function SummaryPage() {
               </h4>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
-                  <Badge variant="outline">+{activity.newThisWeek.associations}</Badge>
+                  <span className="text-sm text-[var(--secondary-text)]">Businesses</span>
+                  <Badge variant="outline">+{activity.newThisWeek.businesses}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--secondary-text)]">Properties</span>
@@ -338,8 +338,8 @@ export default function SummaryPage() {
               </h4>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--secondary-text)]">Associations</span>
-                  <Badge variant="outline">+{activity.newThisMonth.associations}</Badge>
+                  <span className="text-sm text-[var(--secondary-text)]">Businesses</span>
+                  <Badge variant="outline">+{activity.newThisMonth.businesses}</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[var(--secondary-text)]">Properties</span>

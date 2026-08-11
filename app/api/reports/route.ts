@@ -77,13 +77,13 @@ export async function GET(request: NextRequest) {
     // Generate report data
     const reportData = {
       summary: {
-        totalAssociations: associations.length,
+        totalBusinesses: associations.length,
         totalProperties: properties.length,
         totalUnits: units.length,
         totalContacts: contacts.length,
         totalVendors: vendors.length,
         totalCommunications: communications.length,
-        activeAssociations: associations.filter((a: { status: string }) => a.status === "active").length,
+        activeBusinesses: associations.filter((a: { status: string }) => a.status === "active").length,
         activeProperties: properties.filter((p: { status: string }) => p.status === "active").length,
         occupiedUnits: units.filter((u: { occupancy_status?: string; status?: string }) => u.occupancy_status === "occupied" || u.status === "occupied").length,
         vacantUnits: units.filter((u: { occupancy_status?: string; status?: string }) => u.occupancy_status === "vacant" || u.status === "vacant").length,
@@ -150,14 +150,14 @@ export async function GET(request: NextRequest) {
       },
       activity: {
         newThisWeek: {
-          associations: associations.filter((a: { created_at: string }) => new Date(a.created_at) >= sevenDaysAgo).length,
+          businesses: associations.filter((a: { created_at: string }) => new Date(a.created_at) >= sevenDaysAgo).length,
           properties: properties.filter((p: { created_at: string }) => new Date(p.created_at) >= sevenDaysAgo).length,
           units: units.filter((u: { created_at: string }) => new Date(u.created_at) >= sevenDaysAgo).length,
           contacts: contacts.filter((c: { created_at: string }) => new Date(c.created_at) >= sevenDaysAgo).length,
           maintenance: maintenance.filter((m: { created_at: string }) => new Date(m.created_at) >= sevenDaysAgo).length,
         },
         newThisMonth: {
-          associations: associations.filter((a: { created_at: string }) => new Date(a.created_at) >= thirtyDaysAgo).length,
+          businesses: associations.filter((a: { created_at: string }) => new Date(a.created_at) >= thirtyDaysAgo).length,
           properties: properties.filter((p: { created_at: string }) => new Date(p.created_at) >= thirtyDaysAgo).length,
           units: units.filter((u: { created_at: string }) => new Date(u.created_at) >= thirtyDaysAgo).length,
           contacts: contacts.filter((c: { created_at: string }) => new Date(c.created_at) >= thirtyDaysAgo).length,
