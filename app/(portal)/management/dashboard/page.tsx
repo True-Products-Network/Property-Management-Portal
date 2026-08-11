@@ -87,8 +87,14 @@ export default function DashboardPage() {
       setIsLoading(true);
       setError(null);
 
-      // Get current business from session
-      const sessionResponse = await fetch("/api/auth/session");
+      // Get current business from session (with cache-busting)
+      const sessionResponse = await fetch(`/api/auth/session?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        }
+      });
       const sessionResult = await sessionResponse.json();
       
       if (!sessionResult.businessId) {
