@@ -82,11 +82,6 @@ interface SidebarProps {
   userEmail: string;
 }
 
-interface GhlStatus {
-  connected: boolean;
-  locationName?: string;
-}
-
 function MenuItemComponent({
   item,
   depth = 0,
@@ -114,7 +109,6 @@ function MenuItemComponent({
 }
 
 export function Sidebar({ role, userName, userEmail }: SidebarProps) {
-  const [ghlStatus, setGhlStatus] = useState<GhlStatus>({ connected: false });
   const [menuGroups, setMenuGroups] = useState<MenuGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const { branding, isLoading: brandingLoading } = useBranding();
@@ -133,12 +127,6 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
         console.error("Error fetching permissions:", err);
         setLoading(false);
       });
-
-    // Fetch GHL status
-    fetch("/api/admin/ghl/status")
-      .then((res) => res.json())
-      .then((data) => setGhlStatus(data))
-      .catch(() => setGhlStatus({ connected: false }));
   }, []);
 
   return (
@@ -220,17 +208,7 @@ export function Sidebar({ role, userName, userEmail }: SidebarProps) {
         </div>
       </div>
 
-      {/* Connection Status */}
-      <div className="px-4 py-2 border-t border-white/10">
-        <div className="flex items-center gap-2 text-xs text-white/60">
-          <div className={`w-2 h-2 rounded-full ${ghlStatus.connected ? "bg-green-400" : "bg-gray-400"}`} />
-          <span className="truncate">
-            {ghlStatus.connected
-              ? ghlStatus.locationName || "GHL Connected"
-              : "GHL Not Connected"}
-          </span>
-        </div>
-      </div>
+
     </aside>
   );
 }
