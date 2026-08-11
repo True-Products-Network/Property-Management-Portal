@@ -97,6 +97,32 @@ export default function AssignTenantPage() {
       const selected: Record<string, Set<string>> = {};
 
       for (const entity of entityTypes) {
+        console.log(`[AssignTenant] Scanning ${entity.key}...`);
+        
+        // First check if table exists and has records
+        const { count: totalCount } = await supabase
+          .from(entity.key)
+          .select("id", { count: "exact", head: true });
+        
+        console.log(`[AssignTenant] ${entity.key} total records:`, totalCount);
+        
+        // Check records with NULL tenant_id
+        const { count: nullTenantCount } = await supabase
+          .from(entity.key)
+          .select("id", { count: "exact", head: true })
+          .is("tenant_id", null);
+        
+        console.log(`[AssignTenant] ${entity.key} with NULL tenant_id:`, nullTenantCount);
+        
+        // Check records with NULL tenant_id AND NULL business_id
+        const { count: bothNullCount } = await supabase
+          .from(entity.key)
+          .select("id", { count: "exact", head: true })
+          .is("tenant_id", null)
+          .is("business_id", null);
+        
+        console.log(`[AssignTenant] ${entity.key} with NULL tenant_id AND NULL business_id:`, bothNullCount);
+        
         const { data } = await supabase
           .from(entity.key)
           .select(`id, ${entity.nameField}, created_at`)
@@ -105,11 +131,15 @@ export default function AssignTenantPage() {
           .order("created_at", { ascending: false })
           .limit(50);
 
+        console.log(`[AssignTenant] ${entity.key} data returned:`, data?.length || 0);
+
         if (data && data.length > 0) {
           records[entity.key] = data.map((r: any) => ({ ...r, selected: false }));
           selected[entity.key] = new Set();
         }
       }
+      
+      console.log('[AssignTenant] Total orphaned records found:', Object.values(records).reduce((sum, arr) => sum + arr.length, 0));
 
       setOrphanedRecords(records);
       setSelectedRecords(selected);
