@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Search
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OrphanedCounts {
   associations: number;
@@ -41,6 +42,7 @@ interface OrphanedCounts {
 }
 
 export default function OrphanedDataPage() {
+  const [tenants, setTenants] = useState<any[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [loading, setLoading] = useState(false);
   const [fixing, setFixing] = useState(false);
@@ -49,6 +51,18 @@ export default function OrphanedDataPage() {
   const [fixResult, setFixResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    loadTenants();
+  }, []);
+
+  async function loadTenants() {
+    const { data } = await supabase
+      .from("tenants")
+      .select("id, name, code")
+      .order("name");
+    setTenants(data || []);
+  }
 
   async function scanOrphaned() {
     if (!tenantId) {
@@ -197,17 +211,23 @@ export default function OrphanedDataPage() {
           <CardTitle>Select Tenant</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <Label htmlFor="tenant-id">Tenant ID</Label>
-              <Input
-                id="tenant-id"
-                placeholder="e.g., 93f8cdcf-7dcd-4d83-8117-67d869eab88b"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-              />
+              <Label htmlFor="tenant-select">Tenant</Label>
+              <Select value={tenantId} onValueChange={setTenantId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a tenant..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tenants.map(tenant => (
+                    <SelectItem key={tenant.id} value={tenant.id}>
+                      {tenant.name} ({tenant.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="flex items-end">
+            <div>
               <Button 
                 onClick={scanOrphaned} 
                 disabled={loading || !tenantId}
