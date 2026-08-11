@@ -152,10 +152,10 @@ export default function SummaryPage() {
     return (
       <div className="p-6">
         <div className="flex items-center gap-2 mb-6">
-          <Link href="/management/overview">
+          <Link href="/management/portfolio">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              Back to Portfolio
             </Button>
           </Link>
         </div>
@@ -175,10 +175,10 @@ export default function SummaryPage() {
     return (
       <div className="p-6">
         <div className="flex items-center gap-2 mb-6">
-          <Link href="/management/overview">
+          <Link href="/management/portfolio">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              Back to Portfolio
             </Button>
           </Link>
         </div>
@@ -203,10 +203,10 @@ export default function SummaryPage() {
             Complete overview of your property management portfolio
           </p>
         </div>
-        <Link href="/management/overview">
+        <Link href="/management/portfolio">
           <Button variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Back to Portfolio
           </Button>
         </Link>
       </div>

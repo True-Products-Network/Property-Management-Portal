@@ -23,6 +23,8 @@ import {
   Activity,
   AlertTriangle,
   Calendar,
+  ArrowLeft,
+  FileText,
 } from "lucide-react";
 
 interface Business {
@@ -243,6 +245,12 @@ export default function PortfolioPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/management/summary">
+            <Button variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              View Summary
+            </Button>
+          </Link>
           <Link href="/management/businesses/new">
             <Button>
               <Building2 className="h-4 w-4 mr-2" />
@@ -353,7 +361,7 @@ export default function PortfolioPage() {
 
                     <div className="grid grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="text-[var(--secondary-text)]">Associations</p>
+                        <p className="text-[var(--secondary-text)]">Businesses</p>
                         <p className="font-medium">{business.associationCount}</p>
                       </div>
                       <div>

@@ -24,6 +24,8 @@ import {
   AlertTriangle,
   Plus,
   Eye,
+  BarChart3,
+  Upload,
 } from "lucide-react";
 
 interface Business {
@@ -378,10 +380,10 @@ export default function DashboardPage() {
                 setTimeout(() => loadDashboardData(), 100);
               }}
             />
-            <Link href="/management/portfolio">
+            <Link href="/management/reports">
               <Button variant="outline">
-                <Building2 className="h-4 w-4 mr-2" />
-                View Portfolio
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Reports
               </Button>
             </Link>
           </div>
@@ -420,10 +422,10 @@ export default function DashboardPage() {
               loadDashboardData();
             }}
           />
-          <Link href="/management/portfolio">
+          <Link href="/management/reports">
             <Button variant="outline">
-              <Building2 className="h-4 w-4 mr-2" />
-              View Portfolio
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Reports
             </Button>
           </Link>
         </div>
@@ -608,7 +610,7 @@ export default function DashboardPage() {
               <Link href="/management/documents/new">
                 <Button variant="outline" className="w-full h-auto py-6 flex flex-col items-center gap-3">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-gray-600" />
+                    <Upload className="h-6 w-6 text-gray-600" />
                   </div>
                   <div className="text-center">
                     <span className="font-medium block">Add Document</span>
