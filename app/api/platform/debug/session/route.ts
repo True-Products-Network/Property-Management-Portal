@@ -8,8 +8,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("[Debug Session] Request body:", body);
+    
     const portalDomain = body.portalDomain || body.tenantId;
     const requestedTenantId = body.tenantId;
+    
+    console.log("[Debug Session] portalDomain:", portalDomain);
+    console.log("[Debug Session] requestedTenantId:", requestedTenantId);
     
     const serviceClient = createServiceClient();
     
@@ -17,8 +22,10 @@ export async function POST(request: NextRequest) {
     let tenantQuery = serviceClient.from("tenants").select("id, name, code, status");
     
     if (requestedTenantId) {
+      console.log("[Debug Session] Searching by ID:", requestedTenantId);
       tenantQuery = tenantQuery.eq("id", requestedTenantId);
     } else if (portalDomain) {
+      console.log("[Debug Session] Searching by domain:", portalDomain);
       // Try to find by code or name
       tenantQuery = tenantQuery.or(`code.ilike.%${portalDomain}%,name.ilike.%${portalDomain}%`);
     } else {
@@ -27,10 +34,14 @@ export async function POST(request: NextRequest) {
     
     const { data: tenant, error: tenantError } = await tenantQuery.maybeSingle();
     
+    console.log("[Debug Session] Tenant result:", tenant);
+    console.log("[Debug Session] Tenant error:", tenantError);
+    
     if (tenantError || !tenant) {
       return NextResponse.json({ 
         error: "Tenant not found",
-        searched: portalDomain || requestedTenantId 
+        searched: portalDomain || requestedTenantId,
+        debug: { body, tenantError: tenantError?.message }
       }, { status: 404 });
     }
 
