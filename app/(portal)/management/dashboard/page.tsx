@@ -83,6 +83,7 @@ export default function DashboardPage() {
       const sessionResult = await sessionResponse.json();
       
       if (!sessionResult.user?.businessId) {
+        setIsLoading(false);
         setError("No business selected. Please select a business first.");
         return;
       }
@@ -319,7 +320,7 @@ export default function DashboardPage() {
             <BusinessSelector 
               onBusinessSelect={() => {
                 setError(null);
-                loadDashboardData();
+                setTimeout(() => loadDashboardData(), 100);
               }}
             />
             <Link href="/management/portfolio">
@@ -359,7 +360,7 @@ export default function DashboardPage() {
           <BusinessSelector 
             selectedBusinessId={business?.id} 
             onBusinessSelect={(id) => {
-              setBusiness(null);
+              // Don't set business to null - just reload data
               loadDashboardData();
             }}
           />

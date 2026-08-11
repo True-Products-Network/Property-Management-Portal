@@ -27,6 +27,7 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedId, setSelectedId] = useState<string>(selectedBusinessId || "");
   const [isLoading, setIsLoading] = useState(true);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
 
   useEffect(() => {
     loadBusinesses();
@@ -46,8 +47,9 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
       if (result.success && result.data) {
         setBusinesses(result.data);
         
-        // If only one business and none selected, auto-select it
-        if (result.data.length === 1 && !selectedId) {
+        // If only one business and none selected, auto-select it (only once)
+        if (result.data.length === 1 && !selectedId && !hasAutoSelected && !selectedBusinessId) {
+          setHasAutoSelected(true);
           const businessId = result.data[0].id;
           setSelectedId(businessId);
           await setActiveBusiness(businessId);
