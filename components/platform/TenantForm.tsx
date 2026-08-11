@@ -80,9 +80,9 @@ export function TenantForm({ tenantId, initialData }: TenantFormProps) {
     if (!formData.code?.trim()) newErrors.code = "Tenant code is required";
     if (!formData.planId) newErrors.planId = "Plan is required";
     
-    // Validate code format (alphanumeric, hyphens, underscores)
-    if (formData.code && !/^[a-zA-Z0-9_-]+$/.test(formData.code)) {
-      newErrors.code = "Code can only contain letters, numbers, hyphens, and underscores";
+    // Validate code format (lowercase alphanumeric and hyphens only)
+    if (formData.code && !/^[a-z0-9-]+$/.test(formData.code)) {
+      newErrors.code = "Code can only contain lowercase letters, numbers, and hyphens";
     }
     
     // Validate email if provided
@@ -167,7 +167,8 @@ export function TenantForm({ tenantId, initialData }: TenantFormProps) {
       const generatedCode = value
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+        .replace(/^-|-$/g, "")
+        .replace(/_/g, "-"); // Convert underscores to hyphens
       setFormData(prev => ({ ...prev, code: generatedCode }));
     }
   }
