@@ -306,11 +306,35 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <AlertCircle className="h-12 w-12 text-red-500" />
-        <p className="text-red-500">{error}</p>
-        <div className="flex items-center gap-2">
-          <BusinessSelector />
+      <div className="space-y-6">
+        {/* Header with Business Selector */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Dashboard</h1>
+            <p className="text-[var(--secondary-text)] mt-1">
+              What you need to focus on now
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <BusinessSelector 
+              onBusinessSelect={() => {
+                setError(null);
+                loadDashboardData();
+              }}
+            />
+            <Link href="/management/portfolio">
+              <Button variant="outline">
+                <Building2 className="h-4 w-4 mr-2" />
+                View Portfolio
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+          <p className="text-red-500">{error}</p>
           <Button onClick={loadDashboardData} variant="outline">
             Retry
           </Button>
