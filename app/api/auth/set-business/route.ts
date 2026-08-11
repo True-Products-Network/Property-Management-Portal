@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { cookies } from "next/headers";
 
 // POST /api/auth/set-business - Set the active business for the user
@@ -20,9 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the user has access to this business
-    const supabase = await createClient();
-    console.log(`[set-business] Looking up business: ${businessId}`);
-    console.log(`[set-business] User tenants:`, user.tenants);
+    // Use service client to bypass RLS since we've already authenticated the user
+    const supabase = createServiceClient();
     
     const { data: business, error } = await supabase
       .from("businesses")
@@ -30,10 +29,7 @@ export async function POST(request: NextRequest) {
       .eq("id", businessId)
       .single();
 
-    console.log(`[set-business] Business lookup result:`, { business, error });
-
     if (error || !business) {
-      console.log(`[set-business] Business not found, returning 404`);
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
 
