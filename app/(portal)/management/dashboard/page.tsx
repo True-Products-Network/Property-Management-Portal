@@ -98,7 +98,30 @@ export default function DashboardPage() {
       const sessionResult = await sessionResponse.json();
       
       if (!sessionResult.businessId) {
-        console.log(`[Dashboard] No businessId in session`);
+        console.log(`[Dashboard] No businessId in session, checking for single business...`);
+        
+        // Try to auto-set business if there's only one
+        const businessesResponse = await fetch("/api/businesses");
+        const businessesResult = await businessesResponse.json();
+        
+        if (businessesResult.success && businessesResult.data?.length === 1) {
+          const businessId = businessesResult.data[0].id;
+          console.log(`[Dashboard] Auto-setting single business: ${businessId}`);
+          
+          // Set the business cookie
+          const setResponse = await fetch("/api/auth/set-business", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ businessId }),
+          });
+          
+          if (setResponse.ok) {
+            console.log(`[Dashboard] Business set, reloading page...`);
+            window.location.reload();
+            return;
+          }
+        }
+        
         setIsLoading(false);
         setError("No business selected. Please select a business first.");
         return;
