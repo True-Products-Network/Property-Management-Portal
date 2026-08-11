@@ -1,13 +1,46 @@
 -- Fix RLS policies that reference user_metadata (security issue)
 -- user_metadata is editable by end users and should not be used in security policies
 
--- Drop existing policies that reference user_metadata
-DROP POLICY IF EXISTS "compliance_tenant_isolation" ON public.compliance_matters;
-DROP POLICY IF EXISTS "payments_tenant_isolation" ON public.payment_records;
-DROP POLICY IF EXISTS "communications_tenant_isolation" ON public.communications;
+-- First, let's see what policies exist (for debugging)
+-- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+-- FROM pg_policies 
+-- WHERE tablename IN ('compliance_matters', 'payment_records', 'communications');
 
--- Create policies directly without helper functions
--- This avoids any cached function issues
+-- Drop ALL policies on these tables to start fresh
+DO $$
+DECLARE
+    pol RECORD;
+BEGIN
+    -- Drop all policies on compliance_matters
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'compliance_matters'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.compliance_matters', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on payment_records
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'payment_records'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.payment_records', pol.policyname);
+    END LOOP;
+    
+    -- Drop all policies on communications
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE schemaname = 'public' AND tablename = 'communications'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.communications', pol.policyname);
+    END LOOP;
+END $$;
+
+-- Create secure policies using proper type casting
+-- slug is text, tenant_id is uuid - cast slug to uuid for comparison
 
 -- Compliance Matters - secure policy
 CREATE POLICY "compliance_tenant_isolation"
