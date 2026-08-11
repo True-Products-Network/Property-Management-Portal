@@ -93,6 +93,8 @@ export async function getAssociations(
     console.log("[getAssociations] Filtering by businessId:", businessId);
     if (businessId) {
       query = query.eq("business_id", businessId);
+    } else {
+      console.log("[getAssociations] WARNING: No businessId provided - returning ALL associations!");
     }
     
     // Apply search
@@ -116,6 +118,8 @@ export async function getAssociations(
     query = query.range(from, to);
     
     const { data, error, count } = await query;
+    
+    console.log("[getAssociations] Query result:", { count, dataLength: data?.length, error });
     
     if (error) {
       return {
