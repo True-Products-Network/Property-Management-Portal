@@ -94,6 +94,7 @@ async function shouldLog(
 export interface AuditContext {
   userId?: string;
   tenantId?: string;
+  businessId?: string;
   sessionId?: string;
   ipAddress?: string;
   userAgent?: string;
@@ -103,6 +104,7 @@ export interface AuditEntry {
   // Core fields
   userId?: string;
   tenantId?: string;
+  businessId?: string;
   action: string;
   entityType: string;
   entityId?: string;
@@ -166,6 +168,7 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
     const insertData: any = {
       user_id: entry.userId,
       tenant_id: entry.tenantId,
+      business_id: entry.businessId,
       action: entry.action,
       entity_type: entry.entityType,
       entity_id: entry.entityId,
@@ -196,7 +199,6 @@ export async function logAudit(entry: AuditEntry): Promise<void> {
       // Don't throw - just log the error
     }
   } catch (error) {
-    // Never fail the main operation due to audit logging
     console.error("[Audit Log] Critical error (non-blocking):", error);
     // Silently continue - don't rethrow
   }
@@ -214,6 +216,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: "USER_LOGIN",
       entityType: "user",
       entityId: context.userId,
@@ -227,6 +230,9 @@ export const auditLoggers = {
 
   async loginFailed(context: AuditContext, details: { email: string; reason: string }) {
     await logAudit({
+      userId: context.userId,
+      tenantId: context.tenantId,
+      businessId: context.businessId,
       action: "USER_LOGIN_FAILED",
       entityType: "user",
       success: false,
@@ -241,6 +247,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: "USER_LOGOUT",
       entityType: "user",
       entityId: context.userId,
@@ -263,6 +270,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: `${entityType.toUpperCase()}_CREATE`,
       entityType,
       entityId,
@@ -288,6 +296,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: `${entityType.toUpperCase()}_UPDATE`,
       entityType,
       entityId,
@@ -313,6 +322,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: `${entityType.toUpperCase()}_DELETE`,
       entityType,
       entityId,
@@ -336,6 +346,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: `${entityType.toUpperCase()}_VIEW`,
       entityType,
       entityId,
@@ -359,6 +370,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action,
       entityType,
       success: false,
@@ -381,6 +393,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action,
       entityType: "security",
       success: false,
@@ -406,6 +419,7 @@ export const auditLoggers = {
     await logAudit({
       userId: context.userId,
       tenantId: context.tenantId,
+      businessId: context.businessId,
       action: "API_CALL",
       entityType: "api",
       success,
@@ -419,81 +433,82 @@ export const auditLoggers = {
       userAgent: context.userAgent,
     });
   },
+
+  // Batch Operations
+  async batchCreate(
+    context: AuditContext,
+    entityType: string,
+    count: number,
+    details?: Record<string, any>
+  ) {
+    await logAudit({
+      userId: context.userId,
+      tenantId: context.tenantId,
+      businessId: context.businessId,
+      action: `${entityType.toUpperCase()}_BATCH_CREATE`,
+      entityType,
+      success: true,
+      severity: "info",
+      details: { ...details, count },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+  },
+
+  async batchUpdate(
+    context: AuditContext,
+    entityType: string,
+    count: number,
+    details?: Record<string, any>
+  ) {
+    await logAudit({
+      userId: context.userId,
+      tenantId: context.tenantId,
+      businessId: context.businessId,
+      action: `${entityType.toUpperCase()}_BATCH_UPDATE`,
+      entityType,
+      success: true,
+      severity: "info",
+      details: { ...details, count },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+  },
+
+  async batchDelete(
+    context: AuditContext,
+    entityType: string,
+    count: number,
+    details?: Record<string, any>
+  ) {
+    await logAudit({
+      userId: context.userId,
+      tenantId: context.tenantId,
+      businessId: context.businessId,
+      action: `${entityType.toUpperCase()}_BATCH_DELETE`,
+      entityType,
+      success: true,
+      severity: "warning",
+      details: { ...details, count },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
+  },
 };
 
-// Higher-order function to wrap API handlers with audit logging
-export function withAudit(
-  handler: Function,
-  options: {
-    action: string;
-    entityType: string;
-    getEntityId?: (req: NextRequest, result: any) => string | undefined;
-    getEntityName?: (req: NextRequest, result: any) => string | undefined;
-    logSuccess?: boolean;
-    logFailure?: boolean;
-  }
-) {
-  return async function auditedHandler(request: NextRequest, ...args: any[]) {
-    const startTime = Date.now();
-    const context = extractAuditContext(request);
-    
-    try {
-      // Get user session for context
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        context.userId = user.id;
-        context.tenantId = user.user_metadata?.tenant_id;
-      }
-    } catch {
-      // Continue without user context
-    }
-
-    try {
-      const result = await handler(request, ...args);
-      const duration = Date.now() - startTime;
-      
-      if (options.logSuccess !== false) {
-        await logAudit({
-          userId: context.userId,
-          tenantId: context.tenantId,
-          action: options.action,
-          entityType: options.entityType,
-          entityId: options.getEntityId?.(request, result),
-          entityName: options.getEntityName?.(request, result),
-          success: true,
-          severity: "info",
-          requestMethod: request.method,
-          requestPath: request.nextUrl.pathname,
-          durationMs: duration,
-          ipAddress: context.ipAddress,
-          userAgent: context.userAgent,
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      
-      if (options.logFailure !== false) {
-        await logAudit({
-          userId: context.userId,
-          tenantId: context.tenantId,
-          action: options.action,
-          entityType: options.entityType,
-          success: false,
-          severity: "error",
-          requestMethod: request.method,
-          requestPath: request.nextUrl.pathname,
-          durationMs: duration,
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-          errorStack: error instanceof Error ? error.stack : undefined,
-          ipAddress: context.ipAddress,
-          userAgent: context.userAgent,
-        });
-      }
-      
-      throw error;
-    }
-  };
-}
+// Export individual functions for convenience
+export const {
+  loginSuccess,
+  loginFailed,
+  logout,
+  create,
+  update,
+  delete: deleteAudit,
+  view,
+  error,
+  securityEvent,
+  apiCall,
+  batchCreate,
+  batchUpdate,
+  batchDelete,
+} = auditLoggers;

@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
 
     context.userId = user.id;
     context.tenantId = user.tenantId;
+    context.businessId = user.businessId;
 
     const { searchParams } = new URL(request.url);
     const documentType = searchParams.get("documentType");
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
 
     context.userId = user.id;
     context.tenantId = user.tenantId;
+    context.businessId = user.businessId;
 
     // Check entitlements
     const entitlementCheck = await checkRouteEntitlement(request, "documents");
