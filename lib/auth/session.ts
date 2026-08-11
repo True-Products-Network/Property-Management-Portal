@@ -123,9 +123,9 @@ export async function getSession(): Promise<SessionUser | null> {
     if (activeBusiness && userTenantIds.includes(activeBusiness.slug)) {
       businessId = activeBusiness.id;
     } else if (activeBusiness) {
-      // Business exists but doesn't belong to this user - clear the cookie
-      console.log("[getSession] Business doesn't belong to user - clearing cookie");
-      cookieStore.set("active_business_id", "", { maxAge: 0, path: "/" });
+      // Business exists but doesn't belong to this user - ignore it
+      // Can't clear cookie here as this runs in both API routes and Server Components
+      console.log("[getSession] Business doesn't belong to user - ignoring");
     }
   }
   
