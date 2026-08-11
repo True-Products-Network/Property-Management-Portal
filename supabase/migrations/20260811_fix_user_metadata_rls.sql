@@ -1,11 +1,6 @@
 -- Fix RLS policies that reference user_metadata (security issue)
 -- user_metadata is editable by end users and should not be used in security policies
 
--- First, let's see what policies exist (for debugging)
--- SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
--- FROM pg_policies 
--- WHERE tablename IN ('compliance_matters', 'payment_records', 'communications');
-
 -- Drop ALL policies on these tables to start fresh
 DO $$
 DECLARE
@@ -40,6 +35,7 @@ BEGIN
 END $$;
 
 -- Create secure policies using proper type casting
+-- business_id is uuid, b.id is uuid - no cast needed!
 -- slug is text, tenant_id is uuid - cast slug to uuid for comparison
 
 -- Compliance Matters - secure policy
@@ -48,7 +44,7 @@ CREATE POLICY "compliance_tenant_isolation"
   FOR ALL
   USING (
     business_id IN (
-      SELECT b.id::text 
+      SELECT b.id 
       FROM businesses b
       INNER JOIN tenant_users tu ON b.slug::uuid = tu.tenant_id
       WHERE tu.user_id = auth.uid()
@@ -61,7 +57,7 @@ CREATE POLICY "payments_tenant_isolation"
   FOR ALL
   USING (
     business_id IN (
-      SELECT b.id::text 
+      SELECT b.id 
       FROM businesses b
       INNER JOIN tenant_users tu ON b.slug::uuid = tu.tenant_id
       WHERE tu.user_id = auth.uid()
@@ -74,7 +70,7 @@ CREATE POLICY "communications_tenant_isolation"
   FOR ALL
   USING (
     business_id IN (
-      SELECT b.id::text 
+      SELECT b.id 
       FROM businesses b
       INNER JOIN tenant_users tu ON b.slug::uuid = tu.tenant_id
       WHERE tu.user_id = auth.uid()
