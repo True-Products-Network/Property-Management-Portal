@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -22,109 +22,47 @@ interface BusinessSelectorProps {
   onBusinessSelect?: (businessId: string) => void;
 }
 
-// Global to track across component instances
-let globalInitCount = 0;
-
 export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: BusinessSelectorProps) {
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [selectedId, setSelectedId] = useState<string>(selectedBusinessId || "");
   const [isLoading, setIsLoading] = useState(true);
-  const hasAutoSelectedRef = useRef(false);
-  const componentId = useRef(++globalInitCount);
 
-  console.log(`[BusinessSelector ${componentId.current}] Render - selectedBusinessId: ${selectedBusinessId}, selectedId: ${selectedId}, hasAutoSelected: ${hasAutoSelectedRef.current}`);
-
-  // Single effect to load businesses and handle auto-selection
+  // Load businesses on mount
   useEffect(() => {
-    console.log(`[BusinessSelector ${componentId.current}] useEffect running`);
-    let isMounted = true;
-    
-    async function init() {
-      console.log(`[BusinessSelector ${componentId.current}] init() started`);
+    async function loadBusinesses() {
       try {
         const response = await fetch("/api/businesses");
         const result = await response.json();
         
-        console.log(`[BusinessSelector ${componentId.current}] API response:`, result.success, result.data?.length);
-        
-        if (!isMounted) {
-          console.log(`[BusinessSelector ${componentId.current}] Component unmounted, aborting`);
-          return;
-        }
-        
         if (result.success && result.data) {
           setBusinesses(result.data);
-          
-          // Auto-select if single business and not already selected
-          console.log(`[BusinessSelector ${componentId.current}] Checking auto-select: businesses=${result.data.length}, hasAutoSelected=${hasAutoSelectedRef.current}, selectedBusinessId=${selectedBusinessId}`);
-          
-          if (result.data.length === 1 && !hasAutoSelectedRef.current && !selectedBusinessId) {
-            hasAutoSelectedRef.current = true;
+          // If only one business and none selected, auto-select it
+          if (result.data.length === 1 && !selectedBusinessId) {
             const businessId = result.data[0].id;
-            console.log(`[BusinessSelector ${componentId.current}] Auto-selecting business: ${businessId}`);
             setSelectedId(businessId);
-            
-            // Set cookie
-            let cookieSet = false;
-            try {
-              console.log(`[BusinessSelector ${componentId.current}] Calling set-business API`);
-              const response = await fetch("/api/auth/set-business", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ businessId }),
-              });
-              if (response.ok) {
-                console.log(`[BusinessSelector ${componentId.current}] set-business API success`);
-                cookieSet = true;
-              } else {
-                const errorText = await response.text();
-                console.error(`[BusinessSelector ${componentId.current}] set-business API failed: ${response.status}`, errorText);
-              }
-            } catch (e) {
-              console.error(`[BusinessSelector ${componentId.current}] Error setting business:`, e);
-            }
-            
-            // If cookie was set, reload the page to get fresh session
-            if (cookieSet && isMounted) {
-              console.log(`[BusinessSelector ${componentId.current}] Reloading page to refresh session`);
-              window.location.reload();
-              return;
-            }
-          } else {
-            console.log(`[BusinessSelector ${componentId.current}] Skipping auto-select`);
+            // Don't call onBusinessSelect here - let parent handle it
+            // This prevents the infinite loop
           }
         }
       } catch (error) {
-        console.error(`[BusinessSelector ${componentId.current}] Error loading businesses:`, error);
+        console.error("Error loading businesses:", error);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     }
     
-    init();
-    
-    return () => {
-      console.log(`[BusinessSelector ${componentId.current}] Cleanup (unmount)`);
-      isMounted = false;
-    };
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadBusinesses();
+  }, [selectedBusinessId]);
 
-  // Update selectedId when prop changes (from parent)
+  // Update selectedId when prop changes
   useEffect(() => {
-    console.log(`[BusinessSelector ${componentId.current}] selectedBusinessId prop changed: ${selectedBusinessId}`);
     if (selectedBusinessId && selectedBusinessId !== selectedId) {
-      console.log(`[BusinessSelector ${componentId.current}] Updating selectedId from prop`);
       setSelectedId(selectedBusinessId);
     }
   }, [selectedBusinessId, selectedId]);
 
   async function handleBusinessChange(businessId: string) {
-    console.log(`[BusinessSelector ${componentId.current}] handleBusinessChange: ${businessId}`);
     setSelectedId(businessId);
     
     try {
@@ -134,23 +72,20 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
         body: JSON.stringify({ businessId }),
       });
       if (response.ok) {
-        console.log(`[BusinessSelector ${componentId.current}] Cookie set, reloading page`);
-        window.location.reload();
+        // Reload page to get fresh session
+        window.location.href = window.location.href;
         return;
       }
     } catch (e) {
-      console.error(`[BusinessSelector ${componentId.current}] Error setting business:`, e);
+      console.error("Error setting business:", e);
     }
     
     if (onBusinessSelect) {
-      console.log(`[BusinessSelector ${componentId.current}] Calling onBusinessSelect from handleBusinessChange`);
       onBusinessSelect(businessId);
     } else {
       router.refresh();
     }
   }
-
-  console.log(`[BusinessSelector ${componentId.current}] Rendering UI - isLoading: ${isLoading}, businesses: ${businesses.length}`);
 
   if (isLoading) {
     return (
@@ -170,6 +105,7 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
     );
   }
 
+  // For single business, just show the name without any auto-select behavior
   if (businesses.length === 1) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700">
