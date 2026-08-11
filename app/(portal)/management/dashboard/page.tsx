@@ -88,17 +88,17 @@ export default function DashboardPage() {
       setError(null);
 
       // Get current business from session
-      const sessionResponse = await fetch("/api/auth/me");
+      const sessionResponse = await fetch("/api/auth/session");
       const sessionResult = await sessionResponse.json();
       
-      if (!sessionResult.user?.businessId) {
+      if (!sessionResult.businessId) {
         console.log(`[Dashboard] No businessId in session`);
         setIsLoading(false);
         setError("No business selected. Please select a business first.");
         return;
       }
 
-      const businessId = sessionResult.user.businessId;
+      const businessId = sessionResult.businessId;
       console.log(`[Dashboard] businessId from session: ${businessId}`);
 
       // Load business details

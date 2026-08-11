@@ -78,9 +78,9 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
               console.error(`[BusinessSelector ${componentId.current}] Error setting business:`, e);
             }
             
-            // Notify parent
-            if (onBusinessSelect) {
-              console.log(`[BusinessSelector ${componentId.current}] Calling onBusinessSelect callback`);
+            // Notify parent only if still mounted
+            if (isMounted && onBusinessSelect) {
+              console.log(`[BusinessSelector ${componentId.current}] Notifying parent of auto-select`);
               onBusinessSelect(businessId);
             }
           } else {
