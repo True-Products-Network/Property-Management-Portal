@@ -186,11 +186,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create subscription if planId is provided
+    let subscription = null;
     if (validation.data.planId) {
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + validation.data.trialDays);
 
-      const { error: subError } = await supabase
+      const { data: subData, error: subError } = await supabase
         .from("tenant_subscriptions")
         .insert({
           tenant_id: data.id,
@@ -201,11 +202,15 @@ export async function POST(request: NextRequest) {
           current_period_ends_at: trialEndDate.toISOString(),
           created_by: user?.id,
           updated_by: user?.id,
-        });
+        })
+        .select()
+        .single();
 
       if (subError) {
         console.error("Error creating subscription:", subError);
         // Don't fail the tenant creation, just log the error
+      } else {
+        subscription = subData;
       }
     }
 
@@ -219,7 +224,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { success: true, data },
+      { success: true, data, subscription },
       { status: 201 }
     );
   } catch (error) {
