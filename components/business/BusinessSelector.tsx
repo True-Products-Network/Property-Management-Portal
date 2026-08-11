@@ -32,8 +32,16 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
   useEffect(() => {
     async function loadBusinesses() {
       try {
-        const response = await fetch("/api/businesses");
+        setIsLoading(true);
+        // Add cache-busting timestamp
+        const response = await fetch(`/api/businesses?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          }
+        });
         const result = await response.json();
+        console.log("[BusinessSelector] Loaded businesses:", result.data?.length, result.data);
         
         if (result.success && result.data) {
           setBusinesses(result.data);
