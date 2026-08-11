@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { tenantId: filterTenantId } = await request.json();
+    const body = await request.json();
+    const filterTenantId = body.tenantId || body.portalDomain;
     
     const serviceClient = createServiceClient();
     

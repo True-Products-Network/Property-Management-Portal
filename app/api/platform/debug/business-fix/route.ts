@@ -7,12 +7,15 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   try {
-    const { tenantId: requestedTenantId, dryRun = true } = await request.json();
+    const body = await request.json();
+    // Accept either tenantId or portalDomain
+    const requestedTenantId = body.tenantId || body.portalDomain;
+    const dryRun = body.dryRun !== false; // Default to true for safety
     
     const serviceClient = createServiceClient();
     
     if (!requestedTenantId) {
-      return NextResponse.json({ error: "Tenant ID required" }, { status: 400 });
+      return NextResponse.json({ error: "Tenant ID or portal domain required" }, { status: 400 });
     }
 
     // Get tenant info
