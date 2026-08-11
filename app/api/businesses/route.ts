@@ -20,11 +20,11 @@ export async function GET(request: NextRequest) {
 
     const serviceClient = createServiceClient();
 
-    // Get businesses for this tenant
+    // Get businesses for this tenant (slug field stores the tenant_id)
     const { data: businesses, error } = await serviceClient
       .from("businesses")
       .select("*")
-      .eq("tenant_id", tenantId)
+      .eq("slug", tenantId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -76,14 +76,12 @@ export async function POST(request: NextRequest) {
 
     const serviceClient = createServiceClient();
 
-    // Create business
+    // Create business (slug field stores the tenant_id for linking)
     const { data: business, error } = await serviceClient
       .from("businesses")
       .insert({
-        tenant_id: tenantId,
+        slug: tenantId,
         name,
-        code: code || name.toLowerCase().replace(/\s+/g, "-"),
-        description,
         status: "active",
       })
       .select()
