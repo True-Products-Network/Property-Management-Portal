@@ -9,9 +9,10 @@ DROP POLICY IF EXISTS "communications_tenant_isolation" ON public.communications
 -- Drop the helper functions if they exist
 DROP FUNCTION IF EXISTS get_user_business_ids();
 DROP FUNCTION IF EXISTS get_user_tenant_ids_text();
+DROP FUNCTION IF EXISTS get_user_accessible_business_ids();
 
 -- Create a single helper function that does the join internally
--- This avoids type casting issues by doing the comparison in one query
+-- slug is text, tenant_id is uuid - so cast slug to uuid
 CREATE OR REPLACE FUNCTION get_user_accessible_business_ids()
 RETURNS TABLE(business_id text)
 LANGUAGE sql
@@ -20,7 +21,7 @@ SECURITY DEFINER
 AS $$
   SELECT b.id::text 
   FROM businesses b
-  INNER JOIN tenant_users tu ON b.slug = tu.tenant_id::text
+  INNER JOIN tenant_users tu ON b.slug::uuid = tu.tenant_id
   WHERE tu.user_id = auth.uid();
 $$;
 
