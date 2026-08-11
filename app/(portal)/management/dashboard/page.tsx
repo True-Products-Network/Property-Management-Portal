@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessSelector } from "@/components/business/BusinessSelector";
 import {
   Building2,
   Home,
@@ -308,9 +309,12 @@ export default function DashboardPage() {
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <AlertCircle className="h-12 w-12 text-red-500" />
         <p className="text-red-500">{error}</p>
-        <Button onClick={loadDashboardData} variant="outline">
-          Retry
-        </Button>
+        <div className="flex items-center gap-2">
+          <BusinessSelector />
+          <Button onClick={loadDashboardData} variant="outline">
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
@@ -328,6 +332,13 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <BusinessSelector 
+            selectedBusinessId={business?.id} 
+            onBusinessSelect={(id) => {
+              setBusiness(null);
+              loadDashboardData();
+            }}
+          />
           <Link href="/management/portfolio">
             <Button variant="outline">
               <Building2 className="h-4 w-4 mr-2" />

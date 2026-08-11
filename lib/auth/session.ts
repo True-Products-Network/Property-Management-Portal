@@ -78,6 +78,7 @@ export async function getSession(): Promise<SessionUser | null> {
   });
   
   const tenants: TenantInfo[] = Array.from(tenantMap.values());
+  const userTenantIds = tenants.map(t => t.id);
   
   // Check for active tenant cookie
   const activeTenantId = cookieStore.get("active_tenant_id")?.value;
@@ -97,13 +98,31 @@ export async function getSession(): Promise<SessionUser | null> {
     selectedTenantId = tenants[0].id;
   }
   
+  // Check for active business cookie first
+  const activeBusinessId = cookieStore.get("active_business_id")?.value;
+  
   // Look up the business record for this tenant
   let businessId: string | undefined;
-  if (selectedTenantId) {
+  
+  if (activeBusinessId) {
+    // Verify the active business belongs to this user
+    const { data: activeBusiness } = await supabase
+      .from("businesses")
+      .select("id, slug")
+      .eq("id", activeBusinessId)
+      .maybeSingle();
+    
+    if (activeBusiness && userTenantIds.includes(activeBusiness.slug)) {
+      businessId = activeBusiness.id;
+    }
+  }
+  
+  // If no active business or invalid, look up by tenant
+  if (!businessId && selectedTenantId) {
     const { data: business } = await supabase
       .from("businesses")
       .select("id")
-      .eq("tenant_id", selectedTenantId)
+      .eq("slug", selectedTenantId)
       .maybeSingle();
     
     if (business) {
