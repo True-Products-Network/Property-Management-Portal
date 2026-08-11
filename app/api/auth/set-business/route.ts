@@ -21,13 +21,19 @@ export async function POST(request: NextRequest) {
 
     // Verify the user has access to this business
     const supabase = await createClient();
+    console.log(`[set-business] Looking up business: ${businessId}`);
+    console.log(`[set-business] User tenants:`, user.tenants);
+    
     const { data: business, error } = await supabase
       .from("businesses")
       .select("id, slug")
       .eq("id", businessId)
       .single();
 
+    console.log(`[set-business] Business lookup result:`, { business, error });
+
     if (error || !business) {
+      console.log(`[set-business] Business not found, returning 404`);
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
 
