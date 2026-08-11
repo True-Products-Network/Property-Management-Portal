@@ -78,9 +78,7 @@ export async function getAssociations(
   businessId?: string
 ): Promise<ApiResponse<PaginatedResponse<Association>>> {
   try {
-    // Use service client to bypass RLS
-    const { createServiceClient } = await import("@/lib/supabase/service");
-    const supabase = createServiceClient();
+    const supabase = await createClient();
     
     const page = params.page || 1;
     const pageSize = params.pageSize || 20;
@@ -92,11 +90,8 @@ export async function getAssociations(
       .select("*", { count: "exact" });
     
     // Filter by business_id if provided
-    console.log("[getAssociations] businessId:", businessId);
     if (businessId) {
       query = query.eq("business_id", businessId);
-    } else {
-      console.log("[getAssociations] No businessId provided - returning all associations!");
     }
     
     // Apply search
@@ -151,8 +146,7 @@ export async function getAssociation(
   id: string
 ): Promise<ApiResponse<Association>> {
   try {
-    const { createServiceClient } = await import("@/lib/supabase/service");
-    const supabase = createServiceClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from("associations")
@@ -193,9 +187,7 @@ export async function createAssociation(
   businessId?: string
 ): Promise<ApiResponse<Association>> {
   try {
-    // Use service client to bypass RLS for creation
-    const { createServiceClient } = await import("@/lib/supabase/service");
-    const supabase = createServiceClient();
+    const supabase = await createClient();
 
     // Look up the creator's contact record for created_by
     // The created_by field references contacts(id), not auth.users
@@ -271,8 +263,7 @@ export async function updateAssociation(
   userId: string
 ): Promise<ApiResponse<Association>> {
   try {
-    const { createServiceClient } = await import("@/lib/supabase/service");
-    const supabase = createServiceClient();
+    const supabase = await createClient();
     
     // Look up the updater's contact record for updated_by
     // The updated_by field references contacts(id), not auth.users
@@ -343,8 +334,7 @@ export async function deleteAssociation(
   id: string
 ): Promise<ApiResponse<void>> {
   try {
-    const { createServiceClient } = await import("@/lib/supabase/service");
-    const supabase = createServiceClient();
+    const supabase = await createClient();
     
     const { error } = await supabase
       .from("associations")
