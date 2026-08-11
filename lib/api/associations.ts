@@ -90,6 +90,7 @@ export async function getAssociations(
       .select("*", { count: "exact" });
     
     // Filter by business_id if provided
+    console.log("[getAssociations] Filtering by businessId:", businessId);
     if (businessId) {
       query = query.eq("business_id", businessId);
     }

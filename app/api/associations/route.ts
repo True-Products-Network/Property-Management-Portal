@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = (searchParams.get("sortOrder") || "desc") as "asc" | "desc";
 
     // Get associations (filtered by business_id)
+    console.log("[GET /api/associations] user.businessId:", user.businessId, "user.tenantId:", user.tenantId);
     const result = await getAssociations({
       page,
       pageSize,
