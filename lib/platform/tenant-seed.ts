@@ -359,7 +359,6 @@ export async function seedTenantData(
           name: role.name,
           description: role.description,
           permissions: role.permissions,
-          is_system: false,
           created_by: userId,
           updated_by: userId,
         });
@@ -389,8 +388,8 @@ export async function seedTenantData(
 
         const { error } = await supabase.from("ghl_role_mappings").insert({
           tenant_id: tenantId,
-          ghl_role: mapping.ghl_role,
-          portal_role: mapping.portal_role,
+          ghl_role_name: mapping.ghl_role,
+          portal_role_name: mapping.portal_role,
           created_by: userId,
           updated_by: userId,
         });
@@ -423,7 +422,7 @@ export async function seedTenantData(
           name: workflow.name,
           description: workflow.description,
           steps: workflow.steps,
-          is_active: true,
+          status: "active",
           created_by: userId,
           updated_by: userId,
         });
@@ -436,63 +435,14 @@ export async function seedTenantData(
       }
     }
 
-    // Seed Integrations
+    // Seed Integrations - Table doesn't exist, skip
     if (categories.includes("integrations")) {
-      for (const integration of DEFAULT_INTEGRATIONS) {
-        const { data: existing } = await supabase
-          .from("integrations")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("name", integration.name)
-          .maybeSingle();
-
-        if (existing) {
-          results.integrations.skipped++;
-          continue;
-        }
-
-        const { error } = await supabase.from("integrations").insert({
-          tenant_id: tenantId,
-          name: integration.name,
-          description: integration.description,
-          config: integration.config,
-          is_active: false,
-          created_by: userId,
-          updated_by: userId,
-        });
-
-        if (error) {
-          results.integrations.errors.push(`${integration.name}: ${error.message}`);
-        } else {
-          results.integrations.created++;
-        }
-      }
+      results.integrations.skipped = DEFAULT_INTEGRATIONS.length;
     }
 
-    // Seed Branding
+    // Seed Branding - Table doesn't exist, skip
     if (categories.includes("branding")) {
-      const { data: existing } = await supabase
-        .from("brand_settings")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
-
-      if (existing) {
-        results.branding.skipped++;
-      } else {
-        const { error } = await supabase.from("brand_settings").insert({
-          tenant_id: tenantId,
-          ...DEFAULT_BRANDING,
-          created_by: userId,
-          updated_by: userId,
-        });
-
-        if (error) {
-          results.branding.errors.push(`brand_settings: ${error.message}`);
-        } else {
-          results.branding.created++;
-        }
-      }
+      results.branding.skipped = 1;
     }
 
     // Seed Categories (placeholder - depends on your category management structure)
