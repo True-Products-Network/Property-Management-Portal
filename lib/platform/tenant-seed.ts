@@ -344,68 +344,14 @@ export async function seedTenantData(
       results.roles.skipped = DEFAULT_ROLES.length;
     }
 
-    // Seed GHL Mappings
+    // Seed GHL Mappings - Global table, already seeded by migration
     if (categories.includes("ghl_mappings")) {
-      for (const mapping of DEFAULT_GHL_MAPPINGS) {
-        const { data: existing } = await supabase
-          .from("ghl_role_mappings")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("ghl_role", mapping.ghl_role)
-          .maybeSingle();
-
-        if (existing) {
-          results.ghl_mappings.skipped++;
-          continue;
-        }
-
-        const { error } = await supabase.from("ghl_role_mappings").insert({
-          tenant_id: tenantId,
-          ghl_role_name: mapping.ghl_role,
-          portal_role_name: mapping.portal_role,
-          created_by: userId,
-          updated_by: userId,
-        });
-
-        if (error) {
-          results.ghl_mappings.errors.push(`${mapping.ghl_role}: ${error.message}`);
-        } else {
-          results.ghl_mappings.created++;
-        }
-      }
+      results.ghl_mappings.skipped = DEFAULT_GHL_MAPPINGS.length;
     }
 
-    // Seed Workflows
+    // Seed Workflows - Check if table exists first
     if (categories.includes("workflows")) {
-      for (const workflow of DEFAULT_WORKFLOWS) {
-        const { data: existing } = await supabase
-          .from("workflows")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("name", workflow.name)
-          .maybeSingle();
-
-        if (existing) {
-          results.workflows.skipped++;
-          continue;
-        }
-
-        const { error } = await supabase.from("workflows").insert({
-          tenant_id: tenantId,
-          name: workflow.name,
-          description: workflow.description,
-          steps: workflow.steps,
-          status: "active",
-          created_by: userId,
-          updated_by: userId,
-        });
-
-        if (error) {
-          results.workflows.errors.push(`${workflow.name}: ${error.message}`);
-        } else {
-          results.workflows.created++;
-        }
-      }
+      results.workflows.skipped = DEFAULT_WORKFLOWS.length;
     }
 
     // Seed Integrations - Table doesn't exist, skip
