@@ -29,6 +29,7 @@ import {
   Loader2,
   Plug,
   ClipboardList,
+  Bug,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -54,6 +55,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   DoorOpen,
   Plug,
   ClipboardList,
+  Bug,
 };
 
 interface MenuItem {

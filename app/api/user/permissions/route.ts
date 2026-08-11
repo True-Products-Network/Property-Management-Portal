@@ -199,6 +199,13 @@ function getPlatformAdminMenu(): any[] {
         { label: "Health", href: "/platform/health", icon: "Activity" },
       ],
     },
+    {
+      id: "debug",
+      label: "Debug",
+      items: [
+        { label: "Debug Tools", href: "/platform/debug", icon: "Bug" },
+      ],
+    },
   ];
 }
 
