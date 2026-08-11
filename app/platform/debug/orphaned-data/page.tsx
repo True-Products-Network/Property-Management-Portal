@@ -76,7 +76,7 @@ export default function OrphanedDataPage() {
 
       setTenantInfo(tenant);
 
-      // Count orphaned entities (no business_id)
+      // Count orphaned entities (no business_id) - check both with tenant_id and without
       const [
         { count: orphanedAssoc },
         { count: orphanedProp },
@@ -91,18 +91,18 @@ export default function OrphanedDataPage() {
         { count: orphanedPayments },
         { count: orphanedComm },
       ] = await Promise.all([
-        supabase.from("associations").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("properties").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("units").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("contacts").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("vendors").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("maintenance_requests").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("inspections").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("documents").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("approvals").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("compliance_matters").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("payment_records").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
-        supabase.from("communications").select("id", { count: "exact" }).is("business_id", null).eq("tenant_id", tenantId),
+        supabase.from("associations").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("properties").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("units").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("contacts").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("vendors").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("maintenance_requests").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("inspections").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("documents").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("approvals").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("compliance_matters").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("payment_records").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
+        supabase.from("communications").select("id", { count: "exact" }).is("business_id", null).or(`tenant_id.eq.${tenantId},tenant_id.is.null`),
       ]);
 
       setOrphaned({
