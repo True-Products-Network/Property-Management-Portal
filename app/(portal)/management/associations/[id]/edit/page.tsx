@@ -113,7 +113,7 @@ export default function EditAssociationPage() {
 
     // Validation: Email or Phone is required
     if (!formData.email && !formData.phone) {
-      setError("Either Association Email or Association Phone is required");
+      setError("Either Business Email or Business Phone is required");
       setIsSaving(false);
       return;
     }
@@ -235,7 +235,7 @@ export default function EditAssociationPage() {
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <p className="text-red-600">{error}</p>
         <Link href="/management/associations">
-          <Button variant="outline">Back to Associations</Button>
+          <Button variant="outline">Back to Businesses</Button>
         </Link>
       </div>
     );
@@ -251,7 +251,7 @@ export default function EditAssociationPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Edit Association</h1>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Edit Business</h1>
           <p className="text-[var(--secondary-text)]">{association?.name}</p>
         </div>
       </div>
@@ -272,13 +272,13 @@ export default function EditAssociationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Name *
+                  Business Name *
                 </label>
                 <Input
                   required
                   value={formData.name || ""}
                   onChange={(e) => handleChange("name", e.target.value)}
-                  placeholder="e.g., Ridgeland Condominium Association"
+                  placeholder="e.g., Ridgeland Condominium Business"
                 />
               </div>
 
@@ -300,7 +300,7 @@ export default function EditAssociationPage() {
                 <Input
                   value={formData.legalName || ""}
                   onChange={(e) => handleChange("legalName", e.target.value)}
-                  placeholder="e.g., Ridgeland Condominium Association, Inc."
+                  placeholder="e.g., Ridgeland Condominium Business, Inc."
                 />
               </div>
 
@@ -308,7 +308,7 @@ export default function EditAssociationPage() {
                 <DropdownSelect
                   recordType="Association Company"
                   fieldName="Association Type"
-                  label="Association Type *"
+                  label="Business Type *"
                   value={formData.type || ""}
                   onChange={(value) => handleChange("type", value)}
                   required
@@ -319,7 +319,7 @@ export default function EditAssociationPage() {
                 <DropdownSelect
                   recordType="Association Company"
                   fieldName="Association Status"
-                  label="Association Status *"
+                  label="Business Status *"
                   value={formData.status || ""}
                   onChange={(value) => handleChange("status", value)}
                   required
@@ -350,7 +350,7 @@ export default function EditAssociationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Email {!formData.phone && <span className="text-red-500">*</span>}
+                  Business Email {!formData.phone && <span className="text-red-500">*</span>}
                 </label>
                 <Input
                   type="email"
@@ -362,7 +362,7 @@ export default function EditAssociationPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Phone {!formData.email && <span className="text-red-500">*</span>}
+                  Business Phone {!formData.email && <span className="text-red-500">*</span>}
                 </label>
                 <Input
                   value={formData.phone || ""}

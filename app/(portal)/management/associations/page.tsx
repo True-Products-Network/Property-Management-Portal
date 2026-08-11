@@ -125,15 +125,15 @@ export default function AssociationsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Portfolio — Managed Associations</h1>
+            <h1 className="text-2xl font-semibold text-[var(--main-text)]">Portfolio — Managed Businesses</h1>
             <p className="text-[var(--secondary-text)] mt-1">
-              Manage your portfolio of associations and communities
+              Manage your portfolio of businesses and communities
             </p>
           </div>
           <Link href="/management/associations/new">
             <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
               <Plus className="h-4 w-4 mr-2" />
-              Add Association
+              Add Business
             </Button>
           </Link>
         </div>
@@ -145,9 +145,9 @@ export default function AssociationsPage() {
                 <Building2 className="h-8 w-8 text-[var(--secondary-text)]" />
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[var(--main-text)]">No Associations Found</h3>
+                <h3 className="text-lg font-medium text-[var(--main-text)]">No Businesses Found</h3>
                 <p className="text-[var(--secondary-text)] mt-1 max-w-md">
-                  Get started by adding your first association or refresh to check for data.
+                  Get started by adding your first business or refresh to check for data.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -173,15 +173,15 @@ export default function AssociationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Associations</h1>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Businesses</h1>
           <p className="text-[var(--secondary-text)] mt-1">
-            Manage homeowner associations and communities
+            Manage businesses and communities
           </p>
         </div>
         <Link href="/management/associations/new">
           <Button className="bg-[var(--teal)] hover:bg-[var(--teal-hover)]">
             <Plus className="h-4 w-4 mr-2" />
-            Add Association
+            Add Business
           </Button>
         </Link>
       </div>
@@ -195,7 +195,7 @@ export default function AssociationsPage() {
                 <Building2 className="h-5 w-5 text-[var(--teal)]" />
               </div>
               <div>
-                <p className="text-sm text-[var(--secondary-text)]">Total Associations</p>
+                <p className="text-sm text-[var(--secondary-text)]">Total Businesses</p>
                 <p className="text-2xl font-semibold">{totalAssociations}</p>
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function AssociationsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--secondary-text)]" />
               <Input
-                placeholder="Search associations..."
+                placeholder="Search businesses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -289,7 +289,7 @@ export default function AssociationsPage() {
       {/* Association List */}
       <Card>
         <CardHeader>
-          <CardTitle>Association List ({filteredAssociations.length})</CardTitle>
+          <CardTitle>Business List ({filteredAssociations.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -297,7 +297,7 @@ export default function AssociationsPage() {
               <thead>
                 <tr className="border-b border-[var(--border-color)]">
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
-                    Association
+                    Business
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-[var(--secondary-text)]">
                     Type
@@ -357,8 +357,8 @@ export default function AssociationsPage() {
           {filteredAssociations.length === 0 && (
             <div className="text-center py-8 text-[var(--secondary-text)]">
               {searchQuery || typeFilter !== "all" || statusFilter !== "all"
-                ? "No associations found matching your criteria."
-                : "No associations found."}
+                ? "No businesses found matching your criteria."
+                : "No businesses found."}
             </div>
           )}
         </CardContent>

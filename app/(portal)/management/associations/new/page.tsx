@@ -276,8 +276,8 @@ export default function NewAssociationPage() {
         throw new Error(result.error || result.message || "Failed to create association");
       }
 
-      // Show success message with Association ID
-      alert(`Association created successfully!\n\nAssociation ID: ${result.data?.id || result.data?.associationId || 'N/A'}\nName: ${formData.name}`);
+      // Show success message with Business ID
+      alert(`Business created successfully!\n\nBusiness ID: ${result.data?.id || result.data?.associationId || 'N/A'}\nName: ${formData.name}`);
       
       router.push("/management/associations");
     } catch (err) {
@@ -305,8 +305,8 @@ export default function NewAssociationPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add Association</h1>
-          <p className="text-[var(--secondary-text)]">Create a new association or community</p>
+          <h1 className="text-2xl font-semibold text-[var(--main-text)]">Add Business</h1>
+          <p className="text-[var(--secondary-text)]">Create a new business or community</p>
         </div>
       </div>
 
@@ -326,7 +326,7 @@ export default function NewAssociationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--main-text)]">
-                  Association Name *
+                  Business Name *
                 </label>
                 <Input
                   required

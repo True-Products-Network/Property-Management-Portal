@@ -233,9 +233,9 @@ export default function AssociationDetailPage() {
   if (error || !association) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <p className="text-red-600">{error || "Association not found"}</p>
+        <p className="text-red-600">{error || "Business not found"}</p>
         <Link href="/management/associations">
-          <Button variant="outline">Back to Associations</Button>
+          <Button variant="outline">Back to Businesses</Button>
         </Link>
       </div>
     );
@@ -260,7 +260,7 @@ export default function AssociationDetailPage() {
               className="flex items-center gap-1 hover:text-[var(--main-text)] transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Associations
+              Back to Businesses
             </Link>
           </div>
           <div className="flex items-center gap-3">
@@ -352,15 +352,15 @@ export default function AssociationDetailPage() {
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Association Details */}
+            {/* Business Details */}
             <Card>
               <CardHeader>
-                <CardTitle>Association Details</CardTitle>
+                <CardTitle>Business Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-[var(--secondary-text)]">Association Type</p>
+                    <p className="text-sm text-[var(--secondary-text)]">Business Type</p>
                     <p className="font-medium">{getTypeLabel(association.type)}</p>
                   </div>
                   <div>
