@@ -78,7 +78,9 @@ export async function getAssociations(
   businessId?: string
 ): Promise<ApiResponse<PaginatedResponse<Association>>> {
   try {
-    const supabase = await createClient();
+    // Use service client to bypass RLS
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
     
     const page = params.page || 1;
     const pageSize = params.pageSize || 20;
