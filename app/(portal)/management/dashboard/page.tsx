@@ -61,7 +61,13 @@ interface RecentActivity {
   userName?: string;
 }
 
+// Global render counter for debugging
+let dashboardRenderCount = 0;
+
 export default function DashboardPage() {
+  dashboardRenderCount++;
+  console.log(`[Dashboard] Render #${dashboardRenderCount}`);
+  
   const [business, setBusiness] = useState<Business | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [priorities, setPriorities] = useState<PriorityItem[]>([]);
@@ -70,11 +76,13 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log(`[Dashboard] useEffect triggered, calling loadDashboardData`);
     loadDashboardData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadDashboardData() {
+    console.log(`[Dashboard] loadDashboardData() started`);
     try {
       setIsLoading(true);
       setError(null);
@@ -84,12 +92,14 @@ export default function DashboardPage() {
       const sessionResult = await sessionResponse.json();
       
       if (!sessionResult.user?.businessId) {
+        console.log(`[Dashboard] No businessId in session`);
         setIsLoading(false);
         setError("No business selected. Please select a business first.");
         return;
       }
 
       const businessId = sessionResult.user.businessId;
+      console.log(`[Dashboard] businessId from session: ${businessId}`);
 
       // Load business details
       const businessResponse = await fetch(`/api/businesses/${businessId}`);
@@ -319,7 +329,8 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2">
             <BusinessSelector 
-              onBusinessSelect={() => {
+              onBusinessSelect={(id) => {
+                console.log(`[Dashboard] onBusinessSelect (error state) called with id: ${id}`);
                 setError(null);
                 setTimeout(() => loadDashboardData(), 100);
               }}
@@ -361,6 +372,7 @@ export default function DashboardPage() {
           <BusinessSelector 
             selectedBusinessId={business?.id} 
             onBusinessSelect={(id) => {
+              console.log(`[Dashboard] onBusinessSelect called with id: ${id}`);
               // Don't set business to null - just reload data
               loadDashboardData();
             }}
