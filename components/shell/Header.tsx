@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { AssociationSelector } from "./AssociationSelector";
 import { TenantSwitcher } from "@/components/TenantSwitcher";
+import { BusinessSelector } from "@/components/business/BusinessSelector";
 
 interface Tenant {
   id: string;
@@ -115,6 +116,9 @@ export function Header({
             <span>Request Board Approval</span>
           </Link>
         </div>
+
+        {/* Business Selector */}
+        <BusinessSelector />
 
         {/* Notifications */}
         <div className="relative">
