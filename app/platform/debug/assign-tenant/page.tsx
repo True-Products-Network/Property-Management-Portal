@@ -53,11 +53,11 @@ const entityTypes: EntityType[] = [
   { key: "contacts", label: "Contacts", icon: Users, nameField: "first_name" },
   { key: "vendors", label: "Vendors", icon: Truck, nameField: "company_name" },
   { key: "maintenance_requests", label: "Maintenance", icon: Wrench, nameField: "title" },
-  { key: "inspections", label: "Inspections", icon: ClipboardCheck, nameField: "title" },
-  { key: "documents", label: "Documents", icon: FileText, nameField: "name" },
+  { key: "inspections", label: "Inspections", icon: ClipboardCheck, nameField: "inspection_id" },
+  { key: "documents", label: "Documents", icon: FileText, nameField: "title" },
   { key: "approvals", label: "Approvals", icon: CheckSquare, nameField: "title" },
   { key: "compliance_matters", label: "Compliance", icon: Scale, nameField: "title" },
-  { key: "payment_records", label: "Payments", icon: CircleDollarSign, nameField: "description" },
+  { key: "payment_records", label: "Payments", icon: CircleDollarSign, nameField: "payment_id" },
   { key: "communications", label: "Communications", icon: MessageSquare, nameField: "subject" },
 ];
 
