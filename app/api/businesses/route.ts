@@ -11,20 +11,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get tenant ID from user's first tenant
-    const tenantId = user.tenants?.[0]?.id;
+    // Get all tenant IDs for the user
+    const tenantIds = user.tenants?.map(t => t.id) || [];
     
-    if (!tenantId) {
-      return NextResponse.json({ error: "No tenant found" }, { status: 400 });
+    if (tenantIds.length === 0) {
+      return NextResponse.json({ error: "No tenants found" }, { status: 400 });
     }
 
     const serviceClient = createServiceClient();
 
-    // Get businesses for this tenant (slug field stores the tenant_id)
+    // Get businesses for ALL of the user's tenants (slug field stores the tenant_id)
     const { data: businesses, error } = await serviceClient
       .from("businesses")
       .select("*")
-      .eq("slug", tenantId)
+      .in("slug", tenantIds)
       .order("created_at", { ascending: false });
 
     if (error) {
