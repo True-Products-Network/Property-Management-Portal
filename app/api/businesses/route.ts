@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
     // Get all tenant IDs for the user
     const tenantIds = user.tenants?.map(t => t.id) || [];
     
+    console.log("[GET /api/businesses] user.tenants:", JSON.stringify(user.tenants));
+    console.log("[GET /api/businesses] tenantIds:", tenantIds);
+    
     if (tenantIds.length === 0) {
       return NextResponse.json({ error: "No tenants found" }, { status: 400 });
     }
@@ -26,6 +29,8 @@ export async function GET(request: NextRequest) {
       .select("*")
       .in("slug", tenantIds)
       .order("created_at", { ascending: false });
+    
+    console.log("[GET /api/businesses] businesses found:", businesses?.length, "error:", error);
 
     if (error) {
       console.error("Error fetching businesses:", error);
