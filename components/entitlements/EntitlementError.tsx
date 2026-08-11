@@ -47,18 +47,6 @@ export function EntitlementError({
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
-          {onContactAdmin ? (
-            <Button onClick={onContactAdmin} variant="default">
-              Contact Administrator
-            </Button>
-          ) : (
-            <Button 
-              onClick={() => window.location.href = "/platform/entitlements"} 
-              variant="default"
-            >
-              Go to Platform Admin
-            </Button>
-          )}
           <Button 
             variant="outline" 
             onClick={() => window.history.back()}
