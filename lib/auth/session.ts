@@ -125,7 +125,7 @@ export async function getSession(): Promise<SessionUser | null> {
     } else if (activeBusiness) {
       // Business exists but doesn't belong to this user - clear the cookie
       console.log("[getSession] Business doesn't belong to user - clearing cookie");
-      cookieStore.delete("active_business_id");
+      cookieStore.set("active_business_id", "", { maxAge: 0, path: "/" });
     }
   }
   
