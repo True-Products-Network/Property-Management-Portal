@@ -161,7 +161,10 @@ export async function getSession(): Promise<SessionUser | null> {
   // If no business found, use the selected tenant ID
   if (!tenantId && selectedTenantId) {
     tenantId = selectedTenantId;
+    console.log("[getSession] Using selectedTenantId as tenantId:", tenantId);
   }
+  
+  console.log("[getSession] Returning - businessId:", businessId, "tenantId:", tenantId);
   
   return {
     id: user.id,
