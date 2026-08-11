@@ -132,6 +132,7 @@ CREATE POLICY "association_ghl_tenant_member"
 -- ============================================================================
 
 DROP POLICY IF EXISTS "tenant_subscriptions_tenant_isolation" ON public.tenant_subscriptions;
+DROP POLICY IF EXISTS "tenant_subscriptions_tenant_admin" ON public.tenant_subscriptions;
 
 -- Platform support can manage all subscriptions
 CREATE POLICY "tenant_subscriptions_platform_support"

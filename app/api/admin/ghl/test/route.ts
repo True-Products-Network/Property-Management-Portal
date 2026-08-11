@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/permissions/roles";
+import { getAssociationGhlCredentials } from "@/lib/ghl/association-credentials";
 import { createClient } from "@/lib/supabase/server";
-import { decrypt } from "@/lib/ghl/crypto";
 
 // POST /api/admin/ghl/test - Test GHL connection
 export async function POST(request: NextRequest) {
@@ -27,38 +27,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get stored credentials for this association
-    const supabase = await createClient();
-    const { data: credentials, error } = await supabase
-      .from("association_ghl_credentials")
-      .select("*")
-      .eq("association_id", associationId)
-      .single();
+    // Get stored credentials for this association (with auto-refresh if needed)
+    const credentials = await getAssociationGhlCredentials(associationId);
 
-    if (error || !credentials) {
+    if (!credentials) {
       return NextResponse.json(
         { error: "No credentials configured for this association. Please connect to GHL first." },
         { status: 400 }
       );
     }
 
-    // Decrypt credentials
-    let accessToken: string | null = null;
-    let apiKey: string | null = null;
-    
-    try {
-      if (credentials.type === "oauth" && credentials.access_token) {
-        accessToken = decrypt(credentials.access_token);
-      } else if (credentials.type === "api_key" && credentials.api_key) {
-        apiKey = decrypt(credentials.api_key);
-      }
-    } catch (decryptError) {
-      console.error("Error decrypting credentials:", decryptError);
-      return NextResponse.json(
-        { error: "Failed to decrypt credentials. They may be corrupted." },
-        { status: 500 }
-      );
-    }
+    // Extract tokens
+    const accessToken = credentials.type === "oauth" ? credentials.accessToken : null;
+    const apiKey = credentials.type === "api_key" ? credentials.apiKey : null;
 
     // Test OAuth connection
     if (credentials.type === "oauth" && accessToken) {
@@ -105,7 +86,7 @@ export async function POST(request: NextRequest) {
               status: testResponse.status,
               details: errorText,
               suggestion,
-              tokenPrefix: accessToken?.substring(0, 10) + "...",
+              tokenPrefix: accessToken ? accessToken.substring(0, 10) + "..." : "none",
             },
             { status: 400 }
           );
