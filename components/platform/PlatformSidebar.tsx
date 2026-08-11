@@ -19,6 +19,7 @@ import {
   Shield,
   Flag,
   Globe,
+  Bug,
 } from "lucide-react";
 
 const navigation = [
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Audit Log", href: "/platform/audit", icon: ClipboardList },
   { name: "Health & Status", href: "/platform/health", icon: Activity },
   { name: "Site Settings", href: "/platform/site-settings", icon: Globe },
+  { name: "Debug Tools", href: "/platform/debug", icon: Bug },
 ];
 
 export function PlatformSidebar() {
