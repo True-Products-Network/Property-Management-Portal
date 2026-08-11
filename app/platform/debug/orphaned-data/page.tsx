@@ -344,13 +344,24 @@ export default function OrphanedDataPage() {
                 <p className="text-green-800 mb-2">
                   Business record {fixResult.business?.status === "created" ? "created" : "found"}: {fixResult.business?.id}
                 </p>
-                <div className="grid grid-cols-2 gap-2 text-sm text-green-800">
-                  {Object.entries(fixResult.migrations).map(([key, value]: [string, any]) => (
-                    <p key={key}>
-                      {key}: {value.migrated} migrated
-                    </p>
-                  ))}
-                </div>
+                {fixResult.migrations && (
+                  <div className="grid grid-cols-2 gap-2 text-sm text-green-800">
+                    {Object.entries(fixResult.migrations).map(([key, value]: [string, any]) => (
+                      <p key={key}>
+                        {key}: {value.migrated} migrated
+                      </p>
+                    ))}
+                  </div>
+                )}
+                {fixResult.results && (
+                  <div className="grid grid-cols-2 gap-2 text-sm text-green-800">
+                    {Object.entries(fixResult.results).map(([key, value]: [string, any]) => (
+                      <p key={key}>
+                        {key}: {value.deleted || value.updated || 0} processed
+                      </p>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
