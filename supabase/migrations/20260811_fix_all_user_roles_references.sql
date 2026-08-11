@@ -37,6 +37,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 DROP POLICY IF EXISTS associations_admin_all ON associations;
 DROP POLICY IF EXISTS associations_management_all ON associations;
 DROP POLICY IF EXISTS associations_user_select ON associations;
+DROP POLICY IF EXISTS associations_tenant_isolation ON associations;
 
 -- Recreate with correct schema
 CREATE POLICY associations_tenant_isolation ON associations
@@ -60,6 +61,7 @@ CREATE POLICY associations_tenant_isolation ON associations
 DROP POLICY IF EXISTS contacts_admin_all ON contacts;
 DROP POLICY IF EXISTS contacts_management_all ON contacts;
 DROP POLICY IF EXISTS contacts_user_select ON contacts;
+DROP POLICY IF EXISTS contacts_tenant_isolation ON contacts;
 
 CREATE POLICY contacts_tenant_isolation ON contacts
     FOR ALL USING (
@@ -82,6 +84,7 @@ CREATE POLICY contacts_tenant_isolation ON contacts
 DROP POLICY IF EXISTS properties_admin_all ON properties;
 DROP POLICY IF EXISTS properties_management_all ON properties;
 DROP POLICY IF EXISTS properties_user_select ON properties;
+DROP POLICY IF EXISTS properties_tenant_isolation ON properties;
 
 CREATE POLICY properties_tenant_isolation ON properties
     FOR ALL USING (
@@ -104,6 +107,7 @@ CREATE POLICY properties_tenant_isolation ON properties
 DROP POLICY IF EXISTS units_admin_all ON units;
 DROP POLICY IF EXISTS units_management_all ON units;
 DROP POLICY IF EXISTS units_user_select ON units;
+DROP POLICY IF EXISTS units_tenant_isolation ON units;
 
 CREATE POLICY units_tenant_isolation ON units
     FOR ALL USING (
@@ -126,6 +130,7 @@ CREATE POLICY units_tenant_isolation ON units
 DROP POLICY IF EXISTS maintenance_admin_all ON maintenance_requests;
 DROP POLICY IF EXISTS maintenance_management_all ON maintenance_requests;
 DROP POLICY IF EXISTS maintenance_user_select ON maintenance_requests;
+DROP POLICY IF EXISTS maintenance_tenant_isolation ON maintenance_requests;
 
 CREATE POLICY maintenance_tenant_isolation ON maintenance_requests
     FOR ALL USING (
@@ -148,6 +153,7 @@ CREATE POLICY maintenance_tenant_isolation ON maintenance_requests
 DROP POLICY IF EXISTS vendors_admin_all ON vendors;
 DROP POLICY IF EXISTS vendors_management_all ON vendors;
 DROP POLICY IF EXISTS vendors_user_select ON vendors;
+DROP POLICY IF EXISTS vendors_tenant_isolation ON vendors;
 
 CREATE POLICY vendors_tenant_isolation ON vendors
     FOR ALL USING (
@@ -170,6 +176,7 @@ CREATE POLICY vendors_tenant_isolation ON vendors
 DROP POLICY IF EXISTS inspections_admin_all ON inspections;
 DROP POLICY IF EXISTS inspections_management_all ON inspections;
 DROP POLICY IF EXISTS inspections_user_select ON inspections;
+DROP POLICY IF EXISTS inspections_tenant_isolation ON inspections;
 
 CREATE POLICY inspections_tenant_isolation ON inspections
     FOR ALL USING (
@@ -192,6 +199,7 @@ CREATE POLICY inspections_tenant_isolation ON inspections
 DROP POLICY IF EXISTS documents_admin_all ON documents;
 DROP POLICY IF EXISTS documents_management_all ON documents;
 DROP POLICY IF EXISTS documents_user_select ON documents;
+DROP POLICY IF EXISTS documents_tenant_isolation ON documents;
 
 CREATE POLICY documents_tenant_isolation ON documents
     FOR ALL USING (
@@ -214,6 +222,7 @@ CREATE POLICY documents_tenant_isolation ON documents
 DROP POLICY IF EXISTS approvals_admin_all ON approvals;
 DROP POLICY IF EXISTS approvals_management_all ON approvals;
 DROP POLICY IF EXISTS approvals_user_select ON approvals;
+DROP POLICY IF EXISTS approvals_tenant_isolation ON approvals;
 
 CREATE POLICY approvals_tenant_isolation ON approvals
     FOR ALL USING (
@@ -236,6 +245,7 @@ CREATE POLICY approvals_tenant_isolation ON approvals
 DROP POLICY IF EXISTS compliance_admin_all ON compliance_matters;
 DROP POLICY IF EXISTS compliance_management_all ON compliance_matters;
 DROP POLICY IF EXISTS compliance_user_select ON compliance_matters;
+DROP POLICY IF EXISTS compliance_tenant_isolation ON compliance_matters;
 
 CREATE POLICY compliance_tenant_isolation ON compliance_matters
     FOR ALL USING (
@@ -258,6 +268,7 @@ CREATE POLICY compliance_tenant_isolation ON compliance_matters
 DROP POLICY IF EXISTS payments_admin_all ON payment_records;
 DROP POLICY IF EXISTS payments_management_all ON payment_records;
 DROP POLICY IF EXISTS payments_user_select ON payment_records;
+DROP POLICY IF EXISTS payments_tenant_isolation ON payment_records;
 
 CREATE POLICY payments_tenant_isolation ON payment_records
     FOR ALL USING (
@@ -280,6 +291,7 @@ CREATE POLICY payments_tenant_isolation ON payment_records
 DROP POLICY IF EXISTS communications_admin_all ON communications;
 DROP POLICY IF EXISTS communications_management_all ON communications;
 DROP POLICY IF EXISTS communications_user_select ON communications;
+DROP POLICY IF EXISTS communications_tenant_isolation ON communications;
 
 CREATE POLICY communications_tenant_isolation ON communications
     FOR ALL USING (
