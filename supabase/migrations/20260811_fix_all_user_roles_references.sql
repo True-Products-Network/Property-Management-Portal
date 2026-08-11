@@ -1,7 +1,7 @@
 -- Fix all references to user_roles.role column
 -- The user_roles table now uses role_id (UUID) referencing roles.id
 
--- Drop and recreate is_admin_user function
+-- Drop and recreate is_admin_user function (no revoked_at in user_roles)
 CREATE OR REPLACE FUNCTION is_admin_user()
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -11,12 +11,11 @@ BEGIN
         JOIN roles r ON ur.role_id = r.id
         WHERE ur.user_id = auth.uid() 
         AND r.name = 'Admin User'
-        AND ur.revoked_at IS NULL
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Drop and recreate is_management_staff function if it exists
+-- Drop and recreate is_management_staff function if it exists (no revoked_at)
 DROP FUNCTION IF EXISTS is_management_staff();
 CREATE OR REPLACE FUNCTION is_management_staff()
 RETURNS BOOLEAN AS $$
@@ -27,7 +26,6 @@ BEGIN
         JOIN roles r ON ur.role_id = r.id
         WHERE ur.user_id = auth.uid() 
         AND r.name IN ('Admin User', 'Management Staff', 'Property Manager', 'Association Manager')
-        AND ur.revoked_at IS NULL
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
