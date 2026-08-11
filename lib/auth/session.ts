@@ -17,6 +17,7 @@ export interface SessionUser {
   mfaEnabled: boolean;
   status: "ACTIVE" | "SUSPENDED" | "REVOKED" | "PENDING_INVITE";
   businessId?: string;
+  tenantId?: string; // Actual tenant UUID from business.slug for foreign keys
   tenants: TenantInfo[];
 }
 
@@ -133,6 +134,20 @@ export async function getSession(): Promise<SessionUser | null> {
     }
   }
   
+  // Get the actual tenant_id from the business (for audit logs and foreign keys)
+  let tenantId: string | undefined;
+  if (businessId) {
+    const { data: business } = await serviceClient
+      .from("businesses")
+      .select("slug")
+      .eq("id", businessId)
+      .maybeSingle();
+    
+    if (business) {
+      tenantId = business.slug;
+    }
+  }
+  
   return {
     id: user.id,
     email: user.email!,
@@ -141,6 +156,7 @@ export async function getSession(): Promise<SessionUser | null> {
     mfaEnabled: metadata?.mfa_enabled || false,
     status: metadata?.status || "ACTIVE",
     businessId: businessId,
+    tenantId: tenantId, // Actual tenant UUID for foreign key references
     tenants: tenants,
   };
 }
