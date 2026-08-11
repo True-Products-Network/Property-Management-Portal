@@ -39,7 +39,8 @@ export async function GET(request: NextRequest) {
       pageSize: parseInt(searchParams.get("pageSize") || "20"),
       search: searchParams.get("search") || undefined,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
-      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
+      businessId: user.businessId,
+      tenantId: user.tenantId, // CRITICAL: Pass tenant ID for isolation
     });
 
     if (!result.success) return NextResponse.json(result, { status: 400 });

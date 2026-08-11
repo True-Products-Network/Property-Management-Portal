@@ -55,7 +55,8 @@ export async function GET(request: NextRequest) {
       associationId: searchParams.get("associationId") || undefined,
       propertyId: searchParams.get("propertyId") || undefined,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
-      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
+      businessId: user.businessId,
+      tenantId: user.tenantId, // CRITICAL: Pass tenant ID for isolation
     });
 
     const duration = Date.now() - startTime;

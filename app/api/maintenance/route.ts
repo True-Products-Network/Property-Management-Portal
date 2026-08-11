@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
       status: searchParams.get("status") || undefined,
       vendorId: searchParams.get("vendorId") || undefined,
       reportedBy: searchParams.get("reportedBy") || undefined,
-      businessId: user.businessId, // CRITICAL: Pass tenant ID for isolation
+      businessId: user.businessId,
+      tenantId: user.tenantId, // CRITICAL: Pass tenant ID for isolation
     });
 
     const duration = Date.now() - startTime;
