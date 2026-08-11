@@ -339,36 +339,9 @@ export async function seedTenantData(
       }
     }
 
-    // Seed Roles
+    // Seed Roles - System roles already exist from migration, skip tenant-specific roles
     if (categories.includes("roles")) {
-      for (const role of DEFAULT_ROLES) {
-        const { data: existing } = await supabase
-          .from("roles")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("name", role.name)
-          .maybeSingle();
-
-        if (existing) {
-          results.roles.skipped++;
-          continue;
-        }
-
-        const { error } = await supabase.from("roles").insert({
-          tenant_id: tenantId,
-          name: role.name,
-          description: role.description,
-          permissions: role.permissions,
-          created_by: userId,
-          updated_by: userId,
-        });
-
-        if (error) {
-          results.roles.errors.push(`${role.name}: ${error.message}`);
-        } else {
-          results.roles.created++;
-        }
-      }
+      results.roles.skipped = DEFAULT_ROLES.length;
     }
 
     // Seed GHL Mappings
