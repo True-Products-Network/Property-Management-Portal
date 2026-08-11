@@ -102,6 +102,7 @@ export async function getSession(): Promise<SessionUser | null> {
   
   // Check for active business cookie first
   const activeBusinessId = cookieStore.get("active_business_id")?.value;
+  console.log("[getSession] activeBusinessId from cookie:", activeBusinessId);
   
   // Look up the business record for this tenant
   // Use service client to bypass RLS since we've already authenticated the user
@@ -116,12 +117,14 @@ export async function getSession(): Promise<SessionUser | null> {
       .eq("id", activeBusinessId)
       .maybeSingle();
     
+    console.log("[getSession] activeBusiness lookup:", activeBusiness, "userTenantIds:", userTenantIds);
     if (activeBusiness && userTenantIds.includes(activeBusiness.slug)) {
       businessId = activeBusiness.id;
     }
   }
   
   // If no active business or invalid, look up by tenant
+  console.log("[getSession] selectedTenantId:", selectedTenantId, "current businessId:", businessId);
   if (!businessId && selectedTenantId) {
     const { data: business } = await serviceClient
       .from("businesses")
@@ -129,6 +132,7 @@ export async function getSession(): Promise<SessionUser | null> {
       .eq("slug", selectedTenantId)
       .maybeSingle();
     
+    console.log("[getSession] business lookup by tenant:", business);
     if (business) {
       businessId = business.id;
     }
