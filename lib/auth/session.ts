@@ -158,6 +158,11 @@ export async function getSession(): Promise<SessionUser | null> {
     }
   }
   
+  // If no business found, use the selected tenant ID
+  if (!tenantId && selectedTenantId) {
+    tenantId = selectedTenantId;
+  }
+  
   return {
     id: user.id,
     email: user.email!,
