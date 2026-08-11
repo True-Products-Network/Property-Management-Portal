@@ -21,6 +21,7 @@ interface SeedResult {
 // Default dropdown values for each record type
 const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; sortOrder: number; fieldName?: string }>> = {
   "Vendor Company": [
+    // Vendor Type
     { value: "hvac", label: "HVAC", sortOrder: 1, fieldName: "Vendor Type" },
     { value: "plumbing", label: "Plumbing", sortOrder: 2, fieldName: "Vendor Type" },
     { value: "electrical", label: "Electrical", sortOrder: 3, fieldName: "Vendor Type" },
@@ -36,6 +37,11 @@ const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; so
     { value: "pool_service", label: "Pool Service", sortOrder: 13, fieldName: "Vendor Type" },
     { value: "snow_removal", label: "Snow Removal", sortOrder: 14, fieldName: "Vendor Type" },
     { value: "other", label: "Other", sortOrder: 15, fieldName: "Vendor Type" },
+    // Vendor Status
+    { value: "active", label: "Active", sortOrder: 1, fieldName: "Vendor Status" },
+    { value: "inactive", label: "Inactive", sortOrder: 2, fieldName: "Vendor Status" },
+    { value: "pending", label: "Pending", sortOrder: 3, fieldName: "Vendor Status" },
+    { value: "suspended", label: "Suspended", sortOrder: 4, fieldName: "Vendor Status" },
   ],
   "Unit": [
     { value: "studio", label: "Studio", sortOrder: 1 },
@@ -56,23 +62,42 @@ const DEFAULT_DROPDOWNS: Record<string, Array<{ value: string; label: string; so
     { value: "mixed_use", label: "Mixed Use", sortOrder: 6 },
   ],
   "Association Company": [
-    { value: "hoa", label: "HOA", sortOrder: 1 },
-    { value: "condominium", label: "Condominium", sortOrder: 2 },
-    { value: "cooperative", label: "Cooperative", sortOrder: 3 },
-    { value: "commercial", label: "Commercial", sortOrder: 4 },
-    { value: "other", label: "Other", sortOrder: 5 },
+    // Association Type
+    { value: "hoa", label: "HOA", sortOrder: 1, fieldName: "Association Type" },
+    { value: "condominium", label: "Condominium", sortOrder: 2, fieldName: "Association Type" },
+    { value: "cooperative", label: "Cooperative", sortOrder: 3, fieldName: "Association Type" },
+    { value: "commercial", label: "Commercial", sortOrder: 4, fieldName: "Association Type" },
+    { value: "other", label: "Other", sortOrder: 5, fieldName: "Association Type" },
+    // Association Status
+    { value: "active", label: "Active", sortOrder: 1, fieldName: "Association Status" },
+    { value: "inactive", label: "Inactive", sortOrder: 2, fieldName: "Association Status" },
+    { value: "pending", label: "Pending", sortOrder: 3, fieldName: "Association Status" },
+    { value: "dissolved", label: "Dissolved", sortOrder: 4, fieldName: "Association Status" },
   ],
-  "People": [
-    { value: "admin_user", label: "Admin User", sortOrder: 1 },
-    { value: "association_manager", label: "Association Manager", sortOrder: 2 },
-    { value: "board_member", label: "Board Member", sortOrder: 3 },
-    { value: "finance_user", label: "Finance User", sortOrder: 4 },
-    { value: "owner", label: "Owner", sortOrder: 5 },
-    { value: "portfolio_manager", label: "Portfolio Manager", sortOrder: 6 },
-    { value: "property_manager", label: "Property Manager", sortOrder: 7 },
-    { value: "resident", label: "Resident", sortOrder: 8 },
-    { value: "staff", label: "Staff", sortOrder: 9 },
-    { value: "vendor_contractor", label: "Vendor/Contractor", sortOrder: 10 },
+  "Contact": [
+    // Contact Roles
+    { value: "admin_user", label: "Admin User", sortOrder: 1, fieldName: "role" },
+    { value: "association_manager", label: "Association Manager", sortOrder: 2, fieldName: "role" },
+    { value: "board_member", label: "Board Member", sortOrder: 3, fieldName: "role" },
+    { value: "finance_user", label: "Finance User", sortOrder: 4, fieldName: "role" },
+    { value: "owner", label: "Owner", sortOrder: 5, fieldName: "role" },
+    { value: "portfolio_manager", label: "Portfolio Manager", sortOrder: 6, fieldName: "role" },
+    { value: "property_manager", label: "Property Manager", sortOrder: 7, fieldName: "role" },
+    { value: "resident", label: "Resident", sortOrder: 8, fieldName: "role" },
+    { value: "staff", label: "Staff", sortOrder: 9, fieldName: "role" },
+    { value: "vendor_contractor", label: "Vendor/Contractor", sortOrder: 10, fieldName: "role" },
+    // Contact Status
+    { value: "active", label: "Active", sortOrder: 1, fieldName: "status" },
+    { value: "inactive", label: "Inactive", sortOrder: 2, fieldName: "status" },
+    { value: "pending", label: "Pending", sortOrder: 3, fieldName: "status" },
+    { value: "archived", label: "Archived", sortOrder: 4, fieldName: "status" },
+    // Board Position
+    { value: "president", label: "President", sortOrder: 1, fieldName: "board_position" },
+    { value: "vice_president", label: "Vice President", sortOrder: 2, fieldName: "board_position" },
+    { value: "secretary", label: "Secretary", sortOrder: 3, fieldName: "board_position" },
+    { value: "treasurer", label: "Treasurer", sortOrder: 4, fieldName: "board_position" },
+    { value: "member", label: "Member", sortOrder: 5, fieldName: "board_position" },
+    { value: "none", label: "None", sortOrder: 6, fieldName: "board_position" },
   ],
   "Maintenance Request": [
     { value: "hvac", label: "HVAC", sortOrder: 1 },
