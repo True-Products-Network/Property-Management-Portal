@@ -52,7 +52,7 @@ CREATE POLICY associations_tenant_isolation ON associations
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -74,7 +74,7 @@ CREATE POLICY contacts_tenant_isolation ON contacts
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -96,7 +96,7 @@ CREATE POLICY properties_tenant_isolation ON properties
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -118,7 +118,7 @@ CREATE POLICY units_tenant_isolation ON units
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -140,7 +140,7 @@ CREATE POLICY maintenance_tenant_isolation ON maintenance_requests
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -162,7 +162,7 @@ CREATE POLICY vendors_tenant_isolation ON vendors
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -184,7 +184,7 @@ CREATE POLICY inspections_tenant_isolation ON inspections
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -206,7 +206,7 @@ CREATE POLICY documents_tenant_isolation ON documents
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -228,7 +228,7 @@ CREATE POLICY approvals_tenant_isolation ON approvals
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -250,7 +250,7 @@ CREATE POLICY compliance_tenant_isolation ON compliance_matters
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -272,7 +272,7 @@ CREATE POLICY payments_tenant_isolation ON payment_records
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
 
@@ -294,6 +294,6 @@ CREATE POLICY communications_tenant_isolation ON communications
             JOIN roles r ON ur.role_id = r.id
             WHERE ur.user_id = auth.uid()
             AND r.name = 'Admin User'
-            AND ur.revoked_at IS NULL
+            
         )
     );
