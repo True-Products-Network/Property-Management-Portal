@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const portalDomain = body.portalDomain || body.tenantId;
-    const requestedTenantId = body.tenantId;
+    const requestedTenantId = body.tenantId || body.portalDomain;
     
     const serviceClient = createServiceClient();
     

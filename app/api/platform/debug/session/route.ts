@@ -3,7 +3,6 @@
 // Returns session info for a given portal domain/tenant
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
