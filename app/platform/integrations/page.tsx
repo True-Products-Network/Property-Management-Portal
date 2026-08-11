@@ -23,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link2, RefreshCw, AlertTriangle, CheckCircle, MoreHorizontal, Filter, ExternalLink } from "lucide-react";
+import { Link2, RefreshCw, AlertTriangle, CheckCircle, MoreHorizontal, Filter, ExternalLink, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 interface GhlConnection {
@@ -380,19 +380,22 @@ export default function IntegrationsPage() {
                         <DropdownMenuItem onClick={() => router.push(`/platform/integrations/${connection.id}`)}>
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem className="text-gray-400 cursor-not-allowed">
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          Force Sync
+                          Force Sync (Coming Soon)
                         </DropdownMenuItem>
-                        {connection.is_active ? (
-                          <DropdownMenuItem className="text-red-600">
-                            Disconnect
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem className="text-green-600">
-                            Reconnect
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem 
+                          className="text-red-600"
+                          onClick={async () => {
+                            if (confirm("Are you sure you want to delete this integration?")) {
+                              await supabase.from("association_ghl_credentials").delete().eq("id", connection.id);
+                              loadData();
+                            }
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
