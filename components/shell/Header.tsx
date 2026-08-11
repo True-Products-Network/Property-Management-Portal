@@ -108,7 +108,7 @@ export function Header({
             <span>Send Announcement</span>
           </Link>
           <Link
-            href="/management/approvals/request"
+            href="/management/approvals/new"
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--main-text)] bg-white border-2 border-[var(--border-color)] hover:border-[var(--primary-navy)] hover:bg-[var(--primary-navy)]/5 rounded-lg transition-colors"
           >
             <ClipboardCheck className="h-4 w-4" />
