@@ -16,8 +16,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Filter, Package } from "lucide-react";
+import { Plus, Filter, Package, Edit, Trash2, Eye } from "lucide-react";
 import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface Entitlement {
   id: string;
@@ -70,6 +78,11 @@ export default function EntitlementsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Dialog states
+  const [viewEntitlement, setViewEntitlement] = useState<Entitlement | null>(null);
+  const [editEntitlement, setEditEntitlement] = useState<Entitlement | null>(null);
+  const [deleteEntitlement, setDeleteEntitlement] = useState<Entitlement | null>(null);
 
   const tenantFilter = searchParams.get("tenant") || "";
   const featureFilter = searchParams.get("feature") || "";
@@ -182,6 +195,50 @@ export default function EntitlementsPage() {
       setError(String(e));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteEntitlement) return;
+    
+    try {
+      const { error } = await supabase
+        .from("tenant_entitlements")
+        .delete()
+        .eq("id", deleteEntitlement.id);
+      
+      if (error) throw error;
+      
+      setDeleteEntitlement(null);
+      loadData();
+    } catch (e) {
+      console.error("Error deleting entitlement:", e);
+      alert("Failed to delete entitlement: " + String(e));
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editEntitlement) return;
+    
+    try {
+      const { error } = await supabase
+        .from("tenant_entitlements")
+        .update({
+          is_enabled: editEntitlement.is_enabled,
+          limit_value: editEntitlement.limit_value,
+          effective_date: editEntitlement.effective_date,
+          expiration_date: editEntitlement.expiration_date,
+          reason: editEntitlement.reason,
+        })
+        .eq("id", editEntitlement.id);
+      
+      if (error) throw error;
+      
+      setEditEntitlement(null);
+      loadData();
+    } catch (e) {
+      console.error("Error updating entitlement:", e);
+      alert("Failed to update entitlement: " + String(e));
     }
   };
 
@@ -318,18 +375,19 @@ export default function EntitlementsPage() {
               <TableHead>Status</TableHead>
               <TableHead>Limit</TableHead>
               <TableHead>Dates</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <p className="text-gray-500">Loading...</p>
                 </TableCell>
               </TableRow>
             ) : entitlements.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">No entitlements found</p>
                 </TableCell>
@@ -364,12 +422,188 @@ export default function EntitlementsPage() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setViewEntitlement(ent)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditEntitlement(ent)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteEntitlement(ent)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* View Dialog */}
+      <Dialog open={!!viewEntitlement} onOpenChange={() => setViewEntitlement(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Entitlement Details</DialogTitle>
+          </DialogHeader>
+          {viewEntitlement && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Tenant</p>
+                <p className="font-medium">{viewEntitlement.tenants?.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Feature</p>
+                <p className="font-medium">{viewEntitlement.features?.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Type</p>
+                <p>{viewEntitlement.entitlement_type}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Status</p>
+                <p>{viewEntitlement.is_enabled ? "Enabled" : "Disabled"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Limit</p>
+                <p>{viewEntitlement.limit_value ?? "Unlimited"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Effective Date</p>
+                <p>{new Date(viewEntitlement.effective_date).toLocaleDateString()}</p>
+              </div>
+              {viewEntitlement.expiration_date && (
+                <div>
+                  <p className="text-sm text-gray-500">Expiration Date</p>
+                  <p>{new Date(viewEntitlement.expiration_date).toLocaleDateString()}</p>
+                </div>
+              )}
+              {viewEntitlement.reason && (
+                <div>
+                  <p className="text-sm text-gray-500">Reason</p>
+                  <p>{viewEntitlement.reason}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editEntitlement} onOpenChange={() => setEditEntitlement(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Entitlement</DialogTitle>
+          </DialogHeader>
+          {editEntitlement && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Status</label>
+                <select
+                  className="w-full border rounded-md px-3 py-2"
+                  value={editEntitlement.is_enabled ? "true" : "false"}
+                  onChange={(e) => setEditEntitlement({
+                    ...editEntitlement,
+                    is_enabled: e.target.value === "true"
+                  })}
+                >
+                  <option value="true">Enabled</option>
+                  <option value="false">Disabled</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Limit (leave empty for unlimited)</label>
+                <input
+                  type="number"
+                  className="w-full border rounded-md px-3 py-2"
+                  value={editEntitlement.limit_value ?? ""}
+                  onChange={(e) => setEditEntitlement({
+                    ...editEntitlement,
+                    limit_value: e.target.value ? parseInt(e.target.value) : null
+                  })}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Effective Date</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-md px-3 py-2"
+                  value={editEntitlement.effective_date.split("T")[0]}
+                  onChange={(e) => setEditEntitlement({
+                    ...editEntitlement,
+                    effective_date: e.target.value
+                  })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Expiration Date (optional)</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-md px-3 py-2"
+                  value={editEntitlement.expiration_date?.split("T")[0] || ""}
+                  onChange={(e) => setEditEntitlement({
+                    ...editEntitlement,
+                    expiration_date: e.target.value || null
+                  })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Reason (optional)</label>
+                <textarea
+                  className="w-full border rounded-md px-3 py-2"
+                  value={editEntitlement.reason || ""}
+                  onChange={(e) => setEditEntitlement({
+                    ...editEntitlement,
+                    reason: e.target.value
+                  })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditEntitlement(null)}>Cancel</Button>
+            <Button onClick={handleUpdate}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={!!deleteEntitlement} onOpenChange={() => setDeleteEntitlement(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Entitlement</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this entitlement? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteEntitlement && (
+            <div className="py-4">
+              <p><strong>Tenant:</strong> {deleteEntitlement.tenants?.name}</p>
+              <p><strong>Feature:</strong> {deleteEntitlement.features?.name}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteEntitlement(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
