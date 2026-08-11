@@ -34,7 +34,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user belongs to this business's tenant
-    const userTenantIds = user.tenants?.map(t => t.id) || [];
+    // Get user's tenants from tenant_users table
+    const { data: userTenants } = await supabase
+      .from("tenant_users")
+      .select("tenant_id")
+      .eq("user_id", user.id);
+    
+    const userTenantIds = userTenants?.map(t => t.tenant_id) || [];
+    
+    // Also check contacts table
+    const { data: contactTenants } = await supabase
+      .from("contacts")
+      .select("tenant_id")
+      .eq("portal_user_id", user.id)
+      .not("tenant_id", "is", null);
+    
+    contactTenants?.forEach(ct => {
+      if (ct.tenant_id && !userTenantIds.includes(ct.tenant_id)) {
+        userTenantIds.push(ct.tenant_id);
+      }
+    });
+    
+    console.log("[set-business] business.slug:", business.slug, "userTenantIds:", userTenantIds);
+    
     if (!userTenantIds.includes(business.slug)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
