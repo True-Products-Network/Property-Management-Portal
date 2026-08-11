@@ -36,6 +36,7 @@ const navigation = [
   { name: "Site Settings", href: "/platform/site-settings", icon: Globe },
   { name: "Debug Tools", href: "/platform/debug", icon: Bug },
   { name: "Orphaned Data", href: "/platform/debug/orphaned-data", icon: AlertCircle },
+  { name: "Assign Tenant", href: "/platform/debug/assign-tenant", icon: Users },
 ];
 
 export function PlatformSidebar() {
