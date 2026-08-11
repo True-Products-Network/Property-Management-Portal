@@ -86,15 +86,29 @@ export async function getSession(): Promise<SessionUser | null> {
   // 1. Active tenant cookie (if user still belongs to it)
   // 2. First tenant from contacts (authoritative for data)
   // 3. First tenant from tenant_users
-  let businessId = metadata?.business_id;
+  let selectedTenantId = activeTenantId;
   
   if (activeTenantId && tenants.some(t => t.id === activeTenantId)) {
-    businessId = activeTenantId;
+    selectedTenantId = activeTenantId;
   } else if (contactTenants && contactTenants.length > 0) {
     // Prioritize the tenant from contacts table as that's where the data is
-    businessId = contactTenants[0].tenant_id;
+    selectedTenantId = contactTenants[0].tenant_id;
   } else if (tenants.length > 0) {
-    businessId = tenants[0].id;
+    selectedTenantId = tenants[0].id;
+  }
+  
+  // Look up the business record for this tenant
+  let businessId: string | undefined;
+  if (selectedTenantId) {
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("tenant_id", selectedTenantId)
+      .maybeSingle();
+    
+    if (business) {
+      businessId = business.id;
+    }
   }
   
   return {
