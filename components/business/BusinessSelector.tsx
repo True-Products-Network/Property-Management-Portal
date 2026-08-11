@@ -66,22 +66,30 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
             setSelectedId(businessId);
             
             // Set cookie
+            let cookieSet = false;
             try {
               console.log(`[BusinessSelector ${componentId.current}] Calling set-business API`);
-              await fetch("/api/auth/set-business", {
+              const response = await fetch("/api/auth/set-business", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ businessId }),
               });
-              console.log(`[BusinessSelector ${componentId.current}] set-business API success`);
+              if (response.ok) {
+                console.log(`[BusinessSelector ${componentId.current}] set-business API success`);
+                cookieSet = true;
+              } else {
+                const errorText = await response.text();
+                console.error(`[BusinessSelector ${componentId.current}] set-business API failed: ${response.status}`, errorText);
+              }
             } catch (e) {
               console.error(`[BusinessSelector ${componentId.current}] Error setting business:`, e);
             }
             
-            // Notify parent only if still mounted
-            if (isMounted && onBusinessSelect) {
-              console.log(`[BusinessSelector ${componentId.current}] Notifying parent of auto-select`);
-              onBusinessSelect(businessId);
+            // If cookie was set, reload the page to get fresh session
+            if (cookieSet && isMounted) {
+              console.log(`[BusinessSelector ${componentId.current}] Reloading page to refresh session`);
+              window.location.reload();
+              return;
             }
           } else {
             console.log(`[BusinessSelector ${componentId.current}] Skipping auto-select`);
@@ -120,11 +128,16 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
     setSelectedId(businessId);
     
     try {
-      await fetch("/api/auth/set-business", {
+      const response = await fetch("/api/auth/set-business", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ businessId }),
       });
+      if (response.ok) {
+        console.log(`[BusinessSelector ${componentId.current}] Cookie set, reloading page`);
+        window.location.reload();
+        return;
+      }
     } catch (e) {
       console.error(`[BusinessSelector ${componentId.current}] Error setting business:`, e);
     }
