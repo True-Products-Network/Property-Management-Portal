@@ -92,7 +92,10 @@ export async function getAssociations(
     
     // Filter by business_id or tenant_id
     console.log("[getAssociations] Filtering by businessId:", businessId, "tenantId:", tenantId);
-    if (businessId) {
+    if (businessId && tenantId) {
+      // Match by business_id OR tenant_id (for associations used as businesses)
+      query = query.or(`business_id.eq.${businessId},tenant_id.eq.${tenantId}`);
+    } else if (businessId) {
       query = query.eq("business_id", businessId);
     } else if (tenantId) {
       query = query.eq("tenant_id", tenantId);
