@@ -27,6 +27,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { EntitlementError } from "@/components/entitlements/EntitlementError";
 
 interface Association {
   id: string;
@@ -81,6 +82,7 @@ export default function ReportsPage() {
   const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [entitlementError, setEntitlementError] = useState<{feature: string; error: string; code?: string; action?: string} | null>(null);
 
   useEffect(() => {
     loadAssociations();
@@ -237,6 +239,14 @@ export default function ReportsPage() {
         await loadGeneratedReports();
         
         alert(`Report "${reportConfig?.name}" generated and saved to Documents!`);
+      } else if (documentResponse.status === 403) {
+        const errorData = await documentResponse.json();
+        setEntitlementError({
+          feature: errorData.feature || "documents",
+          error: errorData.error || "Feature not enabled",
+          code: errorData.code,
+          action: errorData.action
+        });
       } else {
         throw new Error("Failed to save report document");
       }
@@ -472,6 +482,16 @@ export default function ReportsPage() {
           </CardContent>
         )}
       </Card>
+
+      {/* Entitlement Error */}
+      {entitlementError && (
+        <EntitlementError
+          feature={entitlementError.feature}
+          error={entitlementError.error}
+          code={entitlementError.code}
+          action={entitlementError.action}
+        />
+      )}
 
       {/* Report Types */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

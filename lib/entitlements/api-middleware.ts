@@ -61,9 +61,11 @@ export function withEntitlement(
       if (!entitlement.enabled) {
         return NextResponse.json(
           { 
-            error: "Feature not available", 
-            message: `This feature is not included in your current plan. Please upgrade to access ${options.featureKey}.`,
-            code: "FEATURE_NOT_ENTITLED"
+            error: "Feature not enabled", 
+            message: `The "${options.featureKey}" feature is not enabled for your business. Please contact your Platform Administrator to enable this feature.`,
+            code: "FEATURE_NOT_ENTITLED",
+            feature: options.featureKey,
+            action: "Contact your Platform Admin to enable this feature in the Entitlements section."
           },
           { status: 403 }
         );
@@ -75,10 +77,12 @@ export function withEntitlement(
           return NextResponse.json(
             { 
               error: "Usage limit reached", 
-              message: `You've reached your monthly limit of ${entitlement.limit} for this feature. Please upgrade your plan.`,
+              message: `You've reached your limit of ${entitlement.limit} for "${options.featureKey}". Contact your Platform Administrator to increase your limit.`,
               code: "LIMIT_REACHED",
+              feature: options.featureKey,
               limit: entitlement.limit,
               currentUsage: entitlement.currentUsage,
+              action: "Contact your Platform Admin to increase the limit in the Entitlements section."
             },
             { status: 403 }
           );
