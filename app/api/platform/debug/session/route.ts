@@ -10,24 +10,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("[Debug Session] Request body:", body);
     
-    const portalDomain = body.portalDomain || body.tenantId;
-    const requestedTenantId = body.tenantId;
+    const input = body.portalDomain || body.tenantId;
     
-    console.log("[Debug Session] portalDomain:", portalDomain);
-    console.log("[Debug Session] requestedTenantId:", requestedTenantId);
+    console.log("[Debug Session] input:", input);
+    
+    // Check if input looks like a UUID (tenant ID)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = uuidPattern.test(input);
+    
+    console.log("[Debug Session] isUuid:", isUuid);
     
     const serviceClient = createServiceClient();
     
     // Find tenant by domain or ID
     let tenantQuery = serviceClient.from("tenants").select("id, name, code, status");
     
-    if (requestedTenantId) {
-      console.log("[Debug Session] Searching by ID:", requestedTenantId);
-      tenantQuery = tenantQuery.eq("id", requestedTenantId);
-    } else if (portalDomain) {
-      console.log("[Debug Session] Searching by domain:", portalDomain);
+    if (isUuid) {
+      console.log("[Debug Session] Searching by ID:", input);
+      tenantQuery = tenantQuery.eq("id", input);
+    } else if (input) {
+      console.log("[Debug Session] Searching by domain/code:", input);
       // Try to find by code or name
-      tenantQuery = tenantQuery.or(`code.ilike.%${portalDomain}%,name.ilike.%${portalDomain}%`);
+      tenantQuery = tenantQuery.or(`code.ilike.%${input}%,name.ilike.%${input}%`);
     } else {
       return NextResponse.json({ error: "Portal domain or tenant ID required" }, { status: 400 });
     }
@@ -40,8 +44,8 @@ export async function POST(request: NextRequest) {
     if (tenantError || !tenant) {
       return NextResponse.json({ 
         error: "Tenant not found",
-        searched: portalDomain || requestedTenantId,
-        debug: { body, tenantError: tenantError?.message }
+        searched: input,
+        debug: { body, isUuid, tenantError: tenantError?.message }
       }, { status: 404 });
     }
 

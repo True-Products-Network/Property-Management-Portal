@@ -8,18 +8,21 @@ import { createServiceClient } from "@/lib/supabase/service";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const portalDomain = body.portalDomain || body.tenantId;
-    const requestedTenantId = body.tenantId || body.portalDomain;
+    const input = body.portalDomain || body.tenantId;
+    
+    // Check if input looks like a UUID (tenant ID)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = uuidPattern.test(input);
     
     const serviceClient = createServiceClient();
     
     // Find tenant
     let tenantQuery = serviceClient.from("tenants").select("id, name, code, status, created_at");
     
-    if (requestedTenantId) {
-      tenantQuery = tenantQuery.eq("id", requestedTenantId);
-    } else if (portalDomain) {
-      tenantQuery = tenantQuery.or(`code.ilike.%${portalDomain}%,name.ilike.%${portalDomain}%`);
+    if (isUuid) {
+      tenantQuery = tenantQuery.eq("id", input);
+    } else if (input) {
+      tenantQuery = tenantQuery.or(`code.ilike.%${input}%,name.ilike.%${input}%`);
     } else {
       return NextResponse.json({ error: "Portal domain or tenant ID required" }, { status: 400 });
     }
@@ -29,7 +32,8 @@ export async function POST(request: NextRequest) {
     if (tenantError || !tenant) {
       return NextResponse.json({ 
         error: "Tenant not found",
-        searched: portalDomain || requestedTenantId 
+        searched: input,
+        isUuid 
       }, { status: 404 });
     }
 
