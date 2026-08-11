@@ -54,7 +54,7 @@ export interface CreateMaintenanceInput {
 }
 
 export async function getMaintenanceRequests(
-  params: QueryParams & { propertyId?: string; unitId?: string; status?: string; vendorId?: string; reportedBy?: string; businessId?: string } = {}
+  params: QueryParams & { propertyId?: string; unitId?: string; status?: string; vendorId?: string; reportedBy?: string; businessId?: string; tenantId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<MaintenanceRequest>>> {
   try {
     const supabase = await createClient();
@@ -68,9 +68,13 @@ export async function getMaintenanceRequests(
       .from("maintenance_requests")
       .select("*, properties!inner(association_id, name), units(unit_number)", { count: "exact" });
     
-    // CRITICAL: Filter by business_id for tenant isolation
+    // CRITICAL: Filter by business_id or tenant_id for tenant isolation
     if (params.businessId) {
       query = query.eq("business_id", params.businessId);
+    } else if (params.tenantId) {
+      query = query.eq("tenant_id", params.tenantId);
+    } else {
+      return { success: true, data: { data: [], total: 0, page, pageSize, totalPages: 0 } };
     }
     
     // Filter by association_id via property join

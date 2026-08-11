@@ -50,7 +50,7 @@ export interface CreateUnitInput {
 }
 
 export async function getUnits(
-  params: QueryParams & { propertyId?: string; businessId?: string } = {}
+  params: QueryParams & { propertyId?: string; businessId?: string; tenantId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Unit>>> {
   try {
     const supabase = await createClient();
@@ -64,9 +64,13 @@ export async function getUnits(
       .from("units")
       .select("*", { count: "exact" });
     
-    // CRITICAL: Filter by business_id for tenant isolation
+    // CRITICAL: Filter by business_id or tenant_id for tenant isolation
     if (params.businessId) {
       query = query.eq("business_id", params.businessId);
+    } else if (params.tenantId) {
+      query = query.eq("tenant_id", params.tenantId);
+    } else {
+      return { success: true, data: { data: [], total: 0, page, pageSize, totalPages: 0 } };
     }
     
     if (params.propertyId) {

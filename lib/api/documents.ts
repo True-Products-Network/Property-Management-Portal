@@ -50,7 +50,7 @@ export interface CreateDocumentInput {
 }
 
 export async function getDocuments(
-  params: QueryParams & { associationId?: string; propertyId?: string; businessId?: string } = {}
+  params: QueryParams & { associationId?: string; propertyId?: string; businessId?: string; tenantId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Document>>> {
   try {
     const supabase = await createClient();
@@ -61,9 +61,13 @@ export async function getDocuments(
     
     let query = supabase.from("documents").select("*", { count: "exact" });
     
-    // CRITICAL: Filter by business_id for tenant isolation
+    // CRITICAL: Filter by business_id or tenant_id for tenant isolation
     if (params.businessId) {
       query = query.eq("business_id", params.businessId);
+    } else if (params.tenantId) {
+      query = query.eq("tenant_id", params.tenantId);
+    } else {
+      return { success: true, data: { data: [], total: 0, page, pageSize, totalPages: 0 } };
     }
     
     if (params.associationId) query = query.eq("association_id", params.associationId);

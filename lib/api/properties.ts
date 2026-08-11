@@ -47,7 +47,7 @@ export interface CreatePropertyInput {
 }
 
 export async function getProperties(
-  params: QueryParams & { associationId?: string; businessId?: string } = {}
+  params: QueryParams & { associationId?: string; businessId?: string; tenantId?: string } = {}
 ): Promise<ApiResponse<PaginatedResponse<Property>>> {
   try {
     const supabase = await createClient();
@@ -61,9 +61,23 @@ export async function getProperties(
       .from("properties")
       .select(`*, associations!inner(name)`, { count: "exact" });
     
-    // CRITICAL: Filter by business_id for tenant isolation
+    // CRITICAL: Filter by business_id or tenant_id for tenant isolation
     if (params.businessId) {
       query = query.eq("business_id", params.businessId);
+    } else if (params.tenantId) {
+      query = query.eq("tenant_id", params.tenantId);
+    } else {
+      // No filtering - return empty for safety
+      return {
+        success: true,
+        data: {
+          data: [],
+          total: 0,
+          page,
+          pageSize,
+          totalPages: 0,
+        },
+      };
     }
     
     if (params.associationId) {

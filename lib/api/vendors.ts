@@ -45,7 +45,7 @@ export interface CreateVendorInput {
   workersCompExpiry?: string;
 }
 
-export async function getVendors(params: QueryParams & { businessId?: string } = {}): Promise<ApiResponse<PaginatedResponse<Vendor>>> {
+export async function getVendors(params: QueryParams & { businessId?: string; tenantId?: string } = {}): Promise<ApiResponse<PaginatedResponse<Vendor>>> {
   try {
     const supabase = await createClient();
     const page = params.page || 1;
@@ -55,9 +55,13 @@ export async function getVendors(params: QueryParams & { businessId?: string } =
     
     let query = supabase.from("vendors").select("*", { count: "exact" });
     
-    // CRITICAL: Filter by business_id for tenant isolation
+    // CRITICAL: Filter by business_id or tenant_id for tenant isolation
     if (params.businessId) {
       query = query.eq("business_id", params.businessId);
+    } else if (params.tenantId) {
+      query = query.eq("tenant_id", params.tenantId);
+    } else {
+      return { success: true, data: { data: [], total: 0, page, pageSize, totalPages: 0 } };
     }
     
     if (params.search) {
