@@ -185,17 +185,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create subscription if planId is provided
+    // Create subscription - use provided plan or find/create default "free" plan
     let subscription = null;
-    if (validation.data.planId) {
+    let planId = validation.data.planId;
+    
+    // If no plan selected, find or create a "free" plan
+    if (!planId) {
+      const { data: freePlan } = await supabase
+        .from("plans")
+        .select("id")
+        .eq("code", "free")
+        .maybeSingle();
+      
+      if (freePlan) {
+        planId = freePlan.id;
+      } else {
+        // Create a default free plan if it doesn't exist
+        const { data: newPlan, error: planError } = await supabase
+          .from("plans")
+          .insert({
+            code: "free",
+            name: "Free",
+            description: "Default free plan with basic features",
+            is_active: true,
+            is_public: false,
+            created_by: user?.id,
+            updated_by: user?.id,
+          })
+          .select()
+          .single();
+        
+        if (!planError && newPlan) {
+          planId = newPlan.id;
+        }
+      }
+    }
+    
+    // Create the subscription
+    if (planId) {
       const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + validation.data.trialDays);
+      trialEndDate.setDate(trialEndDate.getDate() + (validation.data.trialDays || 0));
 
       const { data: subData, error: subError } = await supabase
         .from("tenant_subscriptions")
         .insert({
           tenant_id: data.id,
-          plan_id: validation.data.planId,
+          plan_id: planId,
           status: validation.data.status === "trialing" ? "trialing" : "active",
           trial_ends_at: validation.data.trialDays > 0 ? trialEndDate.toISOString() : null,
           current_period_starts_at: new Date().toISOString(),
