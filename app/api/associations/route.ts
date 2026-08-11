@@ -211,9 +211,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create association (with business_id)
+    // Create association (with business_id and tenant_id)
     console.log("[Associations API POST] Creating with data:", JSON.stringify(validation.data, null, 2));
-    const result = await createAssociation(validation.data, user.id, user.businessId);
+    const result = await createAssociation(validation.data, user.id, user.businessId, user.tenantId);
     console.log("[Associations API POST] Create result:", JSON.stringify(result, null, 2));
 
     const duration = Date.now() - startTime;

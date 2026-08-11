@@ -202,7 +202,8 @@ export async function getAssociation(
 export async function createAssociation(
   input: CreateAssociationInput,
   userId: string,
-  businessId?: string
+  businessId?: string,
+  tenantId?: string
 ): Promise<ApiResponse<Association>> {
   try {
     const supabase = await createClient();
@@ -249,6 +250,7 @@ export async function createAssociation(
         property_count: input.propertyCount,
         unit_count: input.unitCount,
         business_id: businessId,
+        tenant_id: tenantId,
         created_by: creatorContact?.id || null,
         updated_by: creatorContact?.id || null,
       })
