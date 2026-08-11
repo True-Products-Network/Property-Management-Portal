@@ -43,7 +43,7 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
         const result = await response.json();
         console.log("[BusinessSelector] Loaded businesses:", result.data?.length, result.data);
         
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.length > 0) {
           setBusinesses(result.data);
           // If only one business and none selected, auto-select it
           if (result.data.length === 1 && !selectedBusinessId) {
@@ -51,6 +51,27 @@ export function BusinessSelector({ selectedBusinessId, onBusinessSelect }: Busin
             setSelectedId(businessId);
             // Don't call onBusinessSelect here - let parent handle it
             // This prevents the infinite loop
+          }
+        } else {
+          // No businesses found - try loading associations as businesses
+          console.log("[BusinessSelector] No businesses found, loading associations...");
+          const assocResponse = await fetch(`/api/associations?t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache',
+            }
+          });
+          const assocResult = await assocResponse.json();
+          console.log("[BusinessSelector] Loaded associations:", assocResult.data?.data?.length, assocResult.data?.data);
+          
+          if (assocResult.success && assocResult.data?.data) {
+            // Map associations to business format
+            const assocAsBusinesses = assocResult.data.data.map((assoc: any) => ({
+              id: assoc.id,
+              name: assoc.name,
+              slug: assoc.tenantId || '',
+            }));
+            setBusinesses(assocAsBusinesses);
           }
         }
       } catch (error) {
