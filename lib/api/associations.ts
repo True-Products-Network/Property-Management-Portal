@@ -148,7 +148,8 @@ export async function getAssociation(
   id: string
 ): Promise<ApiResponse<Association>> {
   try {
-    const supabase = await createClient();
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
     
     const { data, error } = await supabase
       .from("associations")
@@ -267,7 +268,8 @@ export async function updateAssociation(
   userId: string
 ): Promise<ApiResponse<Association>> {
   try {
-    const supabase = await createClient();
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
     
     // Look up the updater's contact record for updated_by
     // The updated_by field references contacts(id), not auth.users
@@ -338,7 +340,8 @@ export async function deleteAssociation(
   id: string
 ): Promise<ApiResponse<void>> {
   try {
-    const supabase = await createClient();
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
     
     const { error } = await supabase
       .from("associations")
