@@ -100,6 +100,14 @@ export default function DashboardPage() {
       if (!sessionResult.businessId) {
         console.log(`[Dashboard] No businessId in session, checking for single business...`);
         
+        // Check if we already tried to set business (prevent infinite reload)
+        if (sessionStorage.getItem('autoSettingBusiness')) {
+          console.log(`[Dashboard] Already tried to auto-set business, showing error`);
+          setIsLoading(false);
+          setError("No business selected. Please select a business from the dropdown above.");
+          return;
+        }
+        
         // Try to auto-set business if there's only one
         const businessesResponse = await fetch("/api/businesses");
         const businessesResult = await businessesResponse.json();
@@ -107,6 +115,9 @@ export default function DashboardPage() {
         if (businessesResult.success && businessesResult.data?.length === 1) {
           const businessId = businessesResult.data[0].id;
           console.log(`[Dashboard] Auto-setting single business: ${businessId}`);
+          
+          // Mark that we're setting the business
+          sessionStorage.setItem('autoSettingBusiness', 'true');
           
           // Set the business cookie
           const setResponse = await fetch("/api/auth/set-business", {
@@ -125,6 +136,9 @@ export default function DashboardPage() {
         setIsLoading(false);
         setError("No business selected. Please select a business first.");
         return;
+      } else {
+        // Clear the flag if we successfully have a business
+        sessionStorage.removeItem('autoSettingBusiness');
       }
 
       const businessId = sessionResult.businessId;
