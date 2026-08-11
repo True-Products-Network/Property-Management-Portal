@@ -99,45 +99,47 @@ export default function DashboardPage() {
       });
       const sessionResult = await sessionResponse.json();
       
-      if (!sessionResult.businessId) {
-        console.log(`[Dashboard] No businessId in session, checking for single business...`);
+      if (!sessionResult.businessId && !sessionResult.tenantId) {
+        console.log(`[Dashboard] No businessId or tenantId in session, showing error`);
+        setIsLoading(false);
+        setError("No tenant selected. Please contact support.");
+        return;
+      }
+      
+      // If no businessId but have tenantId, check for single association
+      if (!sessionResult.businessId && sessionResult.tenantId) {
+        console.log(`[Dashboard] No businessId, checking for single association in tenant...`);
         
         // Check if we already tried to set business (prevent infinite reload)
         if (sessionStorage.getItem('autoSettingBusiness')) {
-          console.log(`[Dashboard] Already tried to auto-set business, showing error`);
-          setIsLoading(false);
-          setError("No business selected. Please select a business from the dropdown above.");
-          return;
-        }
-        
-        // Try to auto-set business if there's only one
-        const businessesResponse = await fetch("/api/businesses");
-        const businessesResult = await businessesResponse.json();
-        
-        if (businessesResult.success && businessesResult.data?.length === 1) {
-          const businessId = businessesResult.data[0].id;
-          console.log(`[Dashboard] Auto-setting single business: ${businessId}`);
+          console.log(`[Dashboard] Already tried to auto-set business, showing selector`);
+          // Don't show error, just continue - the BusinessSelector will show
+        } else {
+          // Try to auto-set association if there's only one for this tenant
+          const associationsResponse = await fetch(`/api/associations?t=${Date.now()}`);
+          const associationsResult = await associationsResponse.json();
           
-          // Mark that we're setting the business
-          sessionStorage.setItem('autoSettingBusiness', 'true');
-          
-          // Set the business cookie
-          const setResponse = await fetch("/api/auth/set-business", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ businessId }),
-          });
-          
-          if (setResponse.ok) {
-            console.log(`[Dashboard] Business set, reloading page...`);
-            window.location.reload();
-            return;
+          if (associationsResult.success && associationsResult.data?.data?.length === 1) {
+            const association = associationsResult.data.data[0];
+            console.log(`[Dashboard] Auto-setting single association: ${association.id}`);
+            
+            // Mark that we're setting the business
+            sessionStorage.setItem('autoSettingBusiness', 'true');
+            
+            // Set the business cookie using association ID
+            const setResponse = await fetch("/api/auth/set-business", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ businessId: association.id }),
+            });
+            
+            if (setResponse.ok) {
+              console.log(`[Dashboard] Association set as business, reloading page...`);
+              window.location.reload();
+              return;
+            }
           }
         }
-        
-        setIsLoading(false);
-        setError("No business selected. Please select a business first.");
-        return;
       } else {
         // Clear the flag if we successfully have a business
         sessionStorage.removeItem('autoSettingBusiness');
