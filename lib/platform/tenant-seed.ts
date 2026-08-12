@@ -344,14 +344,126 @@ export async function seedTenantData(
       results.roles.skipped = DEFAULT_ROLES.length;
     }
 
-    // Seed GHL Mappings - Global table, already seeded by migration
+    // Seed GHL Mappings - Copy from default seed data
     if (categories.includes("ghl_mappings")) {
-      results.ghl_mappings.skipped = DEFAULT_GHL_MAPPINGS.length;
+      const { data: defaultMappings, error: mappingsError } = await supabase
+        .from("ghl_role_mappings")
+        .select("*")
+        .eq("is_default_seed", true);
+      
+      if (mappingsError) {
+        results.ghl_mappings.errors.push(`Failed to fetch default mappings: ${mappingsError.message}`);
+      } else if (defaultMappings) {
+        for (const mapping of defaultMappings) {
+          // Check if already exists for this tenant
+          const { data: existing } = await supabase
+            .from("ghl_role_mappings")
+            .select("id")
+            .eq("portal_role", mapping.portal_role)
+            .eq("portal_version", mapping.portal_version)
+            .maybeSingle();
+          
+          if (existing) {
+            results.ghl_mappings.skipped++;
+            continue;
+          }
+          
+          const { error } = await supabase.from("ghl_role_mappings").insert({
+            ghl_contact_role: mapping.ghl_contact_role,
+            portal_role: mapping.portal_role,
+            portal_version: mapping.portal_version,
+            default_permissions: mapping.default_permissions,
+            requires_mfa: mapping.requires_mfa,
+            status: mapping.status,
+            description: mapping.description,
+            user_count: 0,
+            created_by: userId,
+          });
+          
+          if (error) {
+            results.ghl_mappings.errors.push(`${mapping.portal_role}: ${error.message}`);
+          } else {
+            results.ghl_mappings.created++;
+          }
+        }
+      }
     }
 
-    // Seed Workflows - Check if table exists first
+    // Seed Workflows - Copy from default seed data
     if (categories.includes("workflows")) {
-      results.workflows.skipped = DEFAULT_WORKFLOWS.length;
+      // Get the business ID for this tenant (create one if needed)
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("slug", tenantId)
+        .maybeSingle();
+      
+      let targetBusinessId = business?.id;
+      
+      // If no business exists, create one
+      if (!targetBusinessId) {
+        const { data: newBusiness, error: bizError } = await supabase
+          .from("businesses")
+          .insert({
+            slug: tenantId,
+            name: "Default Business",
+            status: "active",
+          })
+          .select()
+          .single();
+        
+        if (!bizError && newBusiness) {
+          targetBusinessId = newBusiness.id;
+        }
+      }
+      
+      if (targetBusinessId) {
+        const { data: defaultWorkflows, error: workflowsError } = await supabase
+          .from("workflows")
+          .select("*")
+          .eq("is_default_seed", true);
+        
+        if (workflowsError) {
+          results.workflows.errors.push(`Failed to fetch default workflows: ${workflowsError.message}`);
+        } else if (defaultWorkflows) {
+          for (const workflow of defaultWorkflows) {
+            // Check if already exists for this business
+            const { data: existing } = await supabase
+              .from("workflows")
+              .select("id")
+              .eq("business_id", targetBusinessId)
+              .eq("code", workflow.code)
+              .maybeSingle();
+            
+            if (existing) {
+              results.workflows.skipped++;
+              continue;
+            }
+            
+            const { error } = await supabase.from("workflows").insert({
+              code: workflow.code,
+              ghl_workflow_name: workflow.ghl_workflow_name,
+              ghl_workflow_id: workflow.ghl_workflow_id,
+              trigger: workflow.trigger,
+              active: workflow.active,
+              message_template: workflow.message_template,
+              reminder_timing: workflow.reminder_timing,
+              escalation_owner: workflow.escalation_owner,
+              description: workflow.description,
+              business_id: targetBusinessId,
+              created_by: userId,
+            });
+            
+            if (error) {
+              results.workflows.errors.push(`${workflow.code}: ${error.message}`);
+            } else {
+              results.workflows.created++;
+            }
+          }
+        }
+      } else {
+        results.workflows.errors.push("No business ID available for workflows");
+      }
     }
 
     // Seed Integrations - Table doesn't exist, skip
