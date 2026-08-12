@@ -268,9 +268,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Run seed SQL for the new tenant
+    let seedResult = null;
     try {
       const { runTenantSeedSql } = await import("@/lib/platform/tenant-seed-sql");
-      const seedResult = await runTenantSeedSql(
+      seedResult = await runTenantSeedSql(
         data.id,
         business?.id
       );
