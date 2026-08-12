@@ -249,6 +249,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Create a default business for the tenant (needed for workflows)
+    const { data: business, error: businessError } = await supabase
+      .from("businesses")
+      .insert({
+        slug: data.id,
+        name: validation.data.name,
+        status: "active",
+        created_by: user?.id,
+        updated_by: user?.id,
+      })
+      .select()
+      .single();
+
+    if (businessError) {
+      console.error("Error creating business:", businessError);
+      // Don't fail tenant creation, just log the error
+    }
+
+    // Run seed SQL for the new tenant
+    try {
+      const { runTenantSeedSql } = await import("@/lib/platform/tenant-seed-sql");
+      const seedResult = await runTenantSeedSql(
+        data.id,
+        business?.id
+      );
+      console.log("Tenant seed result:", seedResult);
+    } catch (seedError) {
+      console.error("Error seeding tenant data:", seedError);
+      // Don't fail tenant creation if seeding fails
+    }
+
     // Log audit event
     await logAuditEvent(supabase, {
       action: "tenant_created",
@@ -259,7 +290,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { success: true, data, subscription },
+      { success: true, data, subscription, business, seedResult },
       { status: 201 }
     );
   } catch (error) {
