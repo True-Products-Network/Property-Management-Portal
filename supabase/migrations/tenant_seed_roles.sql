@@ -24,7 +24,7 @@ INSERT INTO ghl_role_mappings (
 ('Resident', 'Resident', 'v2', 'resident_access', false, 'active', 'Access to own unit and building information', 0),
 ('Bookkeeper', 'Restricted Finance', 'v2', 'finance_readonly', false, 'active', 'Financial Access Only - view and reports', 0),
 ('Vendor Contact', 'Vendor Contact', 'v2', 'vendor_access', false, 'active', 'Vendor contact for job assignments', 0)
-ON CONFLICT (portal_role, portal_version) DO NOTHING;
+ON CONFLICT (ghl_contact_role) DO NOTHING;
 
 -- Note: These are global mappings that apply to all tenants
 -- The ghl_role_mappings table doesn't have tenant_id, so these are shared

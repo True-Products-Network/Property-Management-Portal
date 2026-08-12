@@ -27,7 +27,7 @@ BEGIN
     ('Resident', 'Resident', 'v2', 'resident_access', false, 'active', 'Access to own unit and building information', 0, NOW(), NOW()),
     ('Bookkeeper', 'Restricted Finance', 'v2', 'finance_readonly', false, 'active', 'Financial Access Only - view and reports', 0, NOW(), NOW()),
     ('Vendor Contact', 'Vendor Contact', 'v2', 'vendor_access', false, 'active', 'Vendor contact for job assignments', 0, NOW(), NOW())
-    ON CONFLICT (portal_role, portal_version) DO NOTHING;
+    ON CONFLICT (ghl_contact_role) DO NOTHING;
 
     RAISE NOTICE 'GHL role mappings seeded successfully';
 END $$;

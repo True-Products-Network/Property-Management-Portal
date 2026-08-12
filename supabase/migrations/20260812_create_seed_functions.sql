@@ -36,7 +36,7 @@ BEGIN
                 ('Resident', 'Resident', 'v2', 'resident_access', false, 'active', 'Unit and building access', 0, NOW(), NOW()),
                 ('Bookkeeper', 'Restricted Finance', 'v2', 'finance_readonly', false, 'active', 'Financial view only', 0, NOW(), NOW()),
                 ('Vendor Contact', 'Vendor Contact', 'v2', 'vendor_access', false, 'active', 'Vendor job assignments', 0, NOW(), NOW())
-            ON CONFLICT (portal_role, portal_version) DO NOTHING;
+            ON CONFLICT (ghl_contact_role) DO NOTHING;
         ELSE
             RAISE EXCEPTION 'Unknown SQL file: %', sql_file;
     END CASE;
